@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build-and-release:
     name: Build and Release
@@ -24,33 +27,27 @@ jobs:
           xcodebuild -project SpeechToTextApp.xcodeproj \
             -scheme SpeechToTextApp \
             -configuration Release \
-            -destination 'platform=macOS' \
-            -archivePath $RUNNER_TEMP/SpeechToTextApp.xcarchive \
+            -derivedDataPath $RUNNER_TEMP/DerivedData \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            archive
-
-      - name: Export App
-        run: |
-          mkdir -p $RUNNER_TEMP/export
-          cp -R $RUNNER_TEMP/SpeechToTextApp.xcarchive/Products/Applications/SpeechToTextApp.app $RUNNER_TEMP/export/
+            build
 
       - name: Create ZIP
         run: |
-          cd $RUNNER_TEMP/export
-          zip -r SpeechToTextApp.zip SpeechToTextApp.app
+          cd $RUNNER_TEMP/DerivedData/Build/Products/Release
+          zip -r $RUNNER_TEMP/SpeechToTextApp.zip SpeechToTextApp.app
 
       - name: Get SHA256
         id: sha
         run: |
-          SHA=$(shasum -a 256 $RUNNER_TEMP/export/SpeechToTextApp.zip | awk '{print $1}')
+          SHA=$(shasum -a 256 $RUNNER_TEMP/SpeechToTextApp.zip | awk '{print $1}')
           echo "sha256=$SHA" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ runner.temp }}/export/SpeechToTextApp.zip
+          files: ${{ runner.temp }}/SpeechToTextApp.zip
           body: |
             ## Installation
 
