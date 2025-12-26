@@ -13,7 +13,7 @@
 
 cask "uttr" do
   version "0.1.0"
-  sha256 "REPLACE_WITH_SHA256_OF_YOUR_ZIP"
+  sha256 "63ad3382781467923dd25c64a8a4a4cca914608b203f5f27b27baaea15410e08"
 
   url "https://github.com/Rakk301/homebrew-uttr/releases/download/v#{version}/SpeechToTextApp.zip"
   name "Uttr"
