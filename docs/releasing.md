@@ -52,7 +52,7 @@ git push origin v1.x.x
 
 ### 6. Create GitHub Release
 
-1. Go to [GitHub Releases](https://github.com/Rakk301/speech-to-text-app/releases)
+1. Go to [GitHub Releases](https://github.com/Rakk301/homebrew-uttr/releases)
 2. Click **Draft a new release**
 3. Select the tag you just created
 4. Title: `v1.x.x`
@@ -64,6 +64,7 @@ git push origin v1.x.x
 
 Update the Cask formula in your tap repository:
 
+1. Edit `Casks/uttr.rb`:
 1. Edit `Casks/uttr.rb`:
    ```ruby
    version "1.x.x"
@@ -79,6 +80,7 @@ Update the Cask formula in your tap repository:
 Users can now install/upgrade via:
 ```bash
 brew upgrade --cask uttr
+brew upgrade --cask uttr
 ```
 
 ## Setting Up Your Homebrew Tap
@@ -88,18 +90,22 @@ If you haven't set up your tap yet:
 ### 1. Create the Tap Repository
 
 Create a new GitHub repository named `homebrew-uttr`.
+Create a new GitHub repository named `homebrew-uttr`.
 
 ### 2. Add the Cask Formula
 
 ```bash
 git clone https://github.com/Rakk301/homebrew-uttr.git
 cd homebrew-uttr
+git clone https://github.com/Rakk301/homebrew-uttr.git
+cd homebrew-uttr
 mkdir Casks
-cp /path/to/speech-to-text-app/docs/homebrew/uttr.rb Casks/
+cp /path/to/homebrew-uttr/docs/homebrew/uttr.rb Casks/
 ```
 
 ### 3. Update and Push
 
+Edit `Casks/uttr.rb`:
 Edit `Casks/uttr.rb`:
 - Set correct `version`
 - Set correct `sha256`
@@ -107,12 +113,15 @@ Edit `Casks/uttr.rb`:
 ```bash
 git add .
 git commit -m "Add uttr cask"
+git commit -m "Add uttr cask"
 git push
 ```
 
 ### 4. Test Installation
 
 ```bash
+brew tap Rakk301/uttr
+brew install --cask uttr
 brew tap Rakk301/uttr
 brew install --cask uttr
 ```
@@ -144,6 +153,7 @@ xattr -cr /Applications/SpeechToTextApp.app
 Users may need to:
 ```bash
 brew update
+brew upgrade --cask uttr
 brew upgrade --cask uttr
 ```
 

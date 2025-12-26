@@ -7,8 +7,8 @@ Thank you for your interest in contributing to SpeechToTextApp! This guide will 
 1. **Fork the repository** on GitHub
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/speech-to-text-app.git
-   cd speech-to-text-app
+   git clone https://github.com/YOUR_USERNAME/homebrew-uttr.git
+   cd homebrew-uttr
    ```
 3. **Set up the development environment** — See [Development Guide](docs/development.md)
 

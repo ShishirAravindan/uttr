@@ -15,7 +15,7 @@ This automatically installs the app and its dependencies.
 
 ### Option 2: Download from Releases
 
-1. Download the latest `.zip` from [GitHub Releases](https://github.com/Rakk301/speech-to-text-app/releases)
+1. Download the latest `.zip` from [GitHub Releases](https://github.com/Rakk301/homebrew-uttr/releases)
 2. Extract and move `SpeechToTextApp.app` to `/Applications`
 3. Install the `uv` dependency:
    ```bash

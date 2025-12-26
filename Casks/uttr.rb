@@ -15,10 +15,10 @@ cask "uttr" do
   version "0.1.0"
   sha256 "REPLACE_WITH_SHA256_OF_YOUR_ZIP"
 
-  url "https://github.com/Rakk301/speech-to-text-app/releases/download/v#{version}/SpeechToTextApp.zip"
+  url "https://github.com/Rakk301/homebrew-uttr/releases/download/v#{version}/SpeechToTextApp.zip"
   name "Uttr"
   desc "macOS speech-to-text utility with Whisper and optional LLM post-processing"
-  homepage "https://github.com/Rakk301/speech-to-text-app"
+  homepage "https://github.com/Rakk301/homebrew-uttr"
 
   depends_on formula: "uv"
   depends_on macos: ">= :sonoma"

@@ -195,8 +195,8 @@ Then restart the app.
 
 If you're still stuck:
 
-1. Check [existing issues](https://github.com/Rakk301/speech-to-text-app/issues)
-2. Open a [new issue](https://github.com/Rakk301/speech-to-text-app/issues/new) with:
+1. Check [existing issues](https://github.com/Rakk301/homebrew-uttr/issues)
+2. Open a [new issue](https://github.com/Rakk301/homebrew-uttr/issues/new) with:
    - macOS version
    - Steps to reproduce
    - Relevant log output
