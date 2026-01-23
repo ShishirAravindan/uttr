@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for your interest in contributing to SpeechToTextApp! This guide will help you get started.
+Thank you for your interest in contributing to uttr! This guide will help you get started.
 
 ## Getting Started
 

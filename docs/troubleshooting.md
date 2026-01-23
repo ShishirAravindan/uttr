@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and solutions for SpeechToTextApp.
+Common issues and solutions for uttr.
 
 ## Installation Issues
 
@@ -9,7 +9,7 @@ Common issues and solutions for SpeechToTextApp.
 The app is not notarized. To open it:
 
 1. Go to **System Settings → Privacy & Security**
-2. Scroll down to find the message about SpeechToTextApp
+2. Scroll down to find the message about uttr
 3. Click **Open Anyway**
 4. Click **Open** in the confirmation dialog
 
@@ -32,7 +32,7 @@ echo $PATH | grep -q "/opt/homebrew/bin" || echo "Homebrew not in PATH"
 ### Global hotkey not working
 
 1. Open **System Settings → Privacy & Security → Accessibility**
-2. Find SpeechToTextApp in the list
+2. Find uttr in the list
 3. Toggle it **off**, then **on** again
 4. Restart the app
 
@@ -41,10 +41,10 @@ If the app isn't in the list, try pressing the hotkey once — this should trigg
 ### Microphone permission denied
 
 1. Open **System Settings → Privacy & Security → Microphone**
-2. Ensure SpeechToTextApp is toggled **on**
+2. Ensure uttr is toggled **on**
 3. If not listed, remove and re-add the app, or reset permissions:
    ```bash
-   tccutil reset Microphone com.yourname.SpeechToTextApp
+   tccutil reset Microphone com.yourname.uttr
    ```
 
 ### "Recording failed" error
@@ -65,7 +65,7 @@ curl http://localhost:3001/health
 
 If no response:
 - The server may still be starting (first launch downloads models)
-- Check Console.app for errors from SpeechToTextApp
+- Check Console.app for errors from uttr
 - Try restarting the app
 
 ### Port already in use
@@ -87,7 +87,7 @@ Or change the port in Settings.
 Re-sync dependencies:
 
 ```bash
-cd /Applications/SpeechToTextApp.app/Contents/Resources/stt-server-py
+cd /Applications/uttr.app/Contents/Resources/stt-server-py
 uv sync
 ```
 
@@ -168,10 +168,10 @@ Check logs for detailed error information:
 
 ```bash
 # App logs
-cat ~/Library/Application\ Support/SpeechToTextApp/transcriptions.log
+cat ~/Library/Application\ Support/uttr/transcriptions.log
 
 # System logs (if app crashes)
-log show --predicate 'process == "SpeechToTextApp"' --last 10m
+log show --predicate 'process == "uttr"' --last 10m
 ```
 
 ## Reset Everything
@@ -180,10 +180,10 @@ If nothing works, reset to defaults:
 
 ```bash
 # Remove settings
-rm ~/Library/Application\ Support/SpeechToTextApp/settings.yaml
+rm ~/Library/Application\ Support/uttr/settings.yaml
 
 # Remove app data
-rm -rf ~/Library/Application\ Support/SpeechToTextApp
+rm -rf ~/Library/Application\ Support/uttr
 
 # Re-download Whisper models (they're cached by the Python package)
 rm -rf ~/.cache/whisper

@@ -1,4 +1,4 @@
-# Homebrew Cask formula for Uttr (SpeechToTextApp)
+# Homebrew Cask formula for Uttr (uttr)
 #
 # To use this formula, you need to create a Homebrew tap:
 #   1. Create a new GitHub repo named: homebrew-uttr
@@ -9,15 +9,15 @@
 #
 # Before publishing, update:
 #   - version: Match your GitHub release tag (without 'v' prefix)
-#   - sha256: Run `shasum -a 256 SpeechToTextApp.zip` on your release artifact
+#   - sha256: Run `shasum -a 256 uttr.zip` on your release artifact
 
 cask "uttr" do
   version "0.1.0"
   sha256 "63ad3382781467923dd25c64a8a4a4cca914608b203f5f27b27baaea15410e08"
 
-  url "https://github.com/Rakk301/homebrew-uttr/releases/download/v#{version}/SpeechToTextApp.zip"
+  url "https://github.com/Rakk301/homebrew-uttr/releases/download/v#{version}/uttr.zip"
   name "Uttr"
-  desc "macOS speech-to-text utility with Whisper and optional LLM post-processing"
+  desc "macOS uttr utility with Whisper and optional LLM post-processing"
   homepage "https://github.com/Rakk301/homebrew-uttr"
 
   depends_on formula: "uv"

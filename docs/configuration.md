@@ -1,16 +1,16 @@
 # Configuration
 
-SpeechToTextApp uses a YAML configuration file stored at:
+uttr uses a YAML configuration file stored at:
 
 ```
-~/Library/Application Support/SpeechToTextApp/settings.yaml
+~/Library/Application Support/uttr/settings.yaml
 ```
 
 You can edit settings via the app's Settings UI or by editing the YAML file directly.
 
 ## Settings Reference
 
-### Whisper (Speech-to-Text)
+### Whisper (uttr)
 
 ```yaml
 whisper:
@@ -102,7 +102,7 @@ logging:
   backup_count: 5
 ```
 
-Logs are stored in `~/Library/Application Support/SpeechToTextApp/`.
+Logs are stored in `~/Library/Application Support/uttr/`.
 
 ## Live Reloading
 

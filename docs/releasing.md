@@ -1,6 +1,6 @@
 # Releasing Guide
 
-This guide covers how to create a new release of SpeechToTextApp.
+This guide covers how to create a new release of uttr.
 
 ## Version Numbering
 
@@ -21,7 +21,7 @@ We use [Semantic Versioning](https://semver.org/):
 
 ### 2. Build the App
 
-1. Open `SpeechToTextApp.xcodeproj` in Xcode
+1. Open `uttr.xcodeproj` in Xcode
 2. Select **Product → Archive**
 3. In the Organizer, select the archive
 4. Click **Distribute App**
@@ -32,13 +32,13 @@ We use [Semantic Versioning](https://semver.org/):
 
 ```bash
 cd /path/to/exported
-zip -r SpeechToTextApp.zip SpeechToTextApp.app
+zip -r uttr.zip uttr.app
 ```
 
 ### 4. Get SHA256 Hash
 
 ```bash
-shasum -a 256 SpeechToTextApp.zip
+shasum -a 256 uttr.zip
 ```
 
 Save this hash — you'll need it for Homebrew.
@@ -57,7 +57,7 @@ git push origin v1.x.x
 3. Select the tag you just created
 4. Title: `v1.x.x`
 5. Description: Copy from CHANGELOG.md
-6. Attach `SpeechToTextApp.zip`
+6. Attach `uttr.zip`
 7. Click **Publish release**
 
 ### 7. Update Homebrew Cask
@@ -145,7 +145,7 @@ See the CI/CD setup for automating:
 
 The app was modified after download. Users should:
 ```bash
-xattr -cr /Applications/SpeechToTextApp.app
+xattr -cr /Applications/uttr.app
 ```
 
 ### Homebrew formula doesn't update

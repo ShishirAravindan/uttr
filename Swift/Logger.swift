@@ -20,7 +20,7 @@ class Logger {
         self.componentName = componentName
         
         // Use proper macOS logs directory: ~/Library/Logs/<AppName>/
-        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "SpeechToTextApp"
+        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "uttr"
         let logsDirectory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
             .first?.appendingPathComponent("Logs")
             .appendingPathComponent(appName)

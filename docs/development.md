@@ -1,6 +1,6 @@
 # Development Guide
 
-This guide covers building and developing SpeechToTextApp from source.
+This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
@@ -17,9 +17,9 @@ brew install uv
 ## Repository Structure
 
 ```
-speech-to-text-app/
+uttr/
 ├── Swift/                      # macOS app source
-│   ├── SpeechToTextApp.swift   # App entry point
+│   ├── uttr.swift   # App entry point
 │   ├── AudioRecorder.swift     # Audio capture
 │   ├── HotkeyManager.swift     # Global hotkeys
 │   └── ...
@@ -28,7 +28,7 @@ speech-to-text-app/
 │   ├── whisper_STTProvider.py  # Whisper integration
 │   └── pyproject.toml          # Python dependencies
 ├── docs/                       # Documentation
-├── SpeechToTextApp.xcodeproj/  # Xcode project
+├── uttr.xcodeproj/  # Xcode project
 └── README.md
 ```
 
@@ -54,12 +54,12 @@ This creates a virtual environment and installs all Python dependencies.
 ### 3. Open in Xcode
 
 ```bash
-open SpeechToTextApp.xcodeproj
+open uttr.xcodeproj
 ```
 
 ### 4. Build and Run
 
-- Select **SpeechToTextApp** scheme
+- Select **uttr** scheme
 - Press `Cmd+R` to build and run
 - Grant permissions when prompted
 
@@ -169,7 +169,7 @@ To create a distributable app:
 3. Create a ZIP:
    ```bash
    cd /path/to/export
-   zip -r SpeechToTextApp.zip SpeechToTextApp.app
+   zip -r uttr.zip uttr.app
    ```
 
 See [Releasing Guide](releasing.md) for full release process.

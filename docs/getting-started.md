@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide walks you through installing and setting up SpeechToTextApp.
+This guide walks you through installing and setting up uttr.
 
 ## Installation
 
@@ -16,7 +16,7 @@ This automatically installs the app and its dependencies.
 ### Option 2: Download from Releases
 
 1. Download the latest `.zip` from [GitHub Releases](https://github.com/Rakk301/homebrew-uttr/releases)
-2. Extract and move `SpeechToTextApp.app` to `/Applications`
+2. Extract and move `uttr.app` to `/Applications`
 3. Install the `uv` dependency:
    ```bash
    brew install uv
@@ -28,7 +28,7 @@ Since the app is not notarized, macOS will block it on first launch:
 
 1. Try to open the app — you'll see a warning
 2. Go to **System Settings → Privacy & Security**
-3. Scroll down and click **Open Anyway** next to the SpeechToTextApp message
+3. Scroll down and click **Open Anyway** next to the uttr message
 4. Click **Open** in the confirmation dialog
 
 ## Required Permissions
@@ -48,7 +48,7 @@ Required for global hotkeys and pasting text at your cursor.
 
 - The app will prompt automatically
 - Or grant manually: **System Settings → Privacy & Security → Accessibility**
-- Add SpeechToTextApp to the allowed list
+- Add uttr to the allowed list
 
 ## First Run
 

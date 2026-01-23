@@ -1,4 +1,4 @@
-# SpeechToTextApp
+# uttr
 
 A macOS menu bar app for speech-to-text transcription. Press a hotkey, speak, and the transcribed text is automatically pasted at your cursor.
 
@@ -27,7 +27,7 @@ See [Development Guide](docs/development.md) for building from source.
 
 ## Quick Start
 
-1. Launch **SpeechToTextApp** from Applications
+1. Launch **uttr** from Applications
 2. Grant permissions when prompted:
    - **Microphone** — For recording speech
    - **Accessibility** — For global hotkey and paste functionality
@@ -37,7 +37,7 @@ See [Development Guide](docs/development.md) for building from source.
 
 ## Configuration
 
-The app stores settings in `~/Library/Application Support/SpeechToTextApp/settings.yaml`.
+The app stores settings in `~/Library/Application Support/uttr/settings.yaml`.
 
 Configure via the menu bar icon → Settings:
 - **Whisper model** — tiny, base, small, medium, large
