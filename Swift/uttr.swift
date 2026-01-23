@@ -3,7 +3,7 @@ import Cocoa
 import AVFoundation
 
 @main
-struct SpeechToTextApp: App {
+struct uttr: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
@@ -77,9 +77,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         serverManager = TranscriptionServer(settingsManager: settingsManager)
         logger?.log("TranscriptionServerClient component initialized", level: .debug)
         
-        // Set up hotkey callback
-        hotkeyManager?.onHotkeyPressed = { [weak self] in
-            self?.handleHotkeyPress()
+        // Set up hotkey callbacks
+        hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
+            self?.handleTranscribeHotkeyPress()
+        }
+        hotkeyManager?.onTransformHotkeyPressed = { [weak self] in
+            self?.handleTransformHotkeyPress()
         }
         
         // Initialize menu bar popover view
@@ -200,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
     }
     
-    private func handleHotkeyPress() {
+    private func handleTranscribeHotkeyPress() {
         if isRecording {
             logger?.log("Stopping recording...", level: .info)
             stopRecording()
@@ -208,6 +211,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             logger?.log("Starting recording...", level: .info)
             startRecording()
         }
+    }
+    
+    private func handleTransformHotkeyPress() {
+        logger?.log("Transform hotkey pressed", level: .info)
+        transformClipboardContent()
     }
     
     private func startRecording() {
@@ -291,6 +299,57 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
     }
     
+    // MARK: - Transform Flow
+    private func transformClipboardContent() {
+        // Read text from clipboard
+        let pasteboard = NSPasteboard.general
+        guard let clipboardText = pasteboard.string(forType: .string), !clipboardText.isEmpty else {
+            logger?.log("No text in clipboard to transform", level: .warning)
+            notificationManager?.showTranscriptionError("No text in clipboard")
+            menuBarIconManager?.showErrorState()
+            return
+        }
+        
+        logger?.log("Transforming clipboard text: \(clipboardText.prefix(50))...", level: .info)
+        menuBarIconManager?.setTransformingState()
+        
+        // Get the default transform mode from settings
+        let mode = settingsManager?.transformDefaultMode ?? "bullets"
+        
+        transcriptionClient?.transformText(clipboardText, mode: mode) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let transformedText):
+                    self?.logger?.log("Transform completed successfully", level: .info)
+                    self?.handleTransformedText(transformedText)
+                case .failure(let error):
+                    self?.logger?.logError(error, context: "Transform failed")
+                    self?.notificationManager?.showTranscriptionError("Transform failed: \(error.localizedDescription)")
+                    self?.menuBarIconManager?.showErrorState()
+                }
+            }
+        }
+    }
+    
+    private func handleTransformedText(_ text: String) {
+        logger?.log("Handling transformed text", level: .info)
+        
+        // Paste the transformed text at cursor
+        pasteManager?.pasteText(text) { [weak self] success in
+            DispatchQueue.main.async {
+                if success {
+                    self?.logger?.log("Transformed text pasted successfully", level: .info)
+                    self?.notificationManager?.showTranscriptionSuccess()
+                    self?.menuBarIconManager?.showSuccessState()
+                } else {
+                    self?.logger?.log("Failed to paste transformed text", level: .error)
+                    self?.notificationManager?.showTranscriptionError("Failed to paste transformed text")
+                    self?.menuBarIconManager?.showErrorState()
+                }
+            }
+        }
+    }
+    
     // MARK: - Settings Window Management
     private func openSettingsWindow() {
         logger?.log("Opening settings window", level: .info)
@@ -301,7 +360,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             let hostingController = NSHostingController(rootView: settingsView)
             
             settingsWindow = NSWindow(contentViewController: hostingController)
-            settingsWindow?.title = "Speech-to-Text"
+            settingsWindow?.title = "uttr"
             settingsWindow?.styleMask = [.titled, .closable, .resizable, .miniaturizable]
             settingsWindow?.setContentSize(NSSize(width: 700, height: 500))
             settingsWindow?.center()

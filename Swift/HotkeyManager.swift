@@ -30,15 +30,17 @@ enum HotkeyManagerError: Error, LocalizedError {
 class HotkeyManager {
     
     // MARK: - Properties
-    private var hotkeyRef: EventHotKeyRef?
+    private var transcribeHotkeyRef: EventHotKeyRef?
+    private var transformHotkeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private var localMonitor: Any?
     
     private let logger = Logger()
     private let settingsManager: SettingsManager
     
-    // Callback for when hotkey is pressed
-    var onHotkeyPressed: (() -> Void)?
+    // Callbacks for hotkey presses
+    var onTranscribeHotkeyPressed: (() -> Void)?
+    var onTransformHotkeyPressed: (() -> Void)?
     
     // MARK: - Initialization
     init(settingsManager: SettingsManager) {
@@ -51,6 +53,13 @@ class HotkeyManager {
             self,
             selector: #selector(handleHotkeySettingsChanged),
             name: .hotkeySettingsChanged,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleTransformHotkeySettingsChanged),
+            name: .transformHotkeyChanged,
             object: nil
         )
     }
@@ -69,7 +78,12 @@ class HotkeyManager {
     
     // MARK: - Settings Change Handling
     @objc private func handleHotkeySettingsChanged() {
-        logger.log("[HotkeyManager] Hotkey settings changed, refreshing configuration", level: .info)
+        logger.log("[HotkeyManager] Transcribe hotkey settings changed, refreshing configuration", level: .info)
+        refreshHotkeyConfiguration()
+    }
+    
+    @objc private func handleTransformHotkeySettingsChanged() {
+        logger.log("[HotkeyManager] Transform hotkey settings changed, refreshing configuration", level: .info)
         refreshHotkeyConfiguration()
     }
     
@@ -123,22 +137,35 @@ class HotkeyManager {
     
     // MARK: - Global Hotkey (Carbon)
     private func setupGlobalHotkey() throws {
-        let hotkeyDisplay = settingsManager.getHotkeyDisplayString()
-        logger.log("[HotkeyManager] Attempting to register global hotkey: \(hotkeyDisplay)", level: .debug)
-        
         guard checkAccessibilityPermissions() else {
             throw HotkeyManagerError.permissionDenied
         }
         
-        let (keyCode, modifiers) = try getHotkeyConfiguration()
-        let hotkeyID = try getUniqueHotkeyID()
+        // Register transcribe hotkey
+        let transcribeDisplay = settingsManager.getHotkeyDisplayString()
+        logger.log("[HotkeyManager] Attempting to register transcribe hotkey: \(transcribeDisplay)", level: .debug)
         
-        let status = RegisterEventHotKey(keyCode, modifiers, hotkeyID, GetApplicationEventTarget(), 0, &hotkeyRef)
-        guard status == noErr else {
-            throw HotkeyManagerError.hotkeyRegistrationFailed(status: status)
+        let (transcribeKeyCode, transcribeModifiers) = try getTranscribeHotkeyConfiguration()
+        let transcribeHotkeyID = try getUniqueHotkeyID(id: 1)
+        
+        let transcribeStatus = RegisterEventHotKey(transcribeKeyCode, transcribeModifiers, transcribeHotkeyID, GetApplicationEventTarget(), 0, &transcribeHotkeyRef)
+        guard transcribeStatus == noErr else {
+            throw HotkeyManagerError.hotkeyRegistrationFailed(status: transcribeStatus)
         }
+        logger.log("[HotkeyManager] Transcribe hotkey registered successfully: \(transcribeDisplay)", level: .info)
         
-        logger.log("[HotkeyManager] Global hotkey registered successfully: \(hotkeyDisplay)", level: .info)
+        // Register transform hotkey
+        let transformDisplay = settingsManager.getTransformHotkeyDisplayString()
+        logger.log("[HotkeyManager] Attempting to register transform hotkey: \(transformDisplay)", level: .debug)
+        
+        let (transformKeyCode, transformModifiers) = try getTransformHotkeyConfiguration()
+        let transformHotkeyID = try getUniqueHotkeyID(id: 2)
+        
+        let transformStatus = RegisterEventHotKey(transformKeyCode, transformModifiers, transformHotkeyID, GetApplicationEventTarget(), 0, &transformHotkeyRef)
+        guard transformStatus == noErr else {
+            throw HotkeyManagerError.hotkeyRegistrationFailed(status: transformStatus)
+        }
+        logger.log("[HotkeyManager] Transform hotkey registered successfully: \(transformDisplay)", level: .info)
         
         try installGlobalHotkeyEventHandler()
     }
@@ -149,7 +176,7 @@ class HotkeyManager {
         let status = InstallEventHandler(GetApplicationEventTarget(), { (handler, event, userData) -> OSStatus in
             guard let userData = userData else { return noErr }
             let hotkeyManager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-            hotkeyManager.handleGlobalHotkeyEvent()
+            hotkeyManager.handleGlobalHotkeyEvent(event: event)
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &eventHandler)
         
@@ -159,32 +186,70 @@ class HotkeyManager {
         logger.log("[HotkeyManager] Global hotkey event handler installed", level: .debug)
     }
     
-    private func handleGlobalHotkeyEvent() {
-        let hotkeyDisplay = settingsManager.getHotkeyDisplayString()
-        logger.log("[HotkeyManager] Global hotkey pressed: \(hotkeyDisplay)", level: .info)
+    private func handleGlobalHotkeyEvent(event: EventRef?) {
+        guard let event = event else { return }
+        
+        // Get the hotkey ID from the event to determine which hotkey was pressed
+        var hotkeyID = EventHotKeyID()
+        let result = GetEventParameter(
+            event,
+            EventParamName(kEventParamDirectObject),
+            EventParamType(typeEventHotKeyID),
+            nil,
+            MemoryLayout<EventHotKeyID>.size,
+            nil,
+            &hotkeyID
+        )
+        
+        guard result == noErr else {
+            logger.log("[HotkeyManager] Failed to get hotkey ID from event", level: .error)
+            return
+        }
+        
         DispatchQueue.main.async { [weak self] in
-            self?.onHotkeyPressed?()
+            guard let self = self else { return }
+            
+            if hotkeyID.id == 1 {
+                // Transcribe hotkey
+                let display = self.settingsManager.getHotkeyDisplayString()
+                self.logger.log("[HotkeyManager] Transcribe hotkey pressed: \(display)", level: .info)
+                self.onTranscribeHotkeyPressed?()
+            } else if hotkeyID.id == 2 {
+                // Transform hotkey
+                let display = self.settingsManager.getTransformHotkeyDisplayString()
+                self.logger.log("[HotkeyManager] Transform hotkey pressed: \(display)", level: .info)
+                self.onTransformHotkeyPressed?()
+            }
         }
     }
     
     // MARK: - Local Hotkey (Cocoa)
     private func setupLocalHotkey() {
-        let hotkeyDisplay = settingsManager.getHotkeyDisplayString()
-        logger.log("[HotkeyManager] Setting up local hotkey: \(hotkeyDisplay)", level: .debug)
+        let transcribeDisplay = settingsManager.getHotkeyDisplayString()
+        let transformDisplay = settingsManager.getTransformHotkeyDisplayString()
+        logger.log("[HotkeyManager] Setting up local hotkeys: transcribe=\(transcribeDisplay), transform=\(transformDisplay)", level: .debug)
         
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self = self else { return event }
             
-            guard let (expectedKeyCode, expectedModifiers) = try? self.getHotkeyConfigurationForLocalMonitor() else {
-                return event
-            }
-            
             let actualModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             
-            if actualModifiers == expectedModifiers && event.keyCode == expectedKeyCode {
-                self.logger.log("[HotkeyManager] Local hotkey pressed: \(hotkeyDisplay)", level: .info)
-                self.onHotkeyPressed?()
-                return nil // Swallow the event
+            // Check transcribe hotkey
+            if let (expectedKeyCode, expectedModifiers) = try? self.getTranscribeHotkeyConfigurationForLocalMonitor() {
+                if actualModifiers == expectedModifiers && event.keyCode == expectedKeyCode {
+                    self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
+                    self.onTranscribeHotkeyPressed?()
+                    return nil // Swallow the event
+                }
+            }
+            
+            // Check transform hotkey
+            if let (expectedKeyCode, expectedModifiers) = try? self.getTransformHotkeyConfigurationForLocalMonitor() {
+                if actualModifiers == expectedModifiers && event.keyCode == expectedKeyCode {
+                    self.logger.log("[HotkeyManager] Local transform hotkey pressed: \(transformDisplay)", level: .info)
+                    self.onTransformHotkeyPressed?()
+                    return nil // Swallow the event
+                }
             }
             
             return event
@@ -193,13 +258,13 @@ class HotkeyManager {
     }
     
     // MARK: - Configuration & Permissions
-    private func getUniqueHotkeyID() throws -> EventHotKeyID {
+    private func getUniqueHotkeyID(id: UInt32) throws -> EventHotKeyID {
         guard let bundleId = Bundle.main.bundleIdentifier else {
             throw HotkeyManagerError.bundleIdentifierNotFound
         }
         
         let signature = fourCharString(from: bundleId)
-        return EventHotKeyID(signature: signature, id: 1)
+        return EventHotKeyID(signature: signature, id: id)
     }
     
     private func fourCharString(from string: String) -> FourCharCode {
@@ -211,9 +276,8 @@ class HotkeyManager {
         return hash
     }
     
-    private func getHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
+    private func getTranscribeHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
         let keyCode = UInt32(settingsManager.hotkeyKeyCode)
-        
         var modifiers: UInt32 = 0
         for modifier in settingsManager.hotkeyModifiers {
             switch modifier {
@@ -227,11 +291,40 @@ class HotkeyManager {
         return (keyCode, modifiers)
     }
     
-    private func getHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
+    private func getTransformHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
+        let keyCode = UInt32(settingsManager.transformHotkeyKeyCode)
+        var modifiers: UInt32 = 0
+        for modifier in settingsManager.transformHotkeyModifiers {
+            switch modifier {
+            case "command": modifiers |= UInt32(cmdKey)
+            case "shift":   modifiers |= UInt32(shiftKey)
+            case "option":  modifiers |= UInt32(optionKey)
+            case "control": modifiers |= UInt32(controlKey)
+            default: break
+            }
+        }
+        return (keyCode, modifiers)
+    }
+    
+    private func getTranscribeHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
         let keyCode = UInt16(settingsManager.hotkeyKeyCode)
-        
         var modifiers: NSEvent.ModifierFlags = []
         for modifier in settingsManager.hotkeyModifiers {
+            switch modifier {
+            case "command": modifiers.insert(.command)
+            case "shift":   modifiers.insert(.shift)
+            case "option":  modifiers.insert(.option)
+            case "control": modifiers.insert(.control)
+            default: break
+            }
+        }
+        return (keyCode, modifiers)
+    }
+    
+    private func getTransformHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
+        let keyCode = UInt16(settingsManager.transformHotkeyKeyCode)
+        var modifiers: NSEvent.ModifierFlags = []
+        for modifier in settingsManager.transformHotkeyModifiers {
             switch modifier {
             case "command": modifiers.insert(.command)
             case "shift":   modifiers.insert(.shift)
@@ -266,11 +359,16 @@ class HotkeyManager {
         permissionPollingTimer?.invalidate()
         permissionPollingTimer = nil
         
-        // Clean up global hotkey
-        if let hotkeyRef = hotkeyRef {
+        // Clean up global hotkeys
+        if let hotkeyRef = transcribeHotkeyRef {
             UnregisterEventHotKey(hotkeyRef)
-            self.hotkeyRef = nil
-            logger.log("[HotkeyManager] Global hotkey unregistered", level: .debug)
+            self.transcribeHotkeyRef = nil
+            logger.log("[HotkeyManager] Transcribe hotkey unregistered", level: .debug)
+        }
+        if let hotkeyRef = transformHotkeyRef {
+            UnregisterEventHotKey(hotkeyRef)
+            self.transformHotkeyRef = nil
+            logger.log("[HotkeyManager] Transform hotkey unregistered", level: .debug)
         }
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
@@ -291,7 +389,7 @@ class HotkeyManager {
         logger.log("[HotkeyManager] To enable global hotkeys, please grant Accessibility permissions:", level: .warning)
         logger.log("[HotkeyManager] 1. Open System Settings > Privacy & Security", level: .warning)
         logger.log("[HotkeyManager] 2. Select 'Accessibility'", level: .warning)
-        logger.log("[HotkeyManager] 3. Find 'SpeechToTextApp' and enable it.", level: .warning)
+        logger.log("[HotkeyManager] 3. Find 'uttr' and enable it.", level: .warning)
         logger.log("[HotkeyManager] 4. A restart of the app may be required.", level: .warning)
     }
 }

@@ -1,5 +1,5 @@
 """
-Configuration management for speech-to-text application.
+Configuration management for uttr application.
 Handles loading, validation, and access to application settings.
 """
 
@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 
 
 class Config:
-    """Configuration manager for the speech-to-text application."""
+    """Configuration manager for the uttr application."""
     
     def __init__(self, config_path: str = "settings.yaml"):
         """
@@ -62,4 +62,9 @@ class Config:
     def parakeet(self) -> Dict[str, Any]:
         """Get Parakeet configuration."""
         return self.config.get("parakeet", {})
+    
+    @property
+    def transform(self) -> Dict[str, Any]:
+        """Get Transform configuration."""
+        return self.config.get("transform", {})
         
