@@ -72,8 +72,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
-        transcriptionProvider = PythonWhisperProvider(settings: settingsManager)
-        logger?.log("TranscriptionProvider initialized", level: .debug)
+        transcriptionProvider = TranscriptionProviderFactory.make(
+            id: settingsManager.transcriptionProviderID,
+            settings: settingsManager
+        )
+        logger?.log("TranscriptionProvider initialized: \(settingsManager.transcriptionProviderID)", level: .debug)
 
         // Set up hotkey callbacks
         hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
@@ -94,7 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         // Set up notification observers for settings changes
         NotificationCenter.default.addObserver(
-            forName: .whisperModelChanged,
+            forName: .transcriptionProviderChanged,
             object: nil,
             queue: .main
         ) { [weak self] _ in
@@ -349,7 +352,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         Task { [weak self] in
             guard let self else { return }
             await self.transcriptionProvider?.teardown()
-            self.transcriptionProvider = PythonWhisperProvider(settings: settings)
+            self.transcriptionProvider = TranscriptionProviderFactory.make(
+                id: settings.transcriptionProviderID,
+                settings: settings
+            )
             self.startTranscriptionProvider()
         }
     }
