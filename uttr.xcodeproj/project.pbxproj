@@ -16,6 +16,7 @@
 		00AE3B792E42D5EB00CD52A8 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AE3B6F2E42D5EB00CD52A8 /* HistoryManager.swift */; };
 		00AE3B7F2E42DC0200CD52A8 /* TranscriptionServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AE3B7E2E42DC0200CD52A8 /* TranscriptionServerClient.swift */; };
 		00E612A82E593BC4002E23F2 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 00E612A72E593BC4002E23F2 /* Yams */; };
+		6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0022E9B000000000001 /* FluidAudio */; };
 		00E612AA2E593E66002E23F2 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E612A92E593E66002E23F2 /* HotkeyRecorder.swift */; };
 		00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516B2E24C16D00BE5FC7 /* uttr.swift */; };
 		00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */; };
@@ -58,6 +59,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				00E612A82E593BC4002E23F2 /* Yams in Frameworks */,
+				6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,6 +119,7 @@
 			name = uttr;
 			packageProductDependencies = (
 				00E612A72E593BC4002E23F2 /* Yams */,
+				6AF1A0022E9B000000000001 /* FluidAudio */,
 			);
 			productName = uttr;
 			productReference = 00EA515B2E24C05900BE5FC7 /* uttr.app */;
@@ -149,6 +152,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				00E612A62E593BC4002E23F2 /* XCRemoteSwiftPackageReference "Yams" */,
+				6AF1A0012E9B000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 00EA515C2E24C05900BE5FC7 /* Products */;
@@ -414,6 +418,14 @@
 				minimumVersion = 6.1.0;
 			};
 		};
+		6AF1A0012E9B000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.6.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -421,6 +433,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 00E612A62E593BC4002E23F2 /* XCRemoteSwiftPackageReference "Yams" */;
 			productName = Yams;
+		};
+		6AF1A0022E9B000000000001 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AF1A0012E9B000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
