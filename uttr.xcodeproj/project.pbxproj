@@ -15,10 +15,6 @@
 		00AE3B772E42D5EB00CD52A8 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AE3B742E42D5EB00CD52A8 /* SettingsManager.swift */; };
 		00AE3B792E42D5EB00CD52A8 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00AE3B6F2E42D5EB00CD52A8 /* HistoryManager.swift */; };
 		00E612A82E593BC4002E23F2 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 00E612A72E593BC4002E23F2 /* Yams */; };
-		6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0022E9B000000000001 /* FluidAudio */; };
-		6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */; };
-		6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */; };
-		6AF2A0062E9B000000000001 /* PythonWhisperProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0052E9B000000000001 /* PythonWhisperProvider.swift */; };
 		00E612AA2E593E66002E23F2 /* HotkeyRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E612A92E593E66002E23F2 /* HotkeyRecorder.swift */; };
 		00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516B2E24C16D00BE5FC7 /* uttr.swift */; };
 		00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */; };
@@ -29,6 +25,10 @@
 		6A8FDBE52E8E057900D3C68F /* MenuBarPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FDBE12E8E057900D3C68F /* MenuBarPopoverView.swift */; };
 		6A8FDBE62E8E057900D3C68F /* SettingsWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FDBE32E8E057900D3C68F /* SettingsWindowView.swift */; };
 		6A8FDBE72E8E057900D3C68F /* HomeTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FDBE02E8E057900D3C68F /* HomeTabView.swift */; };
+		6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0022E9B000000000001 /* FluidAudio */; };
+		6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */; };
+		6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */; };
+		6AF2A0062E9B000000000001 /* PythonWhisperProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0052E9B000000000001 /* PythonWhisperProvider.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,7 +40,6 @@
 		00AE3B6F2E42D5EB00CD52A8 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryManager.swift; path = Swift/HistoryManager.swift; sourceTree = "<group>"; };
 		00AE3B722E42D5EB00CD52A8 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationManager.swift; path = Swift/NotificationManager.swift; sourceTree = "<group>"; };
 		00AE3B742E42D5EB00CD52A8 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsManager.swift; path = Swift/SettingsManager.swift; sourceTree = "<group>"; };
-		6AF2A0052E9B000000000001 /* PythonWhisperProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PythonWhisperProvider.swift; path = Swift/Transcription/PythonWhisperProvider.swift; sourceTree = "<group>"; };
 		00E612A92E593E66002E23F2 /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HotkeyRecorder.swift; path = Swift/HotkeyRecorder.swift; sourceTree = "<group>"; };
 		00EA515B2E24C05900BE5FC7 /* uttr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = uttr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioRecorder.swift; path = Swift/AudioRecorder.swift; sourceTree = "<group>"; };
@@ -55,6 +54,7 @@
 		6A8FDBE32E8E057900D3C68F /* SettingsWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsWindowView.swift; path = Swift/SettingsWindowView.swift; sourceTree = "<group>"; };
 		6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionProvider.swift; path = Swift/Transcription/TranscriptionProvider.swift; sourceTree = "<group>"; };
 		6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FluidAudioProvider.swift; path = Swift/Transcription/FluidAudioProvider.swift; sourceTree = "<group>"; };
+		6AF2A0052E9B000000000001 /* PythonWhisperProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PythonWhisperProvider.swift; path = Swift/Transcription/PythonWhisperProvider.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -339,10 +339,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = J9ALQ7F67F;
+				DEVELOPMENT_TEAM = 2JA378N26R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "uttr-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = uttr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to transcribe your speech.";
@@ -372,10 +374,12 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = J9ALQ7F67F;
+				DEVELOPMENT_TEAM = 2JA378N26R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "uttr-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = uttr;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "This app needs microphone access to transcribe your speech.";

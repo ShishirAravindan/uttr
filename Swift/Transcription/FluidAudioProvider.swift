@@ -40,9 +40,7 @@ class FluidAudioProvider: TranscriptionProvider {
     func prepare() async throws {
         logger.log("Downloading/loading \(version.displayName) models…", level: .info)
         let models = try await AsrModels.downloadAndLoad(version: version.asrVersion)
-        let manager = AsrManager(config: .default)
-        try await manager.initialize(models: models)
-        self.asr = manager
+        asr = AsrManager(config: .default, models: models)
         logger.log("\(displayName) ready", level: .info)
     }
 
@@ -50,13 +48,15 @@ class FluidAudioProvider: TranscriptionProvider {
         guard let asr else {
             throw FluidAudioProviderError.notPrepared
         }
-        let samples = try await AudioProcessor.loadAudioFile(path: audioFileURL.path)
-        let result = try await asr.transcribe(samples, source: .system)
+        var decoderState = TdtDecoderState.make()
+        let result = try await asr.transcribe(audioFileURL, decoderState: &decoderState)
         return result.text
     }
 
     func teardown() async {
-        asr?.cleanup()
+        if let asr {
+            await asr.cleanup()
+        }
         asr = nil
         logger.log("\(displayName) torn down", level: .info)
     }
