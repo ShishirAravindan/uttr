@@ -24,3 +24,7 @@ build/
 DerivedData/
 
 .claude/worktrees/
+
+# Benchmark
+bench/audio/
+bench/.build/
