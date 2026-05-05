@@ -8,8 +8,9 @@ struct uttr: App {
 
     var body: some Scene {
         Settings {
-            EmptyView()
+            SettingsWindowView(settings: appDelegate.settingsManager)
         }
+        .defaultSize(width: 520, height: 480)
     }
 }
 
@@ -22,16 +23,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var pasteManager: PasteManager?
     private var transcriptionProvider: TranscriptionProvider?
     private var logger: Logger?
-    private var settingsManager: SettingsManager?
+    let settingsManager = SettingsManager()
     private var notificationManager: NotificationManager?
     private var popoverViewModel = PopoverViewModel()
     private var popover: NSPopover?
     private var menuBarIconManager: MenuBarIconManager?
     private var eventMonitor: Any?
-
-    // Settings window
-    private var settingsWindow: NSWindow?
-    private var settingsWindowController: NSWindowController?
 
     // History window
     private var historyWindow: NSWindow?
@@ -57,14 +54,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         logger = Logger()
         logger?.log("=== Initializing App Setup ===", level: .debug)
 
-        settingsManager = SettingsManager()
         notificationManager = NotificationManager()
         audioRecorder = AudioRecorder()
-
-        guard let settingsManager = settingsManager else {
-            logger?.log("Failed to initialize required managers", level: .error)
-            return
-        }
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
@@ -97,8 +88,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             queue: .main
         ) { [weak self] _ in
             self?.hotkeyManager?.refreshHotkeyConfiguration()
-            if let display = self?.settingsManager?.getHotkeyDisplayString() {
-                self?.popoverViewModel.hotkeyDisplay = display
+            self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
+        }
+
+        // Reset activation policy to accessory when all titled windows have closed
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                self?.dismissIfNoWindows()
             }
         }
 
@@ -106,7 +106,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func startTranscriptionProvider() {
-        settingsManager?.providerStatus = "Loading…"
+        settingsManager.providerStatus = "Loading…"
         Task { [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
             do {
@@ -120,7 +120,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             } catch {
                 await MainActor.run {
                     self.logger?.log("Failed to prepare transcription provider: \(error)", level: .error)
-                    self.settingsManager?.providerStatus = "Failed — \(error.localizedDescription)"
+                    self.settingsManager.providerStatus = "Failed — \(error.localizedDescription)"
                     self.notificationManager?.showAppInitializationError("Failed to prepare transcription provider")
                     self.menuBarIconManager?.showErrorState()
                 }
@@ -129,11 +129,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func updateProviderStatus() {
-        guard let settings = settingsManager else { return }
-        if settings.transcriptionProviderID == "python.whisper" {
-            settings.providerStatus = "Sidecar running · port \(settings.pythonWhisper.serverPort)"
+        if settingsManager.transcriptionProviderID == "python.whisper" {
+            settingsManager.providerStatus = "Sidecar running · port \(settingsManager.pythonWhisper.serverPort)"
         } else {
-            settings.providerStatus = "Loaded · ~600 MB"
+            settingsManager.providerStatus = "Loaded · ~600 MB"
         }
     }
 
@@ -265,23 +264,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func openSettingsWindow() {
         logger?.log("Opening settings window", level: .info)
-
-        if settingsWindow == nil {
-            let hostingController = NSHostingController(
-                rootView: SettingsWindowView(settings: settingsManager!)
-            )
-            settingsWindow = NSWindow(contentViewController: hostingController)
-            settingsWindow?.title = "Settings"
-            settingsWindow?.styleMask = [.titled, .closable, .miniaturizable]
-            settingsWindow?.setContentSize(NSSize(width: 520, height: 480))
-            settingsWindow?.center()
-            settingsWindow?.delegate = self
-            settingsWindowController = NSWindowController(window: settingsWindow)
-        }
-
         NSApp.setActivationPolicy(.regular)
-        settingsWindowController?.showWindow(nil)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
@@ -306,24 +290,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func dismissIfNoWindows() {
-        if settingsWindow == nil && historyWindow == nil {
+        let hasVisibleTitledWindow = NSApp.windows.contains {
+            $0.isVisible && $0.styleMask.contains(.titled)
+        }
+        if !hasVisibleTitledWindow {
             NSApp.setActivationPolicy(.accessory)
         }
     }
 
     // MARK: - Window Delegate
     func windowWillClose(_ notification: Notification) {
-        switch notification.object as? NSWindow {
-        case settingsWindow:
-            settingsWindow = nil
-            settingsWindowController = nil
-            dismissIfNoWindows()
-        case historyWindow:
+        if notification.object as? NSWindow == historyWindow {
             historyWindow = nil
             historyWindowController = nil
-            dismissIfNoWindows()
-        default:
-            break
         }
     }
 
@@ -332,14 +311,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         logger?.log("Settings changed, swapping transcription provider", level: .info)
         hotkeyManager?.refreshHotkeyConfiguration()
 
-        guard let settings = settingsManager else { return }
-        settings.providerStatus = "Loading…"
+        settingsManager.providerStatus = "Loading…"
         Task { [weak self] in
             guard let self else { return }
             await self.transcriptionProvider?.teardown()
             self.transcriptionProvider = TranscriptionProviderFactory.make(
-                id: settings.transcriptionProviderID,
-                settings: settings
+                id: settingsManager.transcriptionProviderID,
+                settings: settingsManager
             )
             self.startTranscriptionProvider()
         }
@@ -350,9 +328,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
         closePopover()
-        settingsWindow?.close()
-        settingsWindow = nil
-        settingsWindowController = nil
         historyWindow?.close()
         historyWindow = nil
         historyWindowController = nil
