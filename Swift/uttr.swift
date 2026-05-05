@@ -91,6 +91,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
         }
 
+        // Show dock icon whenever a titled window is active
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.didBecomeKeyNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let window = notification.object as? NSWindow,
+               window.styleMask.contains(.titled) {
+                NSApp.setActivationPolicy(.regular)
+            }
+        }
+
         // Reset activation policy to accessory when all titled windows have closed
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
@@ -264,9 +276,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func openSettingsWindow() {
         logger?.log("Opening settings window", level: .info)
-        NSApp.setActivationPolicy(.regular)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        NSApp.activate(ignoringOtherApps: true)
+        closePopover()
+        DispatchQueue.main.async {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func openHistoryWindow() {
