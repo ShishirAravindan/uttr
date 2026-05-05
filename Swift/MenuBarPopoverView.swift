@@ -1,107 +1,131 @@
 import SwiftUI
 
-struct MenuBarPopoverView: View {
-    @State private var isRecording = false
-    
+// MARK: - View model (owned by AppDelegate, observed by the view)
+
+class PopoverViewModel: ObservableObject {
+    @Published var isRecording = false
+    @Published var hotkeyDisplay: String = "⌥L"
+
     var onStartRecording: (() -> Void)?
     var onStopRecording: (() -> Void)?
     var onOpenSettings: (() -> Void)?
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            // Start/Stop Recording Button
-            IconButton(
-                icon: isRecording ? "stop.circle.fill" : "mic.circle.fill",
-                color: isRecording ? .red : .blue,
-                action: handleRecordingToggle
-            )
-            .frame(width: 38, height: 38)
-            
-            Divider()
-                .frame(width: 1, height: 28)
-                .padding(.horizontal, 6)
-            
-            // Settings Button
-            IconButton(
-                icon: "gearshape.fill",
-                color: .gray,
-                action: { onOpenSettings?() }
-            )
-            .frame(width: 38, height: 38)
-            
-            Divider()
-                .frame(width: 1, height: 28)
-                .padding(.horizontal, 6)
-            
-            // Quit Button
-            IconButton(
-                icon: "power",
-                color: .red,
-                action: { NSApplication.shared.terminate(nil) }
-            )
-            .frame(width: 38, height: 38)
-        }
-        .frame(height: 38)  // Exact content height
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .frame(width: 160, height: 54)  // Exact total dimensions: 3×38 + 2×13 + 2×10 = 160
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-    
-    private func handleRecordingToggle() {
-        if isRecording {
-            onStopRecording?()
-        } else {
-            onStartRecording?()
-        }
+    var onOpenHistory: (() -> Void)?
+
+    func toggleRecording() {
+        if isRecording { onStopRecording?() } else { onStartRecording?() }
         isRecording.toggle()
-    }
-    
-    func updateRecordingState(_ recording: Bool) {
-        isRecording = recording
     }
 }
 
-// MARK: - Icon Button Component
-struct IconButton: View {
-    let icon: String
-    let color: Color
-    let action: () -> Void
-    
-    @State private var isHovered = false
-    
+// MARK: - View
+
+struct MenuBarPopoverView: View {
+    @ObservedObject var viewModel: PopoverViewModel
+    @Environment(\.colorScheme) var scheme
+
     var body: some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundColor(color)
-                .frame(width: 38, height: 38, alignment: .center)
-                .background(
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(isHovered ? Color.gray.opacity(0.15) : Color.clear)
-                )
+        VStack(spacing: 0) {
+            PopoverRow(
+                icon: viewModel.isRecording ? "stop.fill" : "mic",
+                label: viewModel.isRecording ? "Stop recording" : "Start recording",
+                shortcut: viewModel.hotkeyDisplay,
+                scheme: scheme,
+                action: viewModel.toggleRecording
+            )
+
+            popoverSeparator
+
+            PopoverRow(
+                icon: "list.bullet.rectangle",
+                label: "History…",
+                shortcut: nil,
+                scheme: scheme,
+                dimmed: viewModel.isRecording,
+                action: { viewModel.onOpenHistory?() }
+            )
+
+            PopoverRow(
+                icon: "gearshape",
+                label: "Settings…",
+                shortcut: "⌘,",
+                scheme: scheme,
+                dimmed: viewModel.isRecording,
+                action: { viewModel.onOpenSettings?() }
+            )
+
+            popoverSeparator
+
+            PopoverRow(
+                icon: nil,
+                label: "Quit uttr",
+                shortcut: "⌘Q",
+                scheme: scheme,
+                action: { NSApplication.shared.terminate(nil) }
+            )
         }
-        .buttonStyle(PlainButtonStyle())
-        .frame(width: 38, height: 38)  // Enforce exact button size
-        .onHover { hovering in
-            isHovered = hovering
-        }
-        .help(getTooltip())
+        .padding(4)
+        .frame(width: 220)
     }
-    
-    private func getTooltip() -> String {
-        switch icon {
-        case "mic.circle.fill": return "Start Recording"
-        case "stop.circle.fill": return "Stop Recording"
-        case "gearshape.fill": return "Settings"
-        case "power": return "Quit"
-        default: return ""
+
+    private var popoverSeparator: some View {
+        Rectangle()
+            .fill(Color(hex: 0x1F1D1A, opacity: 0.12))
+            .frame(height: 0.5)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Row
+
+private struct PopoverRow: View {
+    let icon: String?
+    let label: String
+    let shortcut: String?
+    let scheme: ColorScheme
+    var dimmed: Bool = false
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: { if !dimmed { action() } }) {
+            HStack(spacing: 8) {
+                if let icon = icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 13))
+                        .frame(width: 13, height: 13)
+                        .foregroundColor(.textPrimary(for: scheme))
+                } else {
+                    Spacer().frame(width: 13)
+                }
+                Text(label)
+                    .font(.system(size: 13))
+                    .foregroundColor(.textPrimary(for: scheme))
+                Spacer()
+                if let shortcut = shortcut {
+                    Text(shortcut)
+                        .font(.system(size: 11))
+                        .foregroundColor(.textPrimary(for: scheme).opacity(0.55))
+                }
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isHovered && !dimmed ? Color.accentColor.opacity(0.12) : Color.clear)
+            )
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .opacity(dimmed ? 0.4 : 1.0)
+        .onHover { isHovered = $0 }
     }
 }
 
 #Preview {
-    MenuBarPopoverView()
+    let vm = PopoverViewModel()
+    return MenuBarPopoverView(viewModel: vm)
+        .frame(width: 220)
+        .padding(8)
 }
-
-
