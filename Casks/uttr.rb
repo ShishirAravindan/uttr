@@ -17,10 +17,9 @@ cask "uttr" do
 
   url "https://github.com/Rakk301/homebrew-uttr/releases/download/v#{version}/uttr.zip"
   name "Uttr"
-  desc "macOS speech-to-text utility powered by Parakeet (with optional Whisper)"
+  desc "macOS speech-to-text utility powered by Parakeet on the Neural Engine"
   homepage "https://github.com/Rakk301/homebrew-uttr"
 
-  depends_on formula: "uv"
   depends_on macos: ">= :sonoma"
 
   app "uttr.app"
