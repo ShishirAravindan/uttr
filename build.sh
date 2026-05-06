@@ -11,27 +11,23 @@ NC='\033[0m' # No Color
 CONFIGURATION="Release"
 CLEAN=false
 OPEN_APP=false
-UPDATE_DEPS=false
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SERVER_DIR="$PROJECT_DIR/stt-server-py"
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Build uttr from source with Python dependency management"
+    echo "Build uttr from source"
     echo ""
     echo "Options:"
     echo "  -c, --configuration  Build configuration: Debug or Release (default: Release)"
     echo "  -C, --clean          Clean build folder before building"
     echo "  -o, --open           Open app after successful build"
-    echo "  -u, --update-deps    Update Python dependencies before building"
     echo "  -h, --help           Show this help message"
     echo ""
     echo "Examples:"
     echo "  $0                   # Release build"
     echo "  $0 -c Debug          # Debug build"
     echo "  $0 --clean --open    # Clean Release build, then open app"
-    echo "  $0 --update-deps     # Update Python dependencies then build"
 }
 
 # Parse arguments
@@ -47,10 +43,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         -o|--open)
             OPEN_APP=true
-            shift
-            ;;
-        -u|--update-deps)
-            UPDATE_DEPS=true
             shift
             ;;
         -h|--help)
@@ -70,32 +62,6 @@ if [[ "$CONFIGURATION" != "Debug" && "$CONFIGURATION" != "Release" ]]; then
     echo -e "${RED}Invalid configuration: $CONFIGURATION${NC}"
     echo "Must be 'Debug' or 'Release'"
     exit 1
-fi
-
-# Check/update Python dependencies
-if [ "$UPDATE_DEPS" = true ]; then
-    echo -e "${BLUE}=== Python Dependencies ===${NC}"
-    
-    # Check if uv is installed
-    if ! command -v uv &> /dev/null; then
-        echo -e "${RED}uv not found. Installing uv...${NC}"
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        export PATH="$HOME/.cargo/bin:$PATH"
-    else
-        echo -e "${GREEN}uv found: $(uv --version)${NC}"
-    fi
-    
-    # Update dependencies
-    if [ -d "$SERVER_DIR" ]; then
-        echo -e "${YELLOW}Updating Python dependencies...${NC}"
-        cd "$SERVER_DIR"
-        uv sync --upgrade
-        echo -e "${GREEN}Python dependencies updated${NC}"
-        cd "$PROJECT_DIR"
-    else
-        echo -e "${YELLOW}Warning: stt-server-py directory not found${NC}"
-    fi
-    echo ""
 fi
 
 cd "$PROJECT_DIR"
