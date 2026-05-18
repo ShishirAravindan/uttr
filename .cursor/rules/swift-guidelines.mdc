@@ -13,7 +13,7 @@ alwaysApply: false
 
 ## 📋 Core Swift Files
 
-### SpeechToTextApp.swift (Main Entry Point)
+### uttr.swift (Main Entry Point)
 - App lifecycle management and coordination
 - Menu bar setup and status management
 - Coordinate between all components

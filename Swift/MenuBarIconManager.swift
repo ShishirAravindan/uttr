@@ -7,6 +7,7 @@ enum MenuBarIconState {
     case ready
     case recording
     case processing
+    case transforming
     case success
     case error
     case hidden
@@ -78,6 +79,13 @@ class MenuBarIconManager: ObservableObject {
         currentState = .processing
     }
     
+    /// Show transform processing state (banana yellow)
+    func setTransformingState() {
+        logger.log("[MenuBarIconManager] Setting transforming state", level: .debug)
+        transitionToIcon("arrow.triangle.2.circlepath", withAnimation: true, tintColor: .systemYellow)
+        currentState = .transforming
+    }
+    
     /// Show success state briefly
     func showSuccessState() {
         logger.log("[MenuBarIconManager] Showing success state", level: .debug)
@@ -121,11 +129,16 @@ class MenuBarIconManager: ObservableObject {
     
     // MARK: - Private Methods
     
-    private func transitionToIcon(_ iconName: String, withAnimation: Bool = true) {
+    private func transitionToIcon(_ iconName: String, withAnimation: Bool = true, tintColor: NSColor? = nil) {
         guard let button = statusItem?.button else { return }
         
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
-        let newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "Speech to Text")?.withSymbolConfiguration(config)
+        var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "uttr")?.withSymbolConfiguration(config)
+        
+        // Apply tint color if specified
+        if let tintColor = tintColor, let image = newImage {
+            newImage = image.tinted(with: tintColor)
+        }
         
         if withAnimation {
             // Use NSAnimationContext for smooth macOS animations
@@ -177,5 +190,23 @@ class MenuBarIconManager: ObservableObject {
     // MARK: - Debug
     func getCurrentState() -> MenuBarIconState {
         return currentState
+    }
+}
+
+// MARK: - NSImage Tinting Extension
+extension NSImage {
+    func tinted(with color: NSColor) -> NSImage {
+        let image = self.copy() as! NSImage
+        image.lockFocus()
+        
+        color.set()
+        
+        let imageRect = NSRect(origin: .zero, size: image.size)
+        imageRect.fill(using: .sourceAtop)
+        
+        image.unlockFocus()
+        image.isTemplate = false
+        
+        return image
     }
 }
