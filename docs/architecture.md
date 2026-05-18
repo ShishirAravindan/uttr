@@ -1,61 +1,37 @@
 # Architecture
 
 ## Overview
-1. Hotkey pressed → Swift records audio
-2. Swift saves audio to file → calls Python server API
-3. Python runs Whisper STT → optional LLM postprocessing → JSON
-4. Swift receives text → pastes at cursor → logs
 
-## Components Map
+uttr is a single-tier Swift app. All transcription happens in-process via FluidAudio — there is no server, no Python, and no network communication after the initial model download.
 
-### Swift
-- `Swift/SpeechToTextApp.swift`: App lifecycle & coordination
-- `Swift/AudioRecorder.swift`: AVAudioEngine wrapper (16kHz mono)
-- `Swift/HotkeyManager.swift`: Global hotkey registration
-- `Swift/PasteManager.swift`: Clipboard & paste
-- `Swift/TranscriptionServer.swift`: Launches embedded server with `uv`
-- `Swift/TranscriptionServerClient.swift`: HTTP client (`/transcribe`)
-- `Swift/SettingsManager.swift`: YAML-backed settings (App Support)
+## Transcribe Flow
 
-### Python (`stt-server-py/`)
-- `transcription_server.py`: aiohttp server (`/transcribe`, `/providers`, `/reload_model`, `/health`)
-- `whisper_STTProvider.py`: Whisper integration
-- `llm_processor.py`: Optional LLM postprocessing
-- `config.py`: YAML loader
-- `settings.yaml`: Default config example
-- `pyproject.toml`: Dependencies (managed by `uv`)
+Hotkey → `AudioRecorder` writes WAV → `FluidAudioProvider.transcribe()` → `PasteManager` pastes at cursor
 
-## Server Modes
-- Embedded (default): Swift launches `uv run python transcription_server.py` with the app settings file.
-- Manual: Run server from terminal for development; point app to host/port.
-# Architecture
+## Components
 
-## Overview
-1. Hotkey pressed → Swift records audio
-2. Swift saves audio to file → calls Python server API
-3. Python runs Whisper STT → optional LLM postprocessing → JSON
-4. Swift receives text → pastes at cursor → logs
+| File | Responsibility |
+|------|---------------|
+| `uttr.swift` | App lifecycle, hotkey wiring, provider orchestration |
+| `AudioRecorder.swift` | AVAudioEngine capture (16 kHz mono WAV) |
+| `HotkeyManager.swift` | Global hotkey registration via Carbon |
+| `PasteManager.swift` | Clipboard write + simulated paste |
+| `SettingsManager.swift` | YAML-backed settings (`~/Library/Application Support/uttr/settings.yaml`) |
+| `MenuBarIconManager.swift` | Status bar icon states and animations |
+| `Transcription/TranscriptionProvider.swift` | `TranscriptionProvider` protocol + factory |
+| `Transcription/FluidAudioProvider.swift` | FluidAudio integration (Parakeet v2/v3) |
 
-## Components Map
+## Settings Schema
 
-### Swift
-- `Swift/SpeechToTextApp.swift`: App lifecycle & coordination
-- `Swift/AudioRecorder.swift`: AVAudioEngine wrapper (16kHz mono)
-- `Swift/HotkeyManager.swift`: Global hotkey registration
-- `Swift/PasteManager.swift`: Clipboard & paste
-- `Swift/TranscriptionServer.swift`: Launches embedded server with `uv`
-- `Swift/TranscriptionServerClient.swift`: HTTP client (`/transcribe`)
-- `Swift/SettingsManager.swift`: YAML-backed settings (App Support)
+```yaml
+provider: "fluidaudio.parakeet.v3"   # or fluidaudio.parakeet.v2
+fluid_audio:
+  model_version: "v3"
+hotkey:
+  key_code: 37
+  modifiers: ["option"]
+```
 
-### Python (`stt-server-py/`)
-- `transcription_server.py`: aiohttp server (`/transcribe`, `/providers`, `/reload_model`, `/health`)
-- `whisper_STTProvider.py`: Whisper integration
-- `llm_processor.py`: Optional LLM postprocessing
-- `config.py`: YAML loader
-- `settings.yaml`: Default config example
-- `pyproject.toml`: Dependencies (managed by `uv`)
+## Model Download
 
-## Server Modes
-- Embedded (default): Swift launches `uv run python transcription_server.py` with the app settings file.
-- Manual: Run server from terminal for development; point app to host/port.
-
+FluidAudio downloads the Parakeet model (~600 MB) on the first `transcribe()` call. The model is cached in the system's ML model store and not re-downloaded on subsequent launches.

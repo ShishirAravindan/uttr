@@ -24,8 +24,8 @@ jobs:
 
       - name: Build App for Release
         run: |
-          xcodebuild -project SpeechToTextApp.xcodeproj \
-            -scheme SpeechToTextApp \
+          xcodebuild -project uttr.xcodeproj \
+            -scheme uttr \
             -configuration Release \
             -derivedDataPath $RUNNER_TEMP/DerivedData \
             CODE_SIGN_IDENTITY="-" \
@@ -36,18 +36,18 @@ jobs:
       - name: Create ZIP
         run: |
           cd $RUNNER_TEMP/DerivedData/Build/Products/Release
-          zip -r $RUNNER_TEMP/SpeechToTextApp.zip SpeechToTextApp.app
+          zip -r $RUNNER_TEMP/uttr.zip uttr.app
 
       - name: Get SHA256
         id: sha
         run: |
-          SHA=$(shasum -a 256 $RUNNER_TEMP/SpeechToTextApp.zip | awk '{print $1}')
+          SHA=$(shasum -a 256 $RUNNER_TEMP/uttr.zip | awk '{print $1}')
           echo "sha256=$SHA" >> $GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ runner.temp }}/SpeechToTextApp.zip
+          files: ${{ runner.temp }}/uttr.zip
           body: |
             ## Installation
 
@@ -57,7 +57,7 @@ jobs:
             ```
 
             ### Manual Download
-            1. Download `SpeechToTextApp.zip` below
+            1. Download `uttr.zip` below
             2. Unzip and move to Applications
             3. On first launch: System Settings → Privacy & Security → Open Anyway
 

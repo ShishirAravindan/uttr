@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-# Speech-to-Text Application Overview
+# uttr Application Overview
 
 This is a macOS-native speech-to-text utility app that runs offline, triggered by a global hotkey (⌘⇧S), transcribes real-time microphone input, applies LLM-based postprocessing, then pastes the final output at the cursor.
 
@@ -21,9 +21,9 @@ This is a macOS-native speech-to-text utility app that runs offline, triggered b
 
 ## 📁 Expected Project Structure
 ```
-Speech To Text App/
+uttr/
 ├── Swift/
-│   ├── SpeechToTextApp.swift      # Main Swift app
+│   ├── uttr.swift      # Main Swift app
 │   ├── AudioRecorder.swift        # AVAudioEngine wrapper
 │   ├── HotkeyManager.swift        # Global hotkey handling
 │   └── PasteManager.swift         # Clipboard and paste operations
@@ -44,7 +44,7 @@ Speech To Text App/
 - Maintain loose coupling via subprocess communication
 - CLI-style Python scripts for easy testing and iteration
 ---
-# Speech-to-Text Application Overview
+# uttr Application Overview
 
 This is a macOS-native speech-to-text utility app that runs offline, triggered by a global hotkey (⌘⇧S), transcribes real-time microphone input, applies LLM-based postprocessing, then pastes the final output at the cursor.
 
@@ -63,9 +63,9 @@ This is a macOS-native speech-to-text utility app that runs offline, triggered b
 
 ## 📁 Expected Project Structure
 ```
-Speech To Text App/
+uttr/
 ├── Swift/
-│   ├── SpeechToTextApp.swift      # Main Swift app
+│   ├── uttr.swift      # Main Swift app
 │   ├── AudioRecorder.swift        # AVAudioEngine wrapper
 │   ├── HotkeyManager.swift        # Global hotkey handling
 │   └── PasteManager.swift         # Clipboard and paste operations

@@ -6,7 +6,7 @@ alwaysApply: false
 # Xcode Project Structure & File Management Rule
 
 ## Project Structure
-- Xcode project file (`SpeechToTextApp.xcodeproj`) is in the project root.
+- Xcode project file (`uttr.xcodeproj`) is in the project root.
 - All Swift source files are in the `Swift/` directory.
 - Python scripts are in the `Python/` directory.
 - Configuration files are in the `Config/` directory.
@@ -14,7 +14,7 @@ alwaysApply: false
 
 ## Adding Files
 - Add new Swift files to the `Swift/` directory.
-- In Xcode: File → Add Files to "SpeechToTextApp"…
+- In Xcode: File → Add Files to "uttr"…
   - Select files from `Swift/`, choose "Reference file in place", and check the app target.
 - Add config or Python directories as folder references (blue folder) for visibility and management.
 - Reference config files in place; access them in Swift using relative paths.

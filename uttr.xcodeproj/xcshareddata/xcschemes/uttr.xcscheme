@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00EA515A2E24C05900BE5FC7"
-               BuildableName = "SpeechToTextApp.app"
-               BlueprintName = "SpeechToTextApp"
-               ReferencedContainer = "container:SpeechToTextApp.xcodeproj">
+               BuildableName = "uttr.app"
+               BlueprintName = "uttr"
+               ReferencedContainer = "container:uttr.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "00EA515A2E24C05900BE5FC7"
-            BuildableName = "SpeechToTextApp.app"
-            BlueprintName = "SpeechToTextApp"
-            ReferencedContainer = "container:SpeechToTextApp.xcodeproj">
+            BuildableName = "uttr.app"
+            BlueprintName = "uttr"
+            ReferencedContainer = "container:uttr.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "00EA515A2E24C05900BE5FC7"
-            BuildableName = "SpeechToTextApp.app"
-            BlueprintName = "SpeechToTextApp"
-            ReferencedContainer = "container:SpeechToTextApp.xcodeproj">
+            BuildableName = "uttr.app"
+            BlueprintName = "uttr"
+            ReferencedContainer = "container:uttr.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
