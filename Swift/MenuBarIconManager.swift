@@ -78,12 +78,17 @@ class MenuBarIconManager: ObservableObject {
         currentState = .ready
     }
     
-    /// Transition to recording state and hide icon (let Apple's native indicator show)
+    /// Transition to recording state.
+    ///
+    /// Rather than hiding uttr's icon and deferring to macOS's system mic
+    /// indicator (which can't be controlled and collapses to a stray orange dot
+    /// when the menu bar is full), keep our own icon in place and breathe gently.
+    /// The state stays where the user expects it and is fully under app control.
     func setRecordingState() {
-        logger.log("[MenuBarIconManager] Setting recording state - hiding icon", level: .debug)
-        fadeOutIcon {
-            self.currentState = .recording
-        }
+        logger.log("[MenuBarIconManager] Setting recording state - breathing pulse", level: .debug)
+        transitionToIcon("mic.fill", withAnimation: false)
+        currentState = .recording
+        startRecordingPulse()
     }
     
     /// Show processing state after recording stops
@@ -143,9 +148,34 @@ class MenuBarIconManager: ObservableObject {
     
     // MARK: - Private Methods
     
+    /// Slow, autoreversing opacity pulse — the "breathing" recording indicator.
+    private func startRecordingPulse() {
+        guard let button = statusItem?.button else { return }
+        button.wantsLayer = true
+        button.alphaValue = 1.0
+
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 1.0
+        pulse.toValue = 0.45
+        pulse.duration = 1.1
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        button.layer?.add(pulse, forKey: recordingPulseKey)
+    }
+
+    private func stopRecordingPulse() {
+        statusItem?.button?.layer?.removeAnimation(forKey: recordingPulseKey)
+    }
+
+    private let recordingPulseKey = "recordingPulse"
+
     private func transitionToIcon(_ iconName: String, withAnimation: Bool = true, tintColor: NSColor? = nil) {
         guard let button = statusItem?.button else { return }
-        
+
+        // Any state change ends the recording breathe.
+        stopRecordingPulse()
+
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
         var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "uttr")?.withSymbolConfiguration(config)
         
