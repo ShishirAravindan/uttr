@@ -17,12 +17,28 @@ The app is not notarized. To open it:
 
 ### Global hotkey not working
 
-1. Open **System Settings → Privacy & Security → Accessibility**
-2. Find uttr in the list
-3. Toggle it **off**, then **on** again
-4. Restart the app
+uttr re-registers the global hotkey automatically the moment Accessibility is
+granted — switching back to the app (or just waiting ~2s) is enough, no restart
+required. Open **Settings → Permissions** in the app to see live status. If it
+still doesn't work:
 
-If the app isn't in the list, try pressing the hotkey once — this should trigger the permission prompt.
+1. Open **System Settings → Privacy & Security → Accessibility**
+2. Find uttr in the list and make sure it's toggled **on**
+3. If it's on but still not working, toggle it **off** then **on** again
+4. As a last resort, clear the stale grant and relaunch:
+   ```bash
+   tccutil reset Accessibility io.github.Rakk301.uttr
+   ```
+
+If the app isn't in the list at all, open **Settings → Permissions → Accessibility
+→ Grant** in the app to trigger the prompt.
+
+> **Why a grant occasionally won't "stick":** the distributed app is ad-hoc
+> signed, so macOS ties the Accessibility grant to an unstable code-signing
+> identity. After an app **update** the old grant may no longer match the new
+> binary — toggle it off/on (or run the `tccutil reset` above) once. Notarizing
+> with a Developer ID certificate removes this entirely (see
+> [releasing.md](releasing.md)).
 
 ### Microphone permission denied
 

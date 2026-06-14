@@ -66,6 +66,42 @@ Users can then upgrade via:
 brew upgrade --cask uttr
 ```
 
+## Code Signing & Notarization (recommended)
+
+The build currently ships **ad-hoc signed** (`CODE_SIGN_IDENTITY="-"`). That has
+two user-facing costs:
+
+1. **Gatekeeper friction** — every user has to do the "Open Anyway" dance on
+   first launch.
+2. **Permissions don't stick** — macOS ties the Accessibility (TCC) grant to the
+   app's code-signing identity. With an unstable ad-hoc identity, a grant made to
+   the running app can be ignored until relaunch, and breaks again after each
+   update — the single biggest source of "I approved it but it didn't work."
+
+Signing with a **Developer ID Application** certificate and notarizing the zip
+fixes both. Outline:
+
+```bash
+# 1. Sign with a stable Developer ID identity (hardened runtime, keep entitlements)
+codesign --deep --force --options runtime \
+  --entitlements uttr.entitlements \
+  --sign "Developer ID Application: Your Name (TEAMID)" \
+  /path/to/uttr.app
+
+# 2. Notarize the zip and staple the ticket
+ditto -c -k --keepParent /path/to/uttr.app uttr.zip
+xcrun notarytool submit uttr.zip \
+  --apple-id "you@example.com" --team-id "TEAMID" \
+  --password "app-specific-password" --wait
+xcrun stapler staple /path/to/uttr.app
+
+# 3. Re-zip the stapled app for distribution
+ditto -c -k --keepParent /path/to/uttr.app uttr.zip
+```
+
+Once releases are notarized, drop the "Open Anyway" `caveats` note from the
+Homebrew cask (see [homebrew-tap.md](homebrew-tap.md)).
+
 ## Troubleshooting Releases
 
 ### Archive fails to build

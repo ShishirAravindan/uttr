@@ -7,15 +7,15 @@ This guide walks you through installing and setting up uttr.
 ### Option 1: Homebrew (Recommended)
 
 ```bash
-brew tap Rakk301/uttr
+brew tap ShishirAravindan/uttr
 brew install --cask uttr
 ```
 
-No additional dependencies required.
+No additional dependencies required. See [Homebrew Tap](homebrew-tap.md) for how the tap is published.
 
 ### Option 2: Download from Releases
 
-1. Download the latest `.zip` from [GitHub Releases](https://github.com/Rakk301/homebrew-uttr/releases)
+1. Download the latest `.zip` from [GitHub Releases](https://github.com/ShishirAravindan/uttr/releases)
 2. Extract and move `uttr.app` to `/Applications`
 
 ### Allowing the App (Gatekeeper)
@@ -29,26 +29,33 @@ Since the app is not notarized, macOS will block it on first launch:
 
 ## Required Permissions
 
+On first launch uttr asks for both permissions it needs, back to back:
+
 ### Microphone Access
 
-Required for recording your speech.
-
-- The app prompts automatically on first recording attempt
-- Or grant manually: **System Settings → Privacy & Security → Microphone**
+Required for recording your speech. An in-app prompt appears at launch — click
+**OK**. You can also grant it manually at **System Settings → Privacy & Security
+→ Microphone**.
 
 ### Accessibility Access
 
-Required for global hotkeys and pasting text at your cursor.
+Required for the global hotkey and pasting text at your cursor. uttr opens
+**System Settings → Privacy & Security → Accessibility** — toggle **uttr** on.
 
-- The app prompts automatically
-- Or grant manually: **System Settings → Privacy & Security → Accessibility**
+> **No restart needed.** As soon as you flip the Accessibility toggle and switch
+> back to uttr, the app detects the grant and registers the global hotkey
+> automatically. You can confirm both permissions show **Granted** under
+> **Settings → Permissions** in the app.
 
 ## First Run
 
 1. **Launch the app** — look for the icon in your menu bar
-2. **Grant permissions** — follow the prompts for Microphone and Accessibility
-3. **Press your hotkey** (default: `⌥L`) to start recording
-4. **Speak**, then press the hotkey again to stop
+2. **Grant permissions** — approve the Microphone prompt, then toggle uttr on in
+   the Accessibility list
+3. **Check status** — open **Settings → Permissions** to confirm both are
+   **Granted**
+4. **Press your hotkey** (default: `⌥L`) to start recording
+5. **Speak**, then press the hotkey again to stop
 
 The first transcription downloads the Parakeet model (~600 MB). Subsequent transcriptions are instant.
 

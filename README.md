@@ -9,7 +9,7 @@ Powered by [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) runnin
 ## Installation
 
 ```bash
-brew tap Rakk301/uttr
+brew tap ShishirAravindan/uttr
 brew install --cask uttr
 ```
 
@@ -39,6 +39,7 @@ See [Configuration Guide](docs/configuration.md) for all options.
 - [Configuration](docs/configuration.md) — All settings explained
 - [Architecture](docs/architecture.md) — How it works (for contributors)
 - [Development](docs/development.md) — Building from source
+- [Homebrew Tap](docs/homebrew-tap.md) — Publishing and maintaining the cask
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and fixes
 
 ## Requirements
