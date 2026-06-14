@@ -34,4 +34,4 @@ hotkey:
 
 ## Model Download
 
-FluidAudio downloads the Parakeet model (~600 MB) on the first `transcribe()` call. The model is cached in the system's ML model store and not re-downloaded on subsequent launches.
+FluidAudio downloads the Parakeet model (~600 MB) during `prepare()`, which runs at app launch (and again when the provider is switched). Until it finishes, the menu bar shows a loading state and recording is held; `transcribe()` is only reachable once the model is loaded. The model is cached in the system's ML model store and not re-downloaded on subsequent launches.

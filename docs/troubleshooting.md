@@ -57,9 +57,12 @@ If the app isn't in the list at all, open **Settings → Permissions → Accessi
 
 ## Transcription Issues
 
-### App seems to hang on first transcription
+### Menu bar shows a loading icon (`…`) on first launch
 
-This is normal. The first transcription triggers a one-time download of the Parakeet model (~600 MB). Wait for it to complete — subsequent transcriptions are instant.
+This is normal. On first launch uttr downloads the Parakeet model (~600 MB). The
+menu bar icon shows a loading state and recording is held until it's ready — if
+you press the hotkey too early you'll hear the error sound and the status reads
+"Loading…". Wait for the download to finish; it's cached afterwards and starts instantly.
 
 ### Poor accuracy
 

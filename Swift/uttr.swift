@@ -43,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindowController: NSWindowController?
 
     private var isRecording = false
+    private var isProviderReady = false
 
     // MARK: - App Lifecycle
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -143,12 +144,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func startTranscriptionProvider() {
+        isProviderReady = false
         settingsManager.providerStatus = "Loading…"
+        menuBarIconManager?.setLoadingState()
         Task { [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
             do {
                 try await provider.prepare()
                 await MainActor.run {
+                    self.isProviderReady = true
                     self.logger?.log("Transcription provider ready: \(provider.displayName)", level: .info)
                     self.updateProviderStatus()
                     self.notificationManager?.showAppInitializationSuccess()
@@ -223,6 +227,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func startRecording() {
         guard !isRecording else { return }
+
+        // Don't start a recording the model can't yet transcribe — otherwise the audio
+        // is captured and then lost to a confusing "not prepared" error.
+        guard isProviderReady else {
+            logger?.log("Recording blocked — transcription model still loading", level: .warning)
+            settingsManager.providerStatus = "Loading… (try again in a moment)"
+            notificationManager?.showTranscriptionError("Model still loading")
+            menuBarIconManager?.setLoadingState()
+            return
+        }
+
         do {
             try audioRecorder?.startRecording()
             isRecording = true

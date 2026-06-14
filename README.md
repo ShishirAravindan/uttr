@@ -9,8 +9,7 @@ Powered by [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) runnin
 ## Installation
 
 ```bash
-brew tap ShishirAravindan/uttr
-brew install --cask uttr
+brew install --cask ShishirAravindan/tap/uttr
 ```
 
 That's it. No Python, no `uv`, no setup.
@@ -23,7 +22,7 @@ That's it. No Python, no `uv`, no setup.
 4. Speak, then press the hotkey again to stop
 5. Transcribed text is pasted at your cursor
 
-The first transcription downloads the Parakeet model (~600 MB). Subsequent transcriptions are instant.
+On first launch, uttr downloads the Parakeet model (~600 MB) — the menu bar icon shows a loading state (`…`) until it's ready, and recording is held until then. After that it's cached and starts instantly.
 
 ## Configuration
 

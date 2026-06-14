@@ -79,7 +79,7 @@ Logs appear in Xcode console. Filter by component:
 - Check another app isn't using the same hotkey
 
 **Transcription fails on first run:**
-- The Parakeet model (~600 MB) downloads on first use — wait for completion
+- The Parakeet model (~600 MB) downloads at app launch (in `prepare()`) — wait for completion
 - Check network connectivity if download stalls
 
 ## Code Style

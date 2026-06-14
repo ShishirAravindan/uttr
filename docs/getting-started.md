@@ -7,8 +7,7 @@ This guide walks you through installing and setting up uttr.
 ### Option 1: Homebrew (Recommended)
 
 ```bash
-brew tap ShishirAravindan/uttr
-brew install --cask uttr
+brew install --cask ShishirAravindan/tap/uttr
 ```
 
 No additional dependencies required. See [Homebrew Tap](homebrew-tap.md) for how the tap is published.
@@ -57,7 +56,11 @@ Required for the global hotkey and pasting text at your cursor. uttr opens
 4. **Press your hotkey** (default: `⌥L`) to start recording
 5. **Speak**, then press the hotkey again to stop
 
-The first transcription downloads the Parakeet model (~600 MB). Subsequent transcriptions are instant.
+On first launch, uttr downloads the Parakeet model (~600 MB). The menu bar icon
+shows a loading state (`…`) while this happens, and recording is held until the
+model is ready — if you press the hotkey too early you'll hear the error sound and
+the status reads "Loading…". After the first download the model is cached and
+starts instantly.
 
 ## Using the App
 

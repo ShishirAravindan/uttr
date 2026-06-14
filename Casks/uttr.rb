@@ -1,11 +1,11 @@
 # Homebrew Cask formula for uttr
 #
-# This file is the recipe that lives in the tap repo (ShishirAravindan/homebrew-uttr,
-# under Casks/uttr.rb). See docs/homebrew-tap.md for the full setup and release flow.
+# This file is the recipe that lives in your single tap repo
+# (ShishirAravindan/homebrew-tap, under Casks/uttr.rb). One tap repo can hold all
+# your casks/formulae. See docs/homebrew-tap.md for the full setup and release flow.
 #
 # Install:
-#   brew tap ShishirAravindan/uttr
-#   brew install --cask uttr
+#   brew install --cask ShishirAravindan/tap/uttr
 #
 # On each release, update:
 #   - version: match the GitHub release tag (without the 'v' prefix)

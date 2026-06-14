@@ -24,10 +24,24 @@ class MenuBarIconManager: ObservableObject {
     init(statusItem: NSStatusItem) {
         self.statusItem = statusItem
         logger.log("[MenuBarIconManager] Initialized", level: .debug)
+        // Show a visible icon immediately so the menu bar item never appears empty
+        // while the model loads on launch.
+        if let button = statusItem.button {
+            button.alphaValue = 1.0
+            button.image = NSImage(systemSymbolName: "mic", accessibilityDescription: "uttr")?
+                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .bold))
+        }
     }
-    
+
     // MARK: - Public Methods
-    
+
+    /// Indicate the transcription model is still downloading/loading.
+    func setLoadingState() {
+        logger.log("[MenuBarIconManager] Setting loading state", level: .debug)
+        transitionToIcon("ellipsis.circle", withAnimation: true)
+        currentState = .processing
+    }
+
     /// Play the startup animation sequence
     func playStartupAnimation() {
         logger.log("[MenuBarIconManager] Playing startup animation", level: .debug)
