@@ -18,11 +18,13 @@ uttr/
 │   ├── HotkeyManager.swift         # Global hotkeys
 │   ├── Transcription/              # Provider protocol + implementations
 │   └── ...
-├── docs/                           # Documentation
-├── Casks/uttr.rb                   # Homebrew cask formula
+├── docs/                           # Documentation (incl. homebrew-tap.md)
 ├── uttr.xcodeproj/                 # Xcode project
 └── README.md
 ```
+
+> The Homebrew cask lives in a separate tap repo (`ShishirAravindan/homebrew-tap`),
+> not here. See [homebrew-tap.md](homebrew-tap.md).
 
 ## Building the App
 

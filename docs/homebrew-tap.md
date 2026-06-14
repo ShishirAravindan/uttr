@@ -78,8 +78,9 @@ mkdir -p Casks
 
 ### 2. Add the cask file
 
-Copy [`Casks/uttr.rb`](../Casks/uttr.rb) from this repo into `Casks/uttr.rb` in
-the tap repo. The canonical content is:
+Create `Casks/uttr.rb` in the tap repo (`ShishirAravindan/homebrew-tap`) with the
+canonical content below. (The cask lives only in the tap repo — it is intentionally
+not kept in the app source repo.)
 
 ```ruby
 cask "uttr" do
