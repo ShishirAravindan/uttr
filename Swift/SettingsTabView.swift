@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
+    @ObservedObject var permissions: PermissionManager
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @Environment(\.colorScheme) var scheme
 
@@ -9,6 +10,8 @@ struct SettingsTabView: View {
         ZStack(alignment: .top) {
             Color.windowBackground(for: scheme).ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
+                permissionsSection
+                Spacer().frame(height: 28)
                 transcriptionSection
                 Spacer().frame(height: 28)
                 hotkeySection
@@ -20,6 +23,7 @@ struct SettingsTabView: View {
             .padding(.horizontal, 28)
             .padding(.bottom, 28)
         }
+        .onAppear { permissions.refresh() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
             guard complete else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
@@ -30,6 +34,16 @@ struct SettingsTabView: View {
     }
 
     // MARK: - Sections
+
+    private var permissionsSection: some View {
+        SectionBlock(label: "Permissions") {
+            SettingsCard(scheme: scheme) {
+                PermissionRow(permission: .microphone, permissions: permissions, scheme: scheme)
+                RowDivider(scheme: scheme)
+                PermissionRow(permission: .accessibility, permissions: permissions, scheme: scheme)
+            }
+        }
+    }
 
     private var transcriptionSection: some View {
         SectionBlock(label: "Transcription") {
@@ -191,6 +205,50 @@ private struct RowDivider: View {
     }
 }
 
+// MARK: - Permission row
+
+private struct PermissionRow: View {
+    let permission: PermissionType
+    @ObservedObject var permissions: PermissionManager
+    let scheme: ColorScheme
+
+    private var status: PermissionManager.PermissionStatus { permissions.status(for: permission) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: status.icon)
+                .font(.system(size: 14))
+                .foregroundColor(Color(nsColor: status.color))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(permission.displayName)
+                    .font(.system(size: 13))
+                    .foregroundColor(.textPrimary(for: scheme))
+                Text(permission.description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.textTertiary(for: scheme))
+            }
+
+            Spacer()
+
+            Text(status.displayText)
+                .font(.system(size: 12))
+                .foregroundColor(.textSecondary(for: scheme))
+
+            Button(permissions.primaryActionText(for: permission)) {
+                permissions.performPrimaryAction(for: permission)
+            }
+            .font(.system(size: 12))
+            .foregroundColor(.accentLink(for: scheme))
+            .buttonStyle(.plain)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+    }
+}
+
 // MARK: - Provider picker
 
 private struct ProviderMenu: View {
@@ -303,6 +361,6 @@ private struct KeycapView: View {
 }
 
 #Preview {
-    SettingsTabView(settings: SettingsManager())
+    SettingsTabView(settings: SettingsManager(), permissions: PermissionManager())
         .frame(width: 520, height: 480)
 }

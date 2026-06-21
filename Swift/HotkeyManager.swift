@@ -78,49 +78,21 @@ class HotkeyManager {
         // First, set up the local hotkey which always works
         setupLocalHotkey()
         
-        // Then, attempt to set up the global hotkey
+        // Then, attempt to set up the global hotkey. Accessibility may not be granted
+        // yet — that's fine: PermissionManager owns prompting and, once the user grants
+        // it, the app calls `refreshHotkeyConfiguration()` to register the global hotkey
+        // live. The local monitor keeps the hotkey working in the meantime whenever
+        // the app is frontmost.
         do {
             try setupGlobalHotkey()
         } catch {
             logger.logError(error, context: "Failed to register global hotkey")
             if let error = error as? HotkeyManagerError, case .permissionDenied = error {
                 logAccessibilityInstructions()
-                // Start polling for permission grant
-                startAccessibilityPermissionPolling()
             }
         }
     }
-    
-    // MARK: - Accessibility Polling
-    private var permissionPollingTimer: Timer?
-    
-    private func startAccessibilityPermissionPolling() {
-        // Poll every 2 seconds to check if user granted permission
-        permissionPollingTimer?.invalidate()
-        permissionPollingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                timer.invalidate()
-                return
-            }
-            
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): kCFBooleanFalse]
-            let isTrusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
-            
-            if isTrusted {
-                self.logger.log("[HotkeyManager] Accessibility permission granted! Registering global hotkey...", level: .info)
-                timer.invalidate()
-                self.permissionPollingTimer = nil
-                
-                // Re-attempt to register global hotkey
-                do {
-                    try self.setupGlobalHotkey()
-                } catch {
-                    self.logger.logError(error, context: "Failed to register global hotkey after permission grant")
-                }
-            }
-        }
-    }
-    
+
     // MARK: - Global Hotkey (Carbon)
     private func setupGlobalHotkey() throws {
         guard checkAccessibilityPermissions() else {
@@ -265,28 +237,16 @@ class HotkeyManager {
     }
 
     private func checkAccessibilityPermissions() -> Bool {
-        // First check without prompting
+        // Check without prompting — PermissionManager owns prompting and re-triggers
+        // registration via refreshHotkeyConfiguration() once the grant lands.
         let checkOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): kCFBooleanFalse]
-        let isTrusted = AXIsProcessTrustedWithOptions(checkOptions as CFDictionary)
-        
-        if !isTrusted {
-            // Prompt the user to grant permissions
-            logger.log("[HotkeyManager] Accessibility not granted, prompting user...", level: .info)
-            let promptOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): kCFBooleanTrue]
-            _ = AXIsProcessTrustedWithOptions(promptOptions as CFDictionary)
-        }
-        
-        return isTrusted
+        return AXIsProcessTrustedWithOptions(checkOptions as CFDictionary)
     }
     
     // MARK: - Cleanup
     private func cleanup() {
         logger.log("[HotkeyManager] Cleaning up hotkey resources", level: .debug)
-        
-        // Stop permission polling timer
-        permissionPollingTimer?.invalidate()
-        permissionPollingTimer = nil
-        
+
         // Clean up global hotkeys
         if let hotkeyRef = transcribeHotkeyRef {
             UnregisterEventHotKey(hotkeyRef)

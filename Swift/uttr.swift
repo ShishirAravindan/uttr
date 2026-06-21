@@ -8,7 +8,10 @@ struct uttr: App {
 
     var body: some Scene {
         Settings {
-            SettingsWindowView(settings: appDelegate.settingsManager)
+            SettingsWindowView(
+                settings: appDelegate.settingsManager,
+                permissions: appDelegate.permissionManager
+            )
         }
         .defaultSize(width: 520, height: 480)
     }
@@ -24,6 +27,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var transcriptionProvider: TranscriptionProvider?
     private var logger: Logger?
     let settingsManager = SettingsManager()
+    let permissionManager = PermissionManager()
     private var notificationManager: NotificationManager?
     private var popoverViewModel = PopoverViewModel()
     private var popover: NSPopover?
@@ -39,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindowController: NSWindowController?
 
     private var isRecording = false
+    private var isProviderReady = false
 
     // MARK: - App Lifecycle
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -46,11 +51,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         setupComponents()
         setupMenuBar()
         startTranscriptionProvider()
+        requestPermissions()
         logger?.log("=== App Setup Complete ===", level: .info)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         cleanup()
+    }
+
+    // MARK: - Permissions
+
+    /// Runs the first-run permission flow and re-registers the global hotkey the
+    /// instant Accessibility is granted, so the user never has to quit and relaunch.
+    private func requestPermissions() {
+        NotificationCenter.default.addObserver(
+            forName: .accessibilityPermissionGranted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.logger?.log("Accessibility granted — re-registering global hotkey", level: .info)
+            self?.hotkeyManager?.refreshHotkeyConfiguration()
+        }
+
+        if !permissionManager.hasAllPermissions {
+            permissionManager.requestPermissionsForOnboarding()
+        }
     }
 
     // MARK: - Setup
@@ -121,12 +146,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func startTranscriptionProvider() {
+        isProviderReady = false
         settingsManager.providerStatus = "Loading…"
+        menuBarIconManager?.setLoadingState()
         Task { [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
             do {
                 try await provider.prepare()
                 await MainActor.run {
+                    self.isProviderReady = true
                     self.logger?.log("Transcription provider ready: \(provider.displayName)", level: .info)
                     self.updateProviderStatus()
                     self.notificationManager?.showAppInitializationSuccess()
@@ -201,6 +229,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func startRecording() {
         guard !isRecording else { return }
+
+        // Don't start a recording the model can't yet transcribe — the audio would
+        // be captured and then lost to a confusing "not prepared" error.
+        guard isProviderReady else {
+            logger?.log("Recording blocked — transcription model still loading", level: .warning)
+            settingsManager.providerStatus = "Loading… (try again in a moment)"
+            notificationManager?.showTranscriptionError("Model still loading")
+            menuBarIconManager?.setLoadingState()
+            return
+        }
+
         do {
             try audioRecorder?.startRecording()
             isRecording = true
@@ -284,7 +323,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         if settingsWindow == nil {
             let hostingController = NSHostingController(
-                rootView: SettingsWindowView(settings: settingsManager)
+                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager)
             )
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"
