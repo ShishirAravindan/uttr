@@ -1,13 +1,8 @@
 name: Build
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
-
-permissions:
-  contents: write
 
 jobs:
   build-macos:
@@ -17,8 +12,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -35,18 +28,3 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
-
-      - name: Tag and trigger release
-        if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          MAJOR=$(echo $LATEST | sed 's/v//' | cut -d. -f1)
-          MINOR=$(echo $LATEST | cut -d. -f2)
-          PATCH=$(echo $LATEST | cut -d. -f3)
-          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag $NEW_TAG
-          git push https://x-access-token:${GH_TOKEN}@github.com/ShishirAravindan/uttr.git $NEW_TAG

@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
   contents: write
@@ -12,19 +11,19 @@ jobs:
   build-and-release:
     name: Build and Release
     runs-on: macos-14
-    outputs:
-      sha256: ${{ steps.sha.outputs.sha256 }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: '16.1'
 
-      - name: Build App for Release
+      - name: Build App
         run: |
           xcodebuild -project uttr.xcodeproj \
             -scheme uttr \
@@ -40,15 +39,30 @@ jobs:
           cd $RUNNER_TEMP/DerivedData/Build/Products/Release
           zip -r $RUNNER_TEMP/uttr.zip uttr.app
 
-      - name: Get SHA256
+      - name: Compute SHA256
         id: sha
         run: |
           SHA=$(shasum -a 256 $RUNNER_TEMP/uttr.zip | awk '{print $1}')
           echo "sha256=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Bump version tag
+        id: tag
+        run: |
+          LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          MAJOR=$(echo $LATEST | sed 's/v//' | cut -d. -f1)
+          MINOR=$(echo $LATEST | cut -d. -f2)
+          PATCH=$(echo $LATEST | cut -d. -f3)
+          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag $NEW_TAG
+          git push origin $NEW_TAG
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ runner.temp }}/uttr.zip
           body: |
             ## Installation
@@ -71,30 +85,26 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update-tap:
-    name: Update Homebrew Tap
-    needs: build-and-release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout tap
+      - name: Update Homebrew tap
         uses: actions/checkout@v4
         with:
           repository: ShishirAravindan/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
 
-      - name: Bump version and sha256 in cask
+      - name: Bump cask version and sha256
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          SHA="${{ needs.build-and-release.outputs.sha256 }}"
-          sed -i "s/version \".*\"/version \"$VERSION\"/" Casks/uttr.rb
-          sed -i "s/sha256 \".*\"/sha256 \"$SHA\"/" Casks/uttr.rb
+          VERSION="${{ steps.tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          sed -i "s/version \".*\"/version \"$VERSION\"/" homebrew-tap/Casks/uttr.rb
+          sed -i "s/sha256 \".*\"/sha256 \"${{ steps.sha.outputs.sha256 }}\"/" homebrew-tap/Casks/uttr.rb
 
       - name: Open PR in tap repo
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          commit-message: "chore: bump uttr to ${{ github.ref_name }}"
-          title: "chore: bump uttr to ${{ github.ref_name }}"
-          body: "Automated cask update for release [${{ github.ref_name }}](https://github.com/ShishirAravindan/uttr/releases/tag/${{ github.ref_name }})."
-          branch: "bump/uttr-${{ github.ref_name }}"
+          path: homebrew-tap
+          commit-message: "chore: bump uttr to ${{ steps.tag.outputs.tag }}"
+          title: "chore: bump uttr to ${{ steps.tag.outputs.tag }}"
+          body: "Automated cask update for release [${{ steps.tag.outputs.tag }}](https://github.com/ShishirAravindan/uttr/releases/tag/${{ steps.tag.outputs.tag }})."
+          branch: "bump/uttr-${{ steps.tag.outputs.tag }}"
