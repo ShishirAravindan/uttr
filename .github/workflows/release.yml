@@ -12,6 +12,8 @@ jobs:
   build-and-release:
     name: Build and Release
     runs-on: macos-14
+    outputs:
+      sha256: ${{ steps.sha.outputs.sha256 }}
 
     steps:
       - name: Checkout
@@ -53,6 +55,7 @@ jobs:
 
             ### Homebrew (Recommended)
             ```bash
+            brew tap ShishirAravindan/tap
             brew install --cask uttr
             ```
 
@@ -67,3 +70,31 @@ jobs:
             ```
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-tap:
+    name: Update Homebrew Tap
+    needs: build-and-release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+        with:
+          repository: ShishirAravindan/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Bump version and sha256 in cask
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA="${{ needs.build-and-release.outputs.sha256 }}"
+          sed -i "s/version \".*\"/version \"$VERSION\"/" Casks/uttr.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA\"/" Casks/uttr.rb
+
+      - name: Open PR in tap repo
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          commit-message: "chore: bump uttr to ${{ github.ref_name }}"
+          title: "chore: bump uttr to ${{ github.ref_name }}"
+          body: "Automated cask update for release [${{ github.ref_name }}](https://github.com/ShishirAravindan/uttr/releases/tag/${{ github.ref_name }})."
+          branch: "bump/uttr-${{ github.ref_name }}"
