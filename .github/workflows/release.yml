@@ -96,8 +96,8 @@ jobs:
         run: |
           VERSION="${{ steps.tag.outputs.tag }}"
           VERSION="${VERSION#v}"
-          sed -i "s/version \".*\"/version \"$VERSION\"/" homebrew-tap/Casks/uttr.rb
-          sed -i "s/sha256 \".*\"/sha256 \"${{ steps.sha.outputs.sha256 }}\"/" homebrew-tap/Casks/uttr.rb
+          sed -i '' "s/version \".*\"/version \"$VERSION\"/" homebrew-tap/Casks/uttr.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"${{ steps.sha.outputs.sha256 }}\"/" homebrew-tap/Casks/uttr.rb
 
       - name: Open PR in tap repo
         uses: peter-evans/create-pull-request@v6
