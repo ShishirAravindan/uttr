@@ -146,6 +146,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func startTranscriptionProvider() {
         settingsManager.providerStatus = "Loading…"
+        menuBarIconManager?.setLoadingState()
         Task { [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
             do {
