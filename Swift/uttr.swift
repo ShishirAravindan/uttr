@@ -8,7 +8,10 @@ struct uttr: App {
 
     var body: some Scene {
         Settings {
-            SettingsWindowView(settings: appDelegate.settingsManager)
+            SettingsWindowView(
+                settings: appDelegate.settingsManager,
+                permissions: appDelegate.permissionManager
+            )
         }
         .defaultSize(width: 520, height: 480)
     }
@@ -24,6 +27,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var transcriptionProvider: TranscriptionProvider?
     private var logger: Logger?
     let settingsManager = SettingsManager()
+    let permissionManager = PermissionManager()
     private var notificationManager: NotificationManager?
     private var popoverViewModel = PopoverViewModel()
     private var popover: NSPopover?
@@ -46,11 +50,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         setupComponents()
         setupMenuBar()
         startTranscriptionProvider()
+        requestPermissions()
         logger?.log("=== App Setup Complete ===", level: .info)
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         cleanup()
+    }
+
+    // MARK: - Permissions
+
+    /// Runs the first-run permission flow and re-registers the global hotkey the
+    /// instant Accessibility is granted, so the user never has to quit and relaunch.
+    private func requestPermissions() {
+        NotificationCenter.default.addObserver(
+            forName: .accessibilityPermissionGranted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.logger?.log("Accessibility granted — re-registering global hotkey", level: .info)
+            self?.hotkeyManager?.refreshHotkeyConfiguration()
+        }
+
+        if !permissionManager.hasAllPermissions {
+            permissionManager.requestPermissionsForOnboarding()
+        }
     }
 
     // MARK: - Setup
@@ -284,7 +308,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         if settingsWindow == nil {
             let hostingController = NSHostingController(
-                rootView: SettingsWindowView(settings: settingsManager)
+                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager)
             )
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"
