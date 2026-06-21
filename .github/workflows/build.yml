@@ -38,6 +38,8 @@ jobs:
 
       - name: Tag and trigger release
         if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
           MAJOR=$(echo $LATEST | sed 's/v//' | cut -d. -f1)
@@ -47,4 +49,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag $NEW_TAG
-          git push origin $NEW_TAG
+          git push https://x-access-token:${GH_TOKEN}@github.com/ShishirAravindan/uttr.git $NEW_TAG
