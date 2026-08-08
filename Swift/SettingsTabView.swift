@@ -267,13 +267,21 @@ private struct ProviderMenu: View {
                 Button(label) { selection = tag; onChange(tag) }
             }
         } label: {
-            pickerLabel(options.first(where: { $0.0 == selection })?.1 ?? "", minWidth: 220)
+            PickerLabel(text: options.first(where: { $0.0 == selection })?.1 ?? "", scheme: scheme)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
     }
+}
 
-    private func pickerLabel(_ text: String, minWidth: CGFloat) -> some View {
+// MARK: - Picker chrome
+
+private struct PickerLabel: View {
+    let text: String
+    let scheme: ColorScheme
+    var minWidth: CGFloat = 220
+
+    var body: some View {
         HStack(spacing: 6) {
             Text(text)
                 .font(.system(size: 13))
