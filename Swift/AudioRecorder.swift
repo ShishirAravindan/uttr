@@ -1,3 +1,4 @@
+import AudioToolbox
 import AVFoundation
 import Foundation
 
@@ -19,8 +20,13 @@ enum AudioRecorderError: Error, LocalizedError {
 }
 
 class AudioRecorder {
-    
+
     // MARK: - Properties
+
+    /// Core Audio UID of the device to capture from. `nil` follows whatever the
+    /// system default input is at the time of each recording.
+    var preferredInputDeviceUID: String?
+
     private var audioEngine: AVAudioEngine?
     private var inputNode: AVAudioInputNode?
     private var audioFile: AVAudioFile?
@@ -55,17 +61,28 @@ class AudioRecorder {
         audioEngine = engine
         let input = engine.inputNode
         inputNode = input
-        
+
+        // Pin the capture device before anything reads a format off the node —
+        // switching devices reconfigures the I/O unit's busses.
+        let isPinnedToDevice = applyPreferredInputDevice(to: input)
+
         // Get the native format from the input node
         let format = input.inputFormat(forBus: 0)
         currentSampleRate = format.sampleRate
         framesWritten = 0
-        
-        // Drive the graph so the tap receives buffers even during route changes
-        let mainMixer = engine.mainMixerNode
-        mainMixer.outputVolume = 0.0
-        engine.connect(input, to: mainMixer, format: format)
-        
+
+        // Drive the graph so the tap receives buffers even during route changes.
+        // Skipped when a device is pinned: the engine's input and output nodes
+        // share one I/O unit, so overriding the capture device drags the output
+        // side onto it too, and a capture-only device (most USB mics) leaves the
+        // output bus with an empty format that `connect` rejects. A pinned device
+        // doesn't follow route changes anyway, so a tap-only graph loses nothing.
+        if !isPinnedToDevice {
+            let mainMixer = engine.mainMixerNode
+            mainMixer.outputVolume = 0.0
+            engine.connect(input, to: mainMixer, format: format)
+        }
+
         // Create audio file
         do {
             audioFile = try AVAudioFile(forWriting: url, settings: format.settings)
@@ -127,7 +144,33 @@ class AudioRecorder {
     }
     
     // MARK: - Private Methods
-    
+
+    /// Points the engine's I/O unit at `preferredInputDeviceUID`.
+    ///
+    /// `AVAudioEngine` has no device-selection API — its input node follows the
+    /// system default. `AUAudioUnit.setDeviceID(_:)` reaches the HAL unit behind
+    /// the node and is the supported override on macOS.
+    ///
+    /// Returns `true` only when the override actually took effect; every failure
+    /// falls back to the system default rather than blocking the recording.
+    private func applyPreferredInputDevice(to input: AVAudioInputNode) -> Bool {
+        guard let uid = preferredInputDeviceUID else { return false }
+
+        guard let deviceID = AudioDeviceManager.deviceID(forUID: uid) else {
+            logger?.log("Input device \(uid) is not connected — using the system default", level: .warning)
+            return false
+        }
+
+        do {
+            try input.auAudioUnit.setDeviceID(deviceID)
+            logger?.log("Capturing from input device \(uid)", level: .debug)
+            return true
+        } catch {
+            logger?.logError(error, context: "Failed to select input device \(uid), using the system default")
+            return false
+        }
+    }
+
     private func createTemporaryAudioFile() -> URL? {
         let tempDir = FileManager.default.temporaryDirectory
         let timestamp = Int(Date().timeIntervalSince1970)
