@@ -85,6 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         notificationManager = NotificationManager()
         audioRecorder = AudioRecorder()
+        audioRecorder?.preferredInputDeviceUID = settingsManager.inputDeviceUID
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
@@ -109,6 +110,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             object: nil,
             queue: .main
         ) { [weak self] _ in self?.handleSettingsChanged() }
+
+        // The recorder builds a fresh engine per recording, so the new device
+        // takes effect on the next one — no need to rebuild anything here.
+        NotificationCenter.default.addObserver(
+            forName: .inputDeviceChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.audioRecorder?.preferredInputDeviceUID = self.settingsManager.inputDeviceUID
+        }
 
         NotificationCenter.default.addObserver(
             forName: .hotkeyChanged,

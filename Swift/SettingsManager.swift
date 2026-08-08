@@ -13,17 +13,30 @@ struct FluidAudioSettings: Codable {
     }
 }
 
+struct AudioSettings: Codable {
+    /// Core Audio device UID. `nil` follows the system default input.
+    var inputDeviceUID: String?
+
+    enum CodingKeys: String, CodingKey {
+        case inputDeviceUID = "input_device_uid"
+    }
+}
+
 // MARK: - Serialization schema (written to disk)
 
 private struct SerializedAppConfig: Codable {
     var provider: String
     var fluidAudio: FluidAudioSettings
     var hotkey: HotkeyConfig
+    /// Optional so configs written before input-device selection still decode —
+    /// a decode failure here would reset every other setting.
+    var audio: AudioSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
         case fluidAudio = "fluid_audio"
         case hotkey
+        case audio
     }
 }
 
@@ -43,6 +56,7 @@ struct HotkeyConfig: Codable {
 
 extension Notification.Name {
     static let transcriptionProviderChanged = Notification.Name("transcriptionProviderChanged")
+    static let inputDeviceChanged = Notification.Name("inputDeviceChanged")
     static let hotkeyChanged = Notification.Name("hotkeyChanged")
     static let hotkeySettingsChanged = Notification.Name("hotkeySettingsChanged")
 }
@@ -55,6 +69,9 @@ class SettingsManager: ObservableObject {
 
     @Published var transcriptionProviderID: String = "fluidaudio.parakeet.v3"
     @Published var fluidAudio: FluidAudioSettings = .init()
+
+    /// `nil` = follow the system default input device.
+    @Published var inputDeviceUID: String?
 
     @Published var hotkeyKeyCode: Int = 37  // L key
     @Published var hotkeyModifiers: [String] = ["option"]
@@ -105,7 +122,8 @@ class SettingsManager: ObservableObject {
             let config = SerializedAppConfig(
                 provider: transcriptionProviderID,
                 fluidAudio: fluidAudio,
-                hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers)
+                hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
+                audio: AudioSettings(inputDeviceUID: inputDeviceUID)
             )
 
             let encoder = YAMLEncoder()
@@ -127,6 +145,14 @@ class SettingsManager: ObservableObject {
         transcriptionProviderID = providerID
         NotificationCenter.default.post(name: .transcriptionProviderChanged, object: self)
         logger.log("Transcription provider changed to: \(providerID)", level: .info)
+        saveSettings()
+    }
+
+    /// - Parameter uid: Core Audio device UID, or `nil` to follow the system default.
+    func updateInputDevice(_ uid: String?) {
+        inputDeviceUID = uid
+        NotificationCenter.default.post(name: .inputDeviceChanged, object: self)
+        logger.log("Input device changed to: \(uid ?? "system default")", level: .info)
         saveSettings()
     }
 
@@ -163,6 +189,7 @@ class SettingsManager: ObservableObject {
         fluidAudio = config.fluidAudio
         hotkeyKeyCode = config.hotkey.keyCode
         hotkeyModifiers = config.hotkey.modifiers
+        inputDeviceUID = config.audio?.inputDeviceUID
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -174,6 +201,7 @@ class SettingsManager: ObservableObject {
         fluidAudio = FluidAudioSettings()
         hotkeyKeyCode = 37
         hotkeyModifiers = ["option"]
+        inputDeviceUID = nil
         logger.log("Default settings applied", level: .info)
     }
 
