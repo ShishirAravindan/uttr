@@ -13,7 +13,7 @@ struct uttr: App {
                 permissions: appDelegate.permissionManager
             )
         }
-        .defaultSize(width: 520, height: 480)
+        .defaultSize(width: 520, height: 580)
     }
 }
 
@@ -340,7 +340,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"
             settingsWindow?.styleMask = [.titled, .closable, .miniaturizable]
-            settingsWindow?.setContentSize(NSSize(width: 520, height: 480))
+            settingsWindow?.setContentSize(NSSize(width: 520, height: 580))
             settingsWindow?.center()
             settingsWindow?.delegate = self
             settingsWindowController = NSWindowController(window: settingsWindow)

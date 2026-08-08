@@ -4,6 +4,7 @@ struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
+    @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
 
     var body: some View {
@@ -11,6 +12,8 @@ struct SettingsTabView: View {
             Color.windowBackground(for: scheme).ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
                 permissionsSection
+                Spacer().frame(height: 28)
+                audioSection
                 Spacer().frame(height: 28)
                 transcriptionSection
                 Spacer().frame(height: 28)
@@ -41,6 +44,23 @@ struct SettingsTabView: View {
                 PermissionRow(permission: .microphone, permissions: permissions, scheme: scheme)
                 RowDivider(scheme: scheme)
                 PermissionRow(permission: .accessibility, permissions: permissions, scheme: scheme)
+            }
+        }
+    }
+
+    private var audioSection: some View {
+        SectionBlock(label: "Audio") {
+            SettingsCard(scheme: scheme) {
+                SettingRow(label: "Input device", scheme: scheme) {
+                    InputDeviceMenu(
+                        selection: settings.inputDeviceUID,
+                        devices: audioDevices.inputDevices,
+                        systemDefaultName: audioDevices.systemDefaultInputName,
+                        scheme: scheme
+                    ) {
+                        settings.updateInputDevice($0)
+                    }
+                }
             }
         }
     }
@@ -274,6 +294,43 @@ private struct ProviderMenu: View {
     }
 }
 
+// MARK: - Input device picker
+
+private struct InputDeviceMenu: View {
+    /// Core Audio device UID, or `nil` for the system default.
+    let selection: String?
+    let devices: [AudioInputDevice]
+    let systemDefaultName: String?
+    let scheme: ColorScheme
+    let onChange: (String?) -> Void
+
+    var body: some View {
+        Menu {
+            Button(systemDefaultLabel) { onChange(nil) }
+            if !devices.isEmpty { Divider() }
+            ForEach(devices) { device in
+                Button(device.name) { onChange(device.uid) }
+            }
+        } label: {
+            PickerLabel(text: currentLabel, scheme: scheme)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private var systemDefaultLabel: String {
+        guard let systemDefaultName else { return "System default" }
+        return "System default — \(systemDefaultName)"
+    }
+
+    /// A pinned device that isn't in the list has been unplugged — the recorder
+    /// falls back to the system default, so say so rather than showing a blank.
+    private var currentLabel: String {
+        guard let selection else { return systemDefaultLabel }
+        return devices.first(where: { $0.uid == selection })?.name ?? "Not connected — using default"
+    }
+}
+
 // MARK: - Picker chrome
 
 private struct PickerLabel: View {
@@ -370,5 +427,5 @@ private struct KeycapView: View {
 
 #Preview {
     SettingsTabView(settings: SettingsManager(), permissions: PermissionManager())
-        .frame(width: 520, height: 480)
+        .frame(width: 520, height: 580)
 }
