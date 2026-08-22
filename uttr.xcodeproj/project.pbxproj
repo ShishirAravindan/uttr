@@ -28,6 +28,7 @@
 		6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */; };
 		AA1100022E9B000000000001 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1100012E9B000000000001 /* DesignTokens.swift */; };
 		AA1100042E9B000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA1100032E9B000000000001 /* Assets.xcassets */; };
+		AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1300012E9B000000000001 /* AudioDeviceManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +54,7 @@
 		6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FluidAudioProvider.swift; path = Swift/Transcription/FluidAudioProvider.swift; sourceTree = "<group>"; };
 		AA1100012E9B000000000001 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DesignTokens.swift; path = Swift/Design/DesignTokens.swift; sourceTree = "<group>"; };
 		AA1100032E9B000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB1300012E9B000000000001 /* AudioDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioDeviceManager.swift; path = Swift/AudioDeviceManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +85,7 @@
 				00EA51712E24D1F100BE5FC7 /* PasteManager.swift */,
 				00EA516E2E24C49D00BE5FC7 /* uttr.entitlements */,
 				00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */,
+				AB1300012E9B000000000001 /* AudioDeviceManager.swift */,
 				00EA516B2E24C16D00BE5FC7 /* uttr.swift */,
 				00869A142E56E33600D65D58 /* MenuBarIconManager.swift */,
 				000968732E24DD7C000173E2 /* HotkeyManager.swift */,
@@ -198,6 +201,7 @@
 				6A8FDBE72E8E057900D3C68F /* HomeTabView.swift in Sources */,
 				00EA51702E24D05200BE5FC7 /* Logger.swift in Sources */,
 				00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */,
+				AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */,
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */,
 				AA1100022E9B000000000001 /* DesignTokens.swift in Sources */,

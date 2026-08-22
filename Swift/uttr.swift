@@ -13,7 +13,7 @@ struct uttr: App {
                 permissions: appDelegate.permissionManager
             )
         }
-        .defaultSize(width: 520, height: 480)
+        .defaultSize(width: 520, height: 580)
     }
 }
 
@@ -85,6 +85,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         notificationManager = NotificationManager()
         audioRecorder = AudioRecorder()
+        audioRecorder?.preferredInputDeviceUID = settingsManager.inputDeviceUID
+        audioRecorder?.onInterrupted = { [weak self] in
+            self?.handleRecordingInterrupted()
+        }
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
@@ -109,6 +113,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             object: nil,
             queue: .main
         ) { [weak self] _ in self?.handleSettingsChanged() }
+
+        // The recorder builds a fresh engine per recording, so the new device
+        // takes effect on the next one — no need to rebuild anything here.
+        NotificationCenter.default.addObserver(
+            forName: .inputDeviceChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.audioRecorder?.preferredInputDeviceUID = self.settingsManager.inputDeviceUID
+        }
 
         NotificationCenter.default.addObserver(
             forName: .hotkeyChanged,
@@ -272,6 +287,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         processAudioFile(audioFileURL)
     }
 
+    /// Some devices only hold a pinned capture format for a couple of seconds
+    /// before CoreAudio forces the engine to stop (see `AudioRecorderInterruption`).
+    /// The recording is already discarded by the time this fires — surface it
+    /// rather than silently returning to the idle state.
+    private func handleRecordingInterrupted() {
+        guard isRecording else { return }
+
+        isRecording = false
+        popoverViewModel.isRecording = false
+        logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
+        notificationManager?.showTranscriptionError("Microphone disconnected")
+        menuBarIconManager?.showErrorState()
+    }
+
     private func processAudioFile(_ audioFileURL: URL) {
         logger?.log("Starting audio file processing for: \(audioFileURL.path)", level: .info)
         Task { [weak self] in
@@ -328,7 +357,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"
             settingsWindow?.styleMask = [.titled, .closable, .miniaturizable]
-            settingsWindow?.setContentSize(NSSize(width: 520, height: 480))
+            settingsWindow?.setContentSize(NSSize(width: 520, height: 580))
             settingsWindow?.center()
             settingsWindow?.delegate = self
             settingsWindowController = NSWindowController(window: settingsWindow)
