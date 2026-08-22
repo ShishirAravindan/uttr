@@ -91,7 +91,7 @@ final class AudioDeviceManager: ObservableObject {
             return []
         }
 
-        return deviceIDs.filter { hasInputChannels($0) }
+        return deviceIDs.filter { hasInputChannels($0) && !isPrivateAggregate($0) }
     }
 
     private static func defaultInputDeviceID() -> AudioDeviceID? {
@@ -140,6 +140,30 @@ final class AudioDeviceManager: ObservableObject {
             storage.assumingMemoryBound(to: AudioBufferList.self)
         )
         return buffers.contains { $0.mNumberChannels > 0 }
+    }
+
+    /// Filters out `CADefaultDeviceAggregate-*` — the private aggregate device
+    /// `AVAudioEngine` creates behind its own input node, visible here only
+    /// because "private" hides it from other processes, not its own creator.
+    private static func isPrivateAggregate(_ deviceID: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioAggregateDevicePropertyComposition,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        var dataSize: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(deviceID, &address, 0, nil, &dataSize) == noErr else {
+            return false
+        }
+
+        var composition: CFDictionary?
+        let status = withUnsafeMutablePointer(to: &composition) {
+            AudioObjectGetPropertyData(deviceID, &address, 0, nil, &dataSize, $0)
+        }
+        guard status == noErr, let composition = composition as? [String: Any] else { return false }
+
+        return (composition[kAudioAggregateDeviceIsPrivateKey] as? NSNumber)?.boolValue ?? false
     }
 
     private static func string(_ selector: AudioObjectPropertySelector, of deviceID: AudioDeviceID) -> String? {
