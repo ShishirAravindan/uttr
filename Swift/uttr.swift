@@ -86,6 +86,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         notificationManager = NotificationManager()
         audioRecorder = AudioRecorder()
         audioRecorder?.preferredInputDeviceUID = settingsManager.inputDeviceUID
+        audioRecorder?.onInterrupted = { [weak self] in
+            self?.handleRecordingInterrupted()
+        }
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
@@ -282,6 +285,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         logger?.log("Audio file successfully saved to: \(audioFileURL.path)", level: .debug)
         menuBarIconManager?.setProcessingState()
         processAudioFile(audioFileURL)
+    }
+
+    /// Some devices only hold a pinned capture format for a couple of seconds
+    /// before CoreAudio forces the engine to stop (see `AudioRecorderInterruption`).
+    /// The recording is already discarded by the time this fires — surface it
+    /// rather than silently returning to the idle state.
+    private func handleRecordingInterrupted() {
+        guard isRecording else { return }
+
+        isRecording = false
+        popoverViewModel.isRecording = false
+        logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
+        notificationManager?.showTranscriptionError("Microphone disconnected")
+        menuBarIconManager?.showErrorState()
     }
 
     private func processAudioFile(_ audioFileURL: URL) {
