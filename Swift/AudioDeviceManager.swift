@@ -74,6 +74,11 @@ final class AudioDeviceManager: ObservableObject {
         inputDeviceIDs().first { uid(of: $0) == target }
     }
 
+    /// Whether a device publishes at least one output channel.
+    static func hasOutputChannels(_ deviceID: AudioDeviceID) -> Bool {
+        hasChannels(deviceID, scope: kAudioObjectPropertyScopeOutput)
+    }
+
     // MARK: - Core Audio Queries
 
     private static func inputDeviceIDs() -> [AudioDeviceID] {
@@ -116,9 +121,13 @@ final class AudioDeviceManager: ObservableObject {
     /// A device qualifies as an input if it publishes at least one channel on
     /// its input scope — this is what filters out speakers and virtual outputs.
     private static func hasInputChannels(_ deviceID: AudioDeviceID) -> Bool {
+        hasChannels(deviceID, scope: kAudioObjectPropertyScopeInput)
+    }
+
+    private static func hasChannels(_ deviceID: AudioDeviceID, scope: AudioObjectPropertyScope) -> Bool {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyStreamConfiguration,
-            mScope: kAudioObjectPropertyScopeInput,
+            mScope: scope,
             mElement: kAudioObjectPropertyElementMain
         )
 

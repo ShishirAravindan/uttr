@@ -64,20 +64,18 @@ class AudioRecorder {
 
         // Pin the capture device before anything reads a format off the node —
         // switching devices reconfigures the I/O unit's busses.
-        let isPinnedToDevice = applyPreferredInputDevice(to: input)
+        let pinnedDeviceID = applyPreferredInputDevice(to: input)
 
         // Get the native format from the input node
         let format = input.inputFormat(forBus: 0)
         currentSampleRate = format.sampleRate
         framesWritten = 0
 
-        // Drive the graph so the tap receives buffers even during route changes.
-        // Skipped when a device is pinned: the engine's input and output nodes
-        // share one I/O unit, so overriding the capture device drags the output
-        // side onto it too, and a capture-only device (most USB mics) leaves the
-        // output bus with an empty format that `connect` rejects. A pinned device
-        // doesn't follow route changes anyway, so a tap-only graph loses nothing.
-        if !isPinnedToDevice {
+        // Skip the mixer connection only for capture-only pinned devices — the
+        // shared I/O unit's output bus has no valid format for them and `connect`
+        // rejects it.
+        let devicePublishesOutput = pinnedDeviceID.map(AudioDeviceManager.hasOutputChannels) ?? true
+        if devicePublishesOutput {
             let mainMixer = engine.mainMixerNode
             mainMixer.outputVolume = 0.0
             engine.connect(input, to: mainMixer, format: format)
@@ -151,23 +149,24 @@ class AudioRecorder {
     /// system default. `AUAudioUnit.setDeviceID(_:)` reaches the HAL unit behind
     /// the node and is the supported override on macOS.
     ///
-    /// Returns `true` only when the override actually took effect; every failure
-    /// falls back to the system default rather than blocking the recording.
-    private func applyPreferredInputDevice(to input: AVAudioInputNode) -> Bool {
-        guard let uid = preferredInputDeviceUID else { return false }
+    /// Returns the resolved device ID only when the override actually took
+    /// effect; every failure falls back to the system default rather than
+    /// blocking the recording.
+    private func applyPreferredInputDevice(to input: AVAudioInputNode) -> AudioDeviceID? {
+        guard let uid = preferredInputDeviceUID else { return nil }
 
         guard let deviceID = AudioDeviceManager.deviceID(forUID: uid) else {
             logger?.log("Input device \(uid) is not connected — using the system default", level: .warning)
-            return false
+            return nil
         }
 
         do {
             try input.auAudioUnit.setDeviceID(deviceID)
             logger?.log("Capturing from input device \(uid)", level: .debug)
-            return true
+            return deviceID
         } catch {
             logger?.logError(error, context: "Failed to select input device \(uid), using the system default")
-            return false
+            return nil
         }
     }
 
