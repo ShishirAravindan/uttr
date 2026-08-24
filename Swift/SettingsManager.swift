@@ -4,14 +4,6 @@ import Yams
 
 // MARK: - New settings structs
 
-struct FluidAudioSettings: Codable {
-    var modelVersion: String = "v3"
-
-    enum CodingKeys: String, CodingKey {
-        case modelVersion = "model_version"
-    }
-}
-
 struct AudioSettings: Codable {
     /// Core Audio device UID. `nil` follows the system default input.
     var inputDeviceUID: String?
@@ -25,7 +17,6 @@ struct AudioSettings: Codable {
 
 private struct SerializedAppConfig: Codable {
     var provider: String
-    var fluidAudio: FluidAudioSettings
     var hotkey: HotkeyConfig
     /// Optional so configs written before input-device selection still decode —
     /// a decode failure here would reset every other setting.
@@ -33,7 +24,6 @@ private struct SerializedAppConfig: Codable {
 
     enum CodingKeys: String, CodingKey {
         case provider
-        case fluidAudio = "fluid_audio"
         case hotkey
         case audio
     }
@@ -67,7 +57,6 @@ class SettingsManager: ObservableObject {
     // MARK: - Published Properties
 
     @Published var transcriptionProviderID: String = "fluidaudio.parakeet.v3"
-    @Published var fluidAudio: FluidAudioSettings = .init()
 
     /// `nil` = follow the system default input device.
     @Published var inputDeviceUID: String?
@@ -118,7 +107,6 @@ class SettingsManager: ObservableObject {
         do {
             let config = SerializedAppConfig(
                 provider: transcriptionProviderID,
-                fluidAudio: fluidAudio,
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
                 audio: AudioSettings(inputDeviceUID: inputDeviceUID)
             )
@@ -177,19 +165,13 @@ class SettingsManager: ObservableObject {
             return
         }
         transcriptionProviderID = config.provider
-        fluidAudio = config.fluidAudio
         hotkeyKeyCode = config.hotkey.keyCode
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
-        if transcriptionProviderID == "python.whisper" {
-            transcriptionProviderID = "fluidaudio.parakeet.v3"
-            saveSettings()
-        }
     }
 
     private func setDefaultSettings() {
         transcriptionProviderID = "fluidaudio.parakeet.v3"
-        fluidAudio = FluidAudioSettings()
         hotkeyKeyCode = 37
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil

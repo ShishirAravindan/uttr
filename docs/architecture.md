@@ -26,8 +26,6 @@ Hotkey → `AudioRecorder` writes WAV → `FluidAudioProvider.transcribe()` → 
 
 ```yaml
 provider: "fluidaudio.parakeet.v3"   # or fluidaudio.parakeet.v2
-fluid_audio:
-  model_version: "v3"
 hotkey:
   key_code: 37
   modifiers: ["option"]

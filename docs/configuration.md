@@ -21,15 +21,6 @@ provider: "fluidaudio.parakeet.v3"
 | `fluidaudio.parakeet.v3` | Parakeet v3 — multilingual (recommended) |
 | `fluidaudio.parakeet.v2` | Parakeet v2 — English only, faster |
 
-### Fluid Audio
-
-```yaml
-fluid_audio:
-  model_version: "v3"   # v2 or v3
-```
-
-This mirrors the `provider` selection. Changing the provider in Settings updates both fields.
-
 ### Audio
 
 ```yaml
@@ -59,8 +50,6 @@ Use the Settings UI to record a new hotkey — it sets these values automaticall
 
 ```yaml
 provider: "fluidaudio.parakeet.v3"
-fluid_audio:
-  model_version: "v3"
 hotkey:
   key_code: 37
   modifiers: ["option"]
