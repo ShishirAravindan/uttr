@@ -396,7 +396,7 @@ private struct KeycapsView: View {
     }
 
     private var keycaps: [String] {
-        let modifiers: Set<Character> = ["⌘", "⇧", "⌥", "⌃"]
+        let modifiers = Set(HotkeyModifier.allCases.map { Character($0.symbol) })
         var result: [String] = []
         var keyStart = hotkey.startIndex
         for idx in hotkey.indices {

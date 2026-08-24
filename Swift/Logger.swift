@@ -63,51 +63,11 @@ class Logger {
         // Also print to console for debugging
         print(logEntry.trimmingCharacters(in: .whitespacesAndNewlines))
     }
-    
-    func logTranscription(_ text: String, audioFile: String) {
-        let message = "Transcription completed - Audio: \(audioFile), Text: \"\(text)\""
-        log(message, level: .info)
-    }
-    
+
     func logError(_ error: Error, context: String = "") {
         let message = "\(context.isEmpty ? "" : "\(context): ")\(error.localizedDescription)"
         log(message, level: .error)
     }
+
     
-    // MARK: - Utility Methods
-    func getLogContents() -> String? {
-        do {
-            return try String(contentsOf: logFileURL, encoding: .utf8)
-        } catch {
-            print("Failed to read log file: \(error)")
-            return nil
-        }
-    }
-    
-    func clearLogs() {
-        do {
-            try "".write(to: logFileURL, atomically: true, encoding: .utf8)
-            fileHandle?.seekToEndOfFile()
-        } catch {
-            print("Failed to clear log file: \(error)")
-        }
-    }
-    
-    func rotateLogs() {
-        // Simple log rotation - keep only last 1000 lines
-        guard let contents = getLogContents() else { return }
-        
-        let lines = contents.components(separatedBy: .newlines)
-        if lines.count > 1000 {
-            let recentLines = Array(lines.suffix(1000))
-            let newContents = recentLines.joined(separator: "\n")
-            
-            do {
-                try newContents.write(to: logFileURL, atomically: true, encoding: .utf8)
-                fileHandle?.seekToEndOfFile()
-            } catch {
-                print("Failed to rotate log file: \(error)")
-            }
-        }
-    }
 } 

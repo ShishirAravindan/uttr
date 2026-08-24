@@ -13,20 +13,6 @@ struct TranscriptionEntry: Codable, Identifiable {
         self.timestamp = Date()
         self.audioFileName = audioFileName
     }
-    
-    var formattedTimestamp: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter.string(from: timestamp)
-    }
-    
-    var shortText: String {
-        if text.count > 50 {
-            return String(text.prefix(50)) + "..."
-        }
-        return text
-    }
 }
 
 class HistoryManager: ObservableObject {
@@ -69,27 +55,8 @@ class HistoryManager: ObservableObject {
         
         logger.log("Added transcription to history: \(text.prefix(30))...", level: .info)
     }
+
     
-    func copyToClipboard(_ entry: TranscriptionEntry) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(entry.text, forType: .string)
-        
-        logger.log("Copied transcription to clipboard: \(entry.id)", level: .info)
-    }
-    
-    func clearHistory() {
-        DispatchQueue.main.async {
-            self.transcriptions.removeAll()
-            self.saveHistory()
-        }
-        
-        logger.log("Cleared transcription history", level: .info)
-    }
-    
-    func getRecentTranscriptions(limit: Int = 5) -> [TranscriptionEntry] {
-        return Array(transcriptions.prefix(limit))
-    }
     
     // MARK: - Private Methods
     private func loadHistory() {

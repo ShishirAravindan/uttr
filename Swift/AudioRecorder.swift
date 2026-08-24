@@ -3,14 +3,11 @@ import AVFoundation
 import Foundation
 
 enum AudioRecorderError: Error, LocalizedError {
-    case audioSessionFailed
     case recordingFailed
     case fileCreationFailed
 
     var errorDescription: String? {
         switch self {
-        case .audioSessionFailed:
-            return "Failed to configure audio session"
         case .recordingFailed:
             return "Failed to start recording"
         case .fileCreationFailed:

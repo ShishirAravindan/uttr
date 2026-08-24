@@ -103,9 +103,10 @@ class HotkeyManager {
         let transcribeDisplay = settingsManager.getHotkeyDisplayString()
         logger.log("[HotkeyManager] Attempting to register transcribe hotkey: \(transcribeDisplay)", level: .debug)
         
-        let (transcribeKeyCode, transcribeModifiers) = try getTranscribeHotkeyConfiguration()
+        let transcribeKeyCode = UInt32(settingsManager.hotkeyKeyCode)
+        let transcribeModifiers = configuredModifiers.carbonFlags
         let transcribeHotkeyID = try getUniqueHotkeyID(id: 1)
-        
+
         let transcribeStatus = RegisterEventHotKey(transcribeKeyCode, transcribeModifiers, transcribeHotkeyID, GetApplicationEventTarget(), 0, &transcribeHotkeyRef)
         guard transcribeStatus == noErr else {
             throw HotkeyManagerError.hotkeyRegistrationFailed(status: transcribeStatus)
@@ -174,12 +175,11 @@ class HotkeyManager {
             let actualModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
             // Check transcribe hotkey
-            if let (expectedKeyCode, expectedModifiers) = try? self.getTranscribeHotkeyConfigurationForLocalMonitor() {
-                if actualModifiers == expectedModifiers && event.keyCode == expectedKeyCode {
-                    self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
-                    self.onTranscribeHotkeyPressed?()
-                    return nil // Swallow the event
-                }
+            if actualModifiers == self.configuredModifiers.appKitFlags,
+               event.keyCode == UInt16(self.settingsManager.hotkeyKeyCode) {
+                self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
+                self.onTranscribeHotkeyPressed?()
+                return nil // Swallow the event
             }
 
             return event
@@ -206,34 +206,8 @@ class HotkeyManager {
         return hash
     }
     
-    private func getTranscribeHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
-        let keyCode = UInt32(settingsManager.hotkeyKeyCode)
-        var modifiers: UInt32 = 0
-        for modifier in settingsManager.hotkeyModifiers {
-            switch modifier {
-            case "command": modifiers |= UInt32(cmdKey)
-            case "shift":   modifiers |= UInt32(shiftKey)
-            case "option":  modifiers |= UInt32(optionKey)
-            case "control": modifiers |= UInt32(controlKey)
-            default: break
-            }
-        }
-        return (keyCode, modifiers)
-    }
-    
-    private func getTranscribeHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
-        let keyCode = UInt16(settingsManager.hotkeyKeyCode)
-        var modifiers: NSEvent.ModifierFlags = []
-        for modifier in settingsManager.hotkeyModifiers {
-            switch modifier {
-            case "command": modifiers.insert(.command)
-            case "shift":   modifiers.insert(.shift)
-            case "option":  modifiers.insert(.option)
-            case "control": modifiers.insert(.control)
-            default: break
-            }
-        }
-        return (keyCode, modifiers)
+    private var configuredModifiers: [HotkeyModifier] {
+        HotkeyModifier.from(settingsManager.hotkeyModifiers)
     }
 
     private func checkAccessibilityPermissions() -> Bool {

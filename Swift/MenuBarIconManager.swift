@@ -7,10 +7,8 @@ enum MenuBarIconState {
     case ready
     case recording
     case processing
-    case transforming
     case success
     case error
-    case hidden
 }
 
 class MenuBarIconManager: ObservableObject {
@@ -96,14 +94,7 @@ class MenuBarIconManager: ObservableObject {
         transitionToIcon("clock", withAnimation: true)
         currentState = .processing
     }
-    
-    /// Show transform processing state (banana yellow)
-    func setTransformingState() {
-        logger.log("[MenuBarIconManager] Setting transforming state", level: .debug)
-        transitionToIcon("arrow.triangle.2.circlepath", withAnimation: true, tintColor: .systemYellow)
-        currentState = .transforming
-    }
-    
+
     /// Show success state briefly
     func showSuccessState() {
         logger.log("[MenuBarIconManager] Showing success state", level: .debug)
@@ -127,23 +118,7 @@ class MenuBarIconManager: ObservableObject {
             self.setReadyState()
         }
     }
-    
-    /// Hide the icon completely
-    func hideIcon() {
-        logger.log("[MenuBarIconManager] Hiding icon", level: .debug)
-        fadeOutIcon {
-            self.currentState = .hidden
-        }
-    }
-    
-    /// Show the icon if it was hidden
-    func showIcon() {
-        if currentState == .hidden {
-            logger.log("[MenuBarIconManager] Showing hidden icon", level: .debug)
-            fadeInIcon()
-            setReadyState()
-        }
-    }
+
     
     // MARK: - Private Methods
 
@@ -228,24 +203,7 @@ class MenuBarIconManager: ObservableObject {
             button.animator().alphaValue = 1.0
         })
     }
-    
-    private func fadeOutIcon(completion: @escaping () -> Void) {
-        guard let button = statusItem?.button else {
-            completion()
-            return
-        }
-        
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.2
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            button.animator().alphaValue = 0.0
-        }, completionHandler: completion)
-    }
-    
-    // MARK: - Debug
-    func getCurrentState() -> MenuBarIconState {
-        return currentState
-    }
+
 }
 
 // MARK: - NSImage Tinting Extension
