@@ -87,9 +87,6 @@ class HotkeyManager {
             try setupGlobalHotkey()
         } catch {
             logger.logError(error, context: "Failed to register global hotkey")
-            if let error = error as? HotkeyManagerError, case .permissionDenied = error {
-                logAccessibilityInstructions()
-            }
         }
     }
 
@@ -239,14 +236,5 @@ class HotkeyManager {
             self.localMonitor = nil
             logger.log("[HotkeyManager] Local hotkey monitor removed", level: .debug)
         }
-    }
-    
-    // MARK: - Helper
-    private func logAccessibilityInstructions() {
-        logger.log("[HotkeyManager] To enable global hotkeys, please grant Accessibility permissions:", level: .warning)
-        logger.log("[HotkeyManager] 1. Open System Settings > Privacy & Security", level: .warning)
-        logger.log("[HotkeyManager] 2. Select 'Accessibility'", level: .warning)
-        logger.log("[HotkeyManager] 3. Find 'uttr' and enable it.", level: .warning)
-        logger.log("[HotkeyManager] 4. A restart of the app may be required.", level: .warning)
     }
 }
