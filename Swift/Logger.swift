@@ -33,12 +33,17 @@ class Logger {
             FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
         }
 
-        // Open file handle for writing
-        do {
-            fileHandle = try FileHandle(forWritingTo: logFileURL)
-            fileHandle?.seekToEndOfFile()
-        } catch {
-            print("Failed to open log file: \(error)")
+        // Every component (AudioRecorder, AudioDeviceManager, ...) creates its
+        // own Logger onto this same file. A plain FileHandle caches its write
+        // offset from a single seekToEndOfFile() at construction, so concurrent
+        // writers race and clobber each other's lines. Opening with O_APPEND
+        // makes the kernel atomically seek to EOF on every write(2), so
+        // interleaved writers never overlap regardless of when each was opened.
+        let fd = open(logFileURL.path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+        if fd != -1 {
+            fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        } else {
+            print("Failed to open log file: \(String(cString: strerror(errno)))")
             fileHandle = nil
         }
     }
