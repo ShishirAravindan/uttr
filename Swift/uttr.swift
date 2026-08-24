@@ -341,11 +341,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Window Management
 
-    /// Public entry point used by the popover button and the SwiftUI Settings command.
-    func showSettings() {
-        openSettingsWindow()
-    }
-
     private func openSettingsWindow() {
         logger?.log("Opening settings window", level: .info)
         closePopover()
