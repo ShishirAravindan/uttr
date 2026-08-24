@@ -122,13 +122,21 @@ class AudioRecorder {
         }
 
         // Some pinned devices drop the engine after a couple of seconds — end
-        // the recording instead of silently starving the tap.
-        configurationChangeObserver = NotificationCenter.default.addObserver(
-            forName: .AVAudioEngineConfigurationChange,
-            object: engine,
-            queue: .main
-        ) { [weak self] _ in
-            self?.handleConfigurationChange(for: engine)
+        // the recording instead of silently starving the tap. Scoped to pinned
+        // devices only: on the system-default path (e.g. a MacBook's built-in
+        // mic) macOS routinely posts this notification right at start — the
+        // HAL settling AVAudioEngine's own private aggregate device, or the
+        // system negotiating Voice Isolation — with the engine still healthy.
+        // Reacting to that on an unpinned recording killed it before the user
+        // had a chance to speak.
+        if pinnedDeviceID != nil {
+            configurationChangeObserver = NotificationCenter.default.addObserver(
+                forName: .AVAudioEngineConfigurationChange,
+                object: engine,
+                queue: .main
+            ) { [weak self] _ in
+                self?.handleConfigurationChange(for: engine)
+            }
         }
     }
 
