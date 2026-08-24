@@ -28,11 +28,6 @@ class Logger {
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
 
-        // Create log file if it doesn't exist
-        if !FileManager.default.fileExists(atPath: logFileURL.path) {
-            FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
-        }
-
         // Every component (AudioRecorder, AudioDeviceManager, ...) creates its
         // own Logger onto this same file. A plain FileHandle caches its write
         // offset from a single seekToEndOfFile() at construction, so concurrent
@@ -58,10 +53,11 @@ class Logger {
         let prefix = componentName != nil ? "[\(componentName!)] " : ""
         let logEntry = "[\(timestamp)] [\(level.rawValue)] \(prefix)\(message)\n"
         
-        // Write to file
+        // No fsync: O_APPEND already orders the write, and page-cached data
+        // survives an app crash. Syncing every line only buys durability
+        // against a kernel panic, at the cost of a disk round-trip per line.
         if let data = logEntry.data(using: .utf8) {
             fileHandle?.write(data)
-            fileHandle?.synchronizeFile()
         }
         
         // Also print to console for debugging

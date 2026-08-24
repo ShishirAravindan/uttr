@@ -79,3 +79,10 @@ audio:
 `brew uninstall --zap uttr` removes both the Application Support and Logs directories.
 
 A build run from Xcode (`io.github.Rakk301.uttr.debug`) uses a separate `uttr-dev` folder under both roots instead — it never reads, writes, or clobbers an installed release app's settings, history, or logs.
+
+History previously lived in `~/Documents/History`. There is no automatic migration; if you want to keep an older file, move it yourself:
+
+```sh
+mv ~/Documents/History/transcription_history.json \
+   ~/Library/Application\ Support/uttr/History/
+```

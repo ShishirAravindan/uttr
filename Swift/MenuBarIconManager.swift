@@ -28,12 +28,7 @@ class MenuBarIconManager: ObservableObject {
         // while the model downloads/loads on first launch.
         if let button = statusItem.button {
             button.alphaValue = 1.0
-            var image = NSImage(systemSymbolName: "mic", accessibilityDescription: "uttr")?
-                .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .bold))
-            if let debugTint, let unwrapped = image {
-                image = unwrapped.tinted(with: debugTint)
-            }
-            button.image = image
+            button.image = Self.icon("mic")
         }
     }
 
@@ -154,14 +149,23 @@ class MenuBarIconManager: ObservableObject {
 
     private let recordingPulseKey = "recordingPulse"
 
-    /// Debug and Release builds otherwise look identical in the menu bar —
-    /// the only surface this menu-bar-only (LSUIElement) app shows day to
-    /// day. Tinting the debug build's icon makes the two impossible to
-    /// confuse at a glance without touching Release's appearance at all.
+    /// Builds a menu bar icon, applying `tint` if given.
+    ///
+    /// Debug builds fall back to a purple tint: the menu bar is the only
+    /// surface this LSUIElement app shows day to day, so without it Debug and
+    /// Release are indistinguishable. Release is untouched (`debugTint` nil).
+    private static func icon(_ name: String, tint: NSColor? = nil) -> NSImage? {
+        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "uttr")?
+            .withSymbolConfiguration(config)
+        guard let effectiveTint = tint ?? debugTint, let image else { return image }
+        return image.tinted(with: effectiveTint)
+    }
+
     #if DEBUG
-    private let debugTint: NSColor? = .systemPurple
+    private static let debugTint: NSColor? = .systemPurple
     #else
-    private let debugTint: NSColor? = nil
+    private static let debugTint: NSColor? = nil
     #endif
 
     private func startRecordingPulse() {
@@ -189,13 +193,7 @@ class MenuBarIconManager: ObservableObject {
         // Any state change ends the recording breathe.
         stopRecordingPulse()
 
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
-        var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "uttr")?.withSymbolConfiguration(config)
-
-        // Apply tint color if specified, falling back to the debug build's tint
-        if let effectiveTint = tintColor ?? debugTint, let image = newImage {
-            newImage = image.tinted(with: effectiveTint)
-        }
+        let newImage = Self.icon(iconName, tint: tintColor)
         
         if withAnimation {
             // Use NSAnimationContext for smooth macOS animations

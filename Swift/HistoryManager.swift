@@ -43,32 +43,12 @@ class HistoryManager: ObservableObject {
     // MARK: - Initialization
     init() {
         // History is app state, not a user document — it belongs under
-        // Application Support, not ~/Documents. Also keeps it inside the same
-        // tree Logger and SettingsManager use, so a single zap/uninstall
-        // removes everything and Debug/Release builds never share entries.
+        // Application Support, not ~/Documents.
         let historyDir = AppPaths.applicationSupportDirectory.appendingPathComponent("History")
         historyFileURL = historyDir.appendingPathComponent("transcription_history.json")
 
         try? FileManager.default.createDirectory(at: historyDir, withIntermediateDirectories: true)
-        migrateLegacyHistoryIfNeeded()
-
         loadHistory()
-    }
-
-    /// One-time move from the pre-existing (and wrong) `~/Documents/History`
-    /// location so upgrading users don't lose their history.
-    private func migrateLegacyHistoryIfNeeded() {
-        guard !FileManager.default.fileExists(atPath: historyFileURL.path) else { return }
-
-        let legacyDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
-            .first!.appendingPathComponent("History")
-        let legacyFileURL = legacyDir.appendingPathComponent("transcription_history.json")
-
-        guard FileManager.default.fileExists(atPath: legacyFileURL.path) else { return }
-
-        try? FileManager.default.moveItem(at: legacyFileURL, to: historyFileURL)
-        try? FileManager.default.removeItem(at: legacyDir)
-        logger.log("Migrated transcription history from ~/Documents/History", level: .info)
     }
     
     // MARK: - Public Methods
