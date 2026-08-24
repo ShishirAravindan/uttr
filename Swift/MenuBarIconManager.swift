@@ -28,8 +28,12 @@ class MenuBarIconManager: ObservableObject {
         // while the model downloads/loads on first launch.
         if let button = statusItem.button {
             button.alphaValue = 1.0
-            button.image = NSImage(systemSymbolName: "mic", accessibilityDescription: "uttr")?
+            var image = NSImage(systemSymbolName: "mic", accessibilityDescription: "uttr")?
                 .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .bold))
+            if let debugTint, let unwrapped = image {
+                image = unwrapped.tinted(with: debugTint)
+            }
+            button.image = image
         }
     }
 
@@ -150,6 +154,16 @@ class MenuBarIconManager: ObservableObject {
 
     private let recordingPulseKey = "recordingPulse"
 
+    /// Debug and Release builds otherwise look identical in the menu bar —
+    /// the only surface this menu-bar-only (LSUIElement) app shows day to
+    /// day. Tinting the debug build's icon makes the two impossible to
+    /// confuse at a glance without touching Release's appearance at all.
+    #if DEBUG
+    private let debugTint: NSColor? = .systemPurple
+    #else
+    private let debugTint: NSColor? = nil
+    #endif
+
     private func startRecordingPulse() {
         guard let button = statusItem?.button else { return }
         button.wantsLayer = true
@@ -177,10 +191,10 @@ class MenuBarIconManager: ObservableObject {
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
         var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "uttr")?.withSymbolConfiguration(config)
-        
-        // Apply tint color if specified
-        if let tintColor = tintColor, let image = newImage {
-            newImage = image.tinted(with: tintColor)
+
+        // Apply tint color if specified, falling back to the debug build's tint
+        if let effectiveTint = tintColor ?? debugTint, let image = newImage {
+            newImage = image.tinted(with: effectiveTint)
         }
         
         if withAnimation {

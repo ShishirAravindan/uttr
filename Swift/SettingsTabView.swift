@@ -111,7 +111,7 @@ struct SettingsTabView: View {
         SectionBlock(label: "About") {
             SettingsCard(scheme: scheme) {
                 HStack(spacing: 14) {
-                    Text("uttr")
+                    Text(appDisplayName)
                         .font(.system(size: 22, weight: .medium))
                         .tracking(-0.88)
                         .foregroundColor(.textPrimary(for: scheme))
@@ -134,6 +134,13 @@ struct SettingsTabView: View {
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+
+    /// "uttr" in Release, "uttr (dev)" in Debug — same label the Finder/Dock
+    /// already show via `CFBundleDisplayName`, surfaced here too so it's
+    /// obvious at a glance which build's settings window is open.
+    private var appDisplayName: String {
+        Bundle.main.infoDictionary?["CFBundleDisplayName"] as? String ?? "uttr"
     }
 
 }
