@@ -18,30 +18,21 @@ class Logger {
     // MARK: - Initialization
     init(componentName: String? = nil) {
         self.componentName = componentName
-        
+
         // Use proper macOS logs directory: ~/Library/Logs/<AppName>/
-        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "uttr"
-        let logsDirectory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
-            .first?.appendingPathComponent("Logs")
-            .appendingPathComponent(appName)
-        
-        if let logsDir = logsDirectory {
-            try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)
-            logFileURL = logsDir.appendingPathComponent("transcriptions.log")
-        } else {
-            // Fallback to temporary directory
-            logFileURL = FileManager.default.temporaryDirectory.appendingPathComponent("transcriptions.log")
-        }
-        
+        let logsDir = AppPaths.logsDirectory
+        try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)
+        logFileURL = logsDir.appendingPathComponent("transcriptions.log")
+
         // Set up date formatter
         dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        
+
         // Create log file if it doesn't exist
         if !FileManager.default.fileExists(atPath: logFileURL.path) {
             FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
         }
-        
+
         // Open file handle for writing
         do {
             fileHandle = try FileHandle(forWritingTo: logFileURL)

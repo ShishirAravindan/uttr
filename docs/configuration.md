@@ -67,3 +67,15 @@ hotkey:
 audio:
   input_device_uid: null
 ```
+
+## Data & Logs
+
+| What | Path |
+|------|------|
+| Settings | `~/Library/Application Support/uttr/settings.yaml` |
+| Transcription history | `~/Library/Application Support/uttr/History/transcription_history.json` |
+| Logs | `~/Library/Logs/uttr/transcriptions.log` |
+
+`brew uninstall --zap uttr` removes both the Application Support and Logs directories.
+
+A build run from Xcode (`io.github.Rakk301.uttr.debug`) uses a separate `uttr-dev` folder under both roots instead — it never reads, writes, or clobbers an installed release app's settings, history, or logs.
