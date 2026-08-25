@@ -272,6 +272,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func stopRecording() {
         guard isRecording else { return }
 
+        // Clear the flag before anything can fail: we are no longer recording
+        // whatever the recorder hands back. Returning early with it still set
+        // left the app unable to record at all — handleTranscribeHotkeyPress
+        // routes on isRecording, so every later press came back here and took
+        // the same early return, with no way out short of a relaunch.
+        isRecording = false
+        popoverViewModel.isRecording = false
+
         guard let audioFileURL = audioRecorder?.stopRecording() else {
             logger?.log("Failed to get audio file", level: .error)
             notificationManager?.showTranscriptionError("Failed to save audio file")
@@ -279,8 +287,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             return
         }
 
-        isRecording = false
-        popoverViewModel.isRecording = false
         notificationManager?.showRecordingStopped()
         logger?.log("Audio file successfully saved to: \(audioFileURL.path)", level: .debug)
         menuBarIconManager?.setProcessingState()
