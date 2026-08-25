@@ -123,12 +123,20 @@ class AudioRecorder {
 
         // Some pinned devices drop the engine after a couple of seconds — end
         // the recording instead of silently starving the tap.
-        configurationChangeObserver = NotificationCenter.default.addObserver(
-            forName: .AVAudioEngineConfigurationChange,
-            object: engine,
-            queue: .main
-        ) { [weak self] _ in
-            self?.handleConfigurationChange(for: engine)
+        //
+        // Pinned devices only. AVAudioEngine stops itself before posting this
+        // notification, so a stopped engine doesn't distinguish a real dropout
+        // from the reconfigurations macOS performs routinely on the
+        // system-default path — observing it there ended built-in-mic
+        // recordings before any audio was captured.
+        if pinnedDeviceID != nil {
+            configurationChangeObserver = NotificationCenter.default.addObserver(
+                forName: .AVAudioEngineConfigurationChange,
+                object: engine,
+                queue: .main
+            ) { [weak self] _ in
+                self?.handleConfigurationChange(for: engine)
+            }
         }
     }
 
