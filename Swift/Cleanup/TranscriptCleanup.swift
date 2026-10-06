@@ -128,6 +128,15 @@ enum CleanupOutput {
         for phrase in ["very very", "really really", "so so", "never never"] {
             if input.localizedCaseInsensitiveContains(phrase), !output.localizedCaseInsensitiveContains(phrase) { return false }
         }
+        // A later alternative after spoken "no" must survive. The model can
+        // otherwise reverse a correction, even with editing examples in its prompt.
+        let correctionPattern = #"\bno[\s,–—-]+([\p{L}\p{N}_]+)"#
+        guard let corrections = try? NSRegularExpression(pattern: correctionPattern, options: .caseInsensitive) else { return false }
+        for match in corrections.matches(in: input, range: NSRange(input.startIndex..., in: input)) {
+            guard let range = Range(match.range(at: 1), in: input) else { continue }
+            let token = NSRegularExpression.escapedPattern(for: String(input[range]))
+            if output.range(of: "\\b\(token)\\b", options: [.regularExpression, .caseInsensitive]) == nil { return false }
+        }
         // Protect literal identifiers, paths, URLs, and version strings when present.
         let pattern = #"https?://[^\s]+|(?:~?/)[^\s,;]+|\b\w+_\w+\b|\b[a-z]+[A-Z]\w*\b|\b\d+\.\d+(?:\.\d+)*\b"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return false }
