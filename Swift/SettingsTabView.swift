@@ -10,21 +10,18 @@ struct SettingsTabView: View {
     var body: some View {
         ZStack(alignment: .top) {
             Color.windowBackground(for: scheme).ignoresSafeArea()
-            VStack(alignment: .leading, spacing: 0) {
-                permissionsSection
-                Spacer().frame(height: 28)
-                audioSection
-                Spacer().frame(height: 28)
-                transcriptionSection
-                Spacer().frame(height: 28)
-                hotkeySection
-                Spacer().frame(height: 28)
-                aboutSection
-                Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    permissionsSection
+                    audioSection
+                    transcriptionSection
+                    hotkeySection
+                    aboutSection
+                }
+                .padding(.top, 24)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 28)
             }
-            .padding(.top, 24)
-            .padding(.horizontal, 28)
-            .padding(.bottom, 28)
         }
         .onAppear { permissions.refresh() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
@@ -94,12 +91,13 @@ struct SettingsTabView: View {
                     } else {
                         HStack(spacing: 6) {
                             KeycapsView(hotkey: settings.getHotkeyDisplayString(), scheme: scheme)
-                            Button("Change") { hotkeyRecorder.startRecording() }
-                                .font(.system(size: 12))
-                                .foregroundColor(.accentLink(for: scheme))
-                                .buttonStyle(.plain)
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 8)
+                            SettingsActionButton(
+                                icon: "pencil",
+                                label: "Change recording shortcut",
+                                scheme: scheme
+                            ) {
+                                hotkeyRecorder.startRecording()
+                            }
                         }
                     }
                 }
@@ -119,11 +117,21 @@ struct SettingsTabView: View {
                         Text("Version \(appVersion)")
                             .font(.system(size: 12))
                             .foregroundColor(.textSecondary(for: scheme))
-                        Text("github.com/Rakk301/homebrew-uttr")
+                        Link(destination: URL(string: "https://github.com/ShishirAravindan/uttr")!) {
+                            HStack(spacing: 4) {
+                                Text("GitHub repository")
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 9))
+                            }
                             .font(.system(size: 11))
-                            .foregroundColor(.textTertiary(for: scheme))
+                            .foregroundColor(.accentLink(for: scheme))
+                        }
+                        .buttonStyle(.plain)
+                        .help("github.com/ShishirAravindan/uttr")
+                        .accessibilityLabel("Open the uttr repository on GitHub")
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 18)
                 .padding(.horizontal, 16)
             }
@@ -239,6 +247,8 @@ private struct PermissionRow: View {
             Image(systemName: status.icon)
                 .font(.system(size: 14))
                 .foregroundColor(Color(nsColor: status.color))
+                .help(status.displayText)
+                .accessibilityLabel("\(permission.displayName): \(status.displayText)")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(permission.displayName)
@@ -247,25 +257,56 @@ private struct PermissionRow: View {
                 Text(permission.description)
                     .font(.system(size: 11))
                     .foregroundColor(.textTertiary(for: scheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !status.isAuthorized {
+                Text(status.displayText)
+                    .font(.system(size: 12))
+                    .foregroundColor(.textSecondary(for: scheme))
+                    .fixedSize()
             }
 
-            Spacer()
-
-            Text(status.displayText)
-                .font(.system(size: 12))
-                .foregroundColor(.textSecondary(for: scheme))
-
-            Button(permissions.primaryActionText(for: permission)) {
+            SettingsActionButton(
+                icon: status.isAuthorized ? "gearshape" : "lock.open",
+                label: "\(permissions.primaryActionText(for: permission)) \(permission.displayName) permission",
+                scheme: scheme
+            ) {
                 permissions.performPrimaryAction(for: permission)
             }
-            .font(.system(size: 12))
-            .foregroundColor(.accentLink(for: scheme))
-            .buttonStyle(.plain)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 8)
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
+    }
+}
+
+// MARK: - Icon action
+
+private struct SettingsActionButton: View {
+    let icon: String
+    let label: String
+    let scheme: ColorScheme
+    let action: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundColor(.accentLink(for: scheme))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(isHovered ? Color.accentLink(for: scheme).opacity(0.08) : Color.clear)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+        .accessibilityLabel(label)
+        .onHover { isHovered = $0 }
     }
 }
 

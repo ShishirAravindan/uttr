@@ -155,7 +155,7 @@ class PermissionManager: ObservableObject {
         case .microphone:
             if microphonePermissionStatus == .notDetermined {
                 Task { await requestMicrophonePermission() }
-            } else if !microphonePermissionStatus.isAuthorized {
+            } else {
                 openSystemPreferences(for: .microphone)
             }
         case .accessibility:
