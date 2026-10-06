@@ -198,6 +198,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             logger?.log(message, level: .error)
             notificationManager?.showTranscriptionError(message)
             menuBarIconManager?.showErrorState(restore: restoreIcon)
+        case .recordingCleanupFailed(let message):
+            logger?.log("Failed to remove recording: \(message)", level: .error)
         case .recordingInterrupted:
             logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
             notificationManager?.showTranscriptionError("Microphone disconnected")

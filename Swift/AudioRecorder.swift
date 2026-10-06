@@ -44,6 +44,8 @@ class AudioRecorder: SessionRecording {
     private var inputNode: AVAudioInputNode?
     private var audioFile: AVAudioFile?
     private var recordingURL: URL?
+    private let recordingFiles = RecordingFiles()
+    private var tapInstalled = false
     private var logger: Logger?
     private var framesWritten: AVAudioFramePosition = 0
     private var currentSampleRate: Double = 0
@@ -65,12 +67,15 @@ class AudioRecorder: SessionRecording {
     func startRecording() throws {
         
         // Create temporary audio file
-        recordingURL = createTemporaryAudioFile()
+        recordingURL = try recordingFiles.makeURL()
         guard let url = recordingURL else {
             logger?.log("Failed to create temporary audio file", level: .error)
             throw AudioRecorderError.fileCreationFailed
         }
         
+        var started = false
+        defer { if !started { cleanup() } }
+
         // Lazily create audio engine and input node only when recording starts
         let engine = AVAudioEngine()
         audioEngine = engine
@@ -109,6 +114,8 @@ class AudioRecorder: SessionRecording {
             self?.handleAudioBuffer(buffer)
         }
         
+        tapInstalled = true
+
         // Start audio engine - this will trigger permission request if needed
         do {
             engine.prepare()
@@ -116,10 +123,11 @@ class AudioRecorder: SessionRecording {
             recordingStartedAt = Date()
             logger?.log("Audio recording started successfully", level: .info)
         } catch {
-            input.removeTap(onBus: 0)
             logger?.log("Audio engine start failed: \(error.localizedDescription)", level: .error)
             throw AudioRecorderError.recordingFailed
         }
+
+        started = true
 
         // Some pinned devices drop the engine after a couple of seconds — end
         // the recording instead of silently starving the tap.
@@ -149,20 +157,7 @@ class AudioRecorder: SessionRecording {
     }
 
     private func discardInterruptedRecording() {
-        removeConfigurationChangeObserver()
-
-        inputNode?.removeTap(onBus: 0)
-        audioFile = nil
-
-        if let url = recordingURL {
-            try? FileManager.default.removeItem(at: url)
-        }
-        recordingURL = nil
-
-        inputNode = nil
-        audioEngine?.reset()
-        audioEngine = nil
-
+        cleanup()
         framesWritten = 0
         recordingStartedAt = nil
         currentSampleRate = 0
@@ -183,7 +178,7 @@ class AudioRecorder: SessionRecording {
 
         // Stop audio engine
         engine.stop()
-        inputNode?.removeTap(onBus: 0)
+        removeTap()
         
         // Close audio file
         audioFile = nil
@@ -242,13 +237,6 @@ class AudioRecorder: SessionRecording {
         }
     }
 
-    private func createTemporaryAudioFile() -> URL? {
-        let tempDir = FileManager.default.temporaryDirectory
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let filename = "recording_\(timestamp).wav"
-        return tempDir.appendingPathComponent(filename)
-    }
-    
     private func handleAudioBuffer(_ buffer: AVAudioPCMBuffer) {
         guard let audioFile = audioFile else { return }
         
@@ -260,15 +248,25 @@ class AudioRecorder: SessionRecording {
         }
     }
     
+    private func removeTap() {
+        guard tapInstalled else { return }
+        inputNode?.removeTap(onBus: 0)
+        tapInstalled = false
+    }
+
     private func cleanup() {
         removeConfigurationChangeObserver()
         if let engine = audioEngine {
             if engine.isRunning {
                 engine.stop()
             }
-            inputNode?.removeTap(onBus: 0)
+            removeTap()
         }
         audioFile = nil
+        if let url = recordingURL {
+            do { try recordingFiles.remove(url) }
+            catch { logger?.logError(error, context: "Failed to remove recording") }
+        }
         recordingURL = nil
         inputNode = nil
         audioEngine = nil

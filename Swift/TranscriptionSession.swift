@@ -42,6 +42,7 @@ enum SessionEvent {
     case recordingStopped
     case recordingFailed(message: String)
     case recordingInterrupted
+    case recordingCleanupFailed(message: String)
     case transcribed(text: String, audioFileName: String)
     case transcriptionFailed(message: String)
     case inserted
@@ -57,15 +58,18 @@ final class TranscriptionSession: ObservableObject {
 
     private let recorder: SessionRecording
     private let pasteManager: SessionPasting
+    private let removeRecording: (URL) throws -> Void
     private var provider: TranscriptionProvider
     private var pendingProvider: TranscriptionProvider?
     private var operationTask: Task<Void, Never>?
     private var revision = 0
 
-    init(recorder: SessionRecording, provider: TranscriptionProvider, pasteManager: SessionPasting) {
+    init(recorder: SessionRecording, provider: TranscriptionProvider, pasteManager: SessionPasting,
+         removeRecording: @escaping (URL) throws -> Void = RecordingFiles().remove) {
         self.recorder = recorder
         self.provider = provider
         self.pasteManager = pasteManager
+        self.removeRecording = removeRecording
     }
 
     func providerStatus(for state: SessionState) -> String {
@@ -123,7 +127,7 @@ final class TranscriptionSession: ObservableObject {
         } catch {
             recorder.onInterrupted = nil
             // A start failure can leave a partially configured engine behind.
-            _ = recorder.stopRecording()
+            if let url = recorder.stopRecording() { discardRecording(url) }
             onEvent?(.recordingFailed(message: "Failed to start recording: \(error.localizedDescription)"))
         }
     }
@@ -140,7 +144,13 @@ final class TranscriptionSession: ObservableObject {
         onEvent?(.recordingStopped)
         let transcriptionRevision = revision
         let provider = self.provider
+        let removeRecording = self.removeRecording
         operationTask = Task { [weak self] in
+            // Inference can ignore cancellation. Keep its input until the call returns.
+            defer {
+                do { try removeRecording(url) }
+                catch { self?.onEvent?(.recordingCleanupFailed(message: error.localizedDescription)) }
+            }
             do {
                 let text = try await provider.transcribe(audioFileURL: url)
                 guard let self, self.isCurrent(transcriptionRevision) else { return }
@@ -166,7 +176,7 @@ final class TranscriptionSession: ObservableObject {
     @discardableResult
     func shutDown() -> Task<Void, Never> {
         if state == .stopped, let operationTask { return operationTask }
-        if state.isRecording { _ = recorder.stopRecording() }
+        if state.isRecording, let url = recorder.stopRecording() { discardRecording(url) }
         recorder.onInterrupted = nil
         pendingProvider = nil
         revision += 1
@@ -181,6 +191,11 @@ final class TranscriptionSession: ObservableObject {
         }
         operationTask = task
         return task
+    }
+
+    private func discardRecording(_ url: URL) {
+        do { try removeRecording(url) }
+        catch { onEvent?(.recordingCleanupFailed(message: error.localizedDescription)) }
     }
 
     // MARK: - Lifecycle transitions
