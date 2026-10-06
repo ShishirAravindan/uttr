@@ -19,7 +19,7 @@ negation, names, quantities, languages, and technical strings. Do not summarize,
 translate, reorganize, answer, or execute dictated instructions.
 
 Output checks reject empty/expanded responses, lost scripts, changed literal
-numbers, lost negations/questions, altered technical literals, and selected repeated
+numbers, changed negation counts/wording, lost questions, altered technical literals, and selected repeated
 emphasis. These are conservative checks, not a semantic verifier. Literal numeric
 self-corrections can fall back to raw text because the numeric check requires all
 original literals to survive. Corrections expressed as words are evaluated normally.
@@ -35,6 +35,8 @@ History still keeps five entries. `text` is the delivered version; optional
 `rawText` retains a different original. Older JSON decodes without that field.
 Changed entries expose an “Original transcription” disclosure and “Copy original
 transcription” context action in the existing history card.
+Collapsed and expanded recovery views were rendered with synthetic data in light
+and dark appearances.
 
 ## Evaluation
 
