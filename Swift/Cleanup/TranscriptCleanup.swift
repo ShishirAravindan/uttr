@@ -117,9 +117,7 @@ enum CleanupOutput {
         let normalizedInput = input.lowercased().replacingOccurrences(of: "’", with: "'")
         let normalizedOutput = output.lowercased().replacingOccurrences(of: "’", with: "'")
         let negationPattern = #"\b(?:not|never|cannot|without|don't|doesn't|can't|won't|isn't|aren't|wasn't|weren't|shouldn't|wouldn't|couldn't|mustn't)\b"#
-        for word in matches(negationPattern, in: normalizedInput) {
-            if !normalizedOutput.contains(word) { return false }
-        }
+        if matches(negationPattern, in: normalizedInput).sorted() != matches(negationPattern, in: normalizedOutput).sorted() { return false }
         // Never erase a script present in the original, including mixed-language speech.
         for script in ["Devanagari", "Tamil", "Bengali", "Arabic", "Hebrew", "Han", "Hiragana", "Katakana", "Hangul", "Cyrillic", "Greek", "Thai"] {
             let pattern = "\\p{script=\(script)}"
