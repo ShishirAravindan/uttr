@@ -139,6 +139,16 @@ class PermissionManager: ObservableObject {
         if !trusted { openSystemPreferences(for: .accessibility) }
     }
 
+    var applicationName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? "uttr"
+    }
+
+    func showApplicationInFinder() {
+        NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL])
+    }
+
     func openSystemPreferences(for permission: PermissionType) {
         let urlString: String
         switch permission {

@@ -247,37 +247,52 @@ private struct PermissionRow: View {
     private var status: PermissionManager.PermissionStatus { permissions.status(for: permission) }
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: status.icon)
-                .font(.system(size: 14))
-                .foregroundColor(Color(nsColor: status.color))
-                .help(status.displayText)
-                .accessibilityLabel("\(permission.displayName): \(status.displayText)")
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Image(systemName: status.icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color(nsColor: status.color))
+                    .help(status.displayText)
+                    .accessibilityLabel("\(permission.displayName): \(status.displayText)")
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(permission.displayName)
-                    .font(.system(size: 13))
-                    .foregroundColor(.textPrimary(for: scheme))
-                Text(permission.description)
-                    .font(.system(size: 11))
-                    .foregroundColor(.textTertiary(for: scheme))
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(permission.displayName)
+                        .font(.system(size: 13))
+                        .foregroundColor(.textPrimary(for: scheme))
+                    Text(permission.description)
+                        .font(.system(size: 11))
+                        .foregroundColor(.textTertiary(for: scheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if !status.isAuthorized {
+                    Text(status.displayText)
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSecondary(for: scheme))
+                        .fixedSize()
+                }
+
+                SettingsActionButton(
+                    icon: status.isAuthorized ? "gearshape" : "lock.open",
+                    label: "\(permissions.primaryActionText(for: permission)) \(permission.displayName) permission",
+                    scheme: scheme
+                ) {
+                    permissions.performPrimaryAction(for: permission)
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if !status.isAuthorized {
-                Text(status.displayText)
-                    .font(.system(size: 12))
-                    .foregroundColor(.textSecondary(for: scheme))
-                    .fixedSize()
-            }
-
-            SettingsActionButton(
-                icon: status.isAuthorized ? "gearshape" : "lock.open",
-                label: "\(permissions.primaryActionText(for: permission)) \(permission.displayName) permission",
-                scheme: scheme
-            ) {
-                permissions.performPrimaryAction(for: permission)
+            if permission == .accessibility && !status.isAuthorized {
+                HStack(spacing: 8) {
+                    Text("Enable \(permissions.applicationName) in System Settings. Use + to add it if missing.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.textSecondary(for: scheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    SettingsActionButton(icon: "folder", label: "Show \(permissions.applicationName) in Finder", scheme: scheme) {
+                        permissions.showApplicationInFinder()
+                    }
+                }
+                .padding(.leading, 26)
             }
         }
         .padding(.vertical, 12)
