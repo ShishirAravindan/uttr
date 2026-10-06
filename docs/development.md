@@ -66,6 +66,17 @@ Both icons are checked in as static PNGs in `Assets.xcassets/AppIcon.appiconset`
 and `Assets.xcassets/AppIconDebug.appiconset`. Update the corresponding asset set
 when changing either icon.
 
+### Logging
+
+`Logger` shares a serialized append sink across components. It keeps the last
+1000 lines when that process first writes to the log; the log can grow during
+the session. Append and startup trimming use an advisory file lock so cooperating
+app processes do not overwrite one another. Trimming preserves the file inode.
+Writes use the filesystem cache rather than syncing the disk for every line.
+
+The hostless test suite exercises concurrent writers and separate processes with
+temporary log files; it does not write to the app’s log directory.
+
 ## Required Permissions
 
 When running from Xcode, you'll need to grant:
