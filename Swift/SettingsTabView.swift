@@ -117,11 +117,21 @@ struct SettingsTabView: View {
                         Text("Version \(appVersion)")
                             .font(.system(size: 12))
                             .foregroundColor(.textSecondary(for: scheme))
-                        Text("github.com/Rakk301/homebrew-uttr")
+                        Link(destination: URL(string: "https://github.com/ShishirAravindan/uttr")!) {
+                            HStack(spacing: 4) {
+                                Text("GitHub repository")
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 9))
+                            }
                             .font(.system(size: 11))
-                            .foregroundColor(.textTertiary(for: scheme))
+                            .foregroundColor(.accentLink(for: scheme))
+                        }
+                        .buttonStyle(.plain)
+                        .help("github.com/ShishirAravindan/uttr")
+                        .accessibilityLabel("Open the uttr repository on GitHub")
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 18)
                 .padding(.horizontal, 16)
             }
