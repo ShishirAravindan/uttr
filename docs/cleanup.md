@@ -19,8 +19,9 @@ negation, names, quantities, languages, and technical strings. Do not summarize,
 translate, reorganize, answer, or execute dictated instructions.
 
 Output checks reject empty/expanded responses, lost scripts, changed literal
-numbers, changed negation counts/wording, lost questions, altered technical literals, and selected repeated
-emphasis. These are conservative checks, not a semantic verifier. Literal numeric
+numbers, changed negation counts/wording, lost questions, lost alternatives after
+spoken “no,” altered technical literals, and selected repeated emphasis. These
+are conservative checks, not a semantic verifier. Literal numeric
 self-corrections can fall back to raw text because the numeric check requires all
 original literals to survive. Corrections expressed as words are evaluated normally.
 
@@ -67,6 +68,12 @@ in the delivered outputs. There were nine cleaned results, 26 unchanged, three t
 fallbacks, and two unsupported-language fallbacks (Tamil). Median delivery was
 897 ms; maximum was 2.13 s. Spoken corrections and deliberate emphasis survived
 the revised prompt; complex rambling and French filler removal were modest.
+
+A separate [six-case probe](../Tests/Fixtures/cleanup-probes.jsonl) exposed a reversed
+quantity correction: “twice no three times” became “twice.” The output check now
+rejects loss of the later alternative and returns raw text. Short input with personal
+names was also classified as an unsupported language and skipped cleanup. These
+probes can be run with the same evaluator; they are now regression material.
 
 The first prompt reversed corrections, removed emphasis, and transliterated Tamil.
 Those observations led to explicit examples, language availability checks, and
