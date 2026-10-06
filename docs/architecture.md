@@ -6,12 +6,12 @@ uttr is a single-tier Swift app. All transcription happens in-process via FluidA
 
 ## Transcribe Flow
 
-Hotkey → `TranscriptionSession` → `AudioRecorder` writes WAV → `FluidAudioProvider.transcribe()` → `PasteManager` pastes at cursor
+Hotkey → `TranscriptionSession` → `AudioRecorder` writes WAV → `FluidAudioProvider.transcribe()` → `TranscriptCleanup` → `PasteManager` pastes at cursor
 
 `TranscriptionSession` owns the workflow on the main actor. Its state moves through
-loading, idle, capturing, transcribing, and inserting; a failed model preparation
+loading, idle, capturing, transcribing, cleaning, and inserting; a failed model preparation
 leaves it unavailable. The popover and menu-bar icon reflect that state. A new
-recording waits until the current transcription and paste finish.
+recording waits until transcription, cleanup, and paste finish.
 
 Provider changes during an utterance are queued until insertion completes, with
 the latest request taking precedence. Superseded preparation results are ignored,
@@ -24,6 +24,8 @@ stops capture and invalidates late results; app quit remains immediate.
 |------|---------------|
 | `uttr.swift` | App lifecycle, windows, hotkey wiring, and session presentation |
 | `TranscriptionSession.swift` | Recording-to-insertion state, task ownership, and provider lifecycle |
+| `Cleanup/TranscriptCleanup.swift` | Cleanup deadline, output checks, and raw-text fallback |
+| `Cleanup/AppleCleanupBackend.swift` | On-device Foundation Models with fresh per-utterance context |
 | `AudioRecorder.swift` | AVAudioEngine capture to native-rate WAV files |
 | `AudioDeviceManager.swift` | Core Audio input-device enumeration and UID → device ID lookup |
 | `HotkeyManager.swift` | Global hotkey registration via Carbon |
@@ -63,6 +65,8 @@ Two consequences shape the code:
 FluidAudio downloads and loads the Parakeet model (~600 MB) during provider preparation at launch or after a provider change. Recording is blocked until preparation succeeds. The model is cached and not re-downloaded on subsequent launches.
 
 ## Storage lifetime
+
+Post-utterance cleanup and raw-history recovery are described in [cleanup](cleanup.md).
 
 Debug and Release continue to share `~/Library/Application Support/uttr/settings.yaml`
 and history. History lives at `~/Library/Application Support/uttr/History/transcription_history.json`;

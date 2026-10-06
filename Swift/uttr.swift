@@ -88,7 +88,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         let session = TranscriptionSession(
             recorder: recorder,
             provider: TranscriptionProviderFactory.make(id: settingsManager.transcriptionProviderID),
-            pasteManager: PasteManager()
+            pasteManager: PasteManager(),
+            cleaner: TranscriptCleanup(backend: CleanupBackendFactory.make())
         )
         self.session = session
         session.onEvent = { [weak self] event in self?.handleSessionEvent(event) }
@@ -204,9 +205,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
             notificationManager?.showTranscriptionError("Microphone disconnected")
             menuBarIconManager?.showErrorState(restore: restoreIcon)
-        case .transcribed(let text, let audioFileName):
-            logger?.log("Handling transcribed text: \(text)")
-            HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
+        case .transcribed(let result, let audioFileName):
+            logger?.log("Transcript ready (cleanup: \(result.outcome.rawValue))")
+            HistoryManager.shared.addTranscription(result.text, audioFileName: audioFileName, rawText: result.rawText)
         case .transcriptionFailed(let message):
             logger?.log("Transcription failed: \(message)", level: .error)
             notificationManager?.showTranscriptionError("Transcription failed: \(message)")

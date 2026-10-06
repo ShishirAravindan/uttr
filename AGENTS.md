@@ -3,8 +3,9 @@
 ## Product and architecture
 
 uttr is a macOS menu-bar app written in Swift. AudioRecorder writes native-rate
-WAV audio; FluidAudio runs Parakeet in-process; PasteManager inserts one completed
-transcript at the cursor. There is no Python sidecar or LLM cleanup stage today.
+WAV audio; FluidAudio runs Parakeet in-process; on supported systems, native
+Foundation Models cleans the utterance before PasteManager inserts it once at the
+cursor. There is no Python sidecar. Cleanup falls back to the original transcript.
 Use the current source and [architecture guide](docs/architecture.md) when older
 notes disagree with them.
 
@@ -25,7 +26,7 @@ explains the costs of automatic stopping, clipboard borrowing, and extra surface
 - One component owns each workflow and its state. AppDelegate owns app lifecycle,
   windows, menu-bar wiring, and system integration; TranscriptionSession owns the
   recording-to-insertion workflow. Views and icons reflect session state. A new
-  recording waits until the current transcription and insertion finish.
+  recording waits until transcription, cleanup, and insertion finish.
 - Keep state transitions on the main actor. Own asynchronous tasks explicitly;
   prevent stale completions from changing newer state. Stop using a provider before
   tearing it down. Preserve behavior during extraction and call out deliberate
