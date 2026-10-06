@@ -110,11 +110,14 @@ final class LoggerReliabilityTests: XCTestCase {
             let process = Process()
             let output = Pipe()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-            process.arguments = ["xctest", "-XCTest", "LoggerReliabilityTests/testProcessWriterHelper",
+            process.arguments = ["xctest", "-XCTest", "\(String(reflecting: Self.self))/testProcessWriterHelper",
                                  Bundle(for: Self.self).bundlePath]
             process.environment = ["PATH": "/usr/bin:/bin",
                                    "UTTR_LOGGER_CHILD_PATH": logURL.path,
                                    "UTTR_LOGGER_CHILD_NAME": name]
+            if let developerDirectory = ProcessInfo.processInfo.environment["DEVELOPER_DIR"] {
+                process.environment?["DEVELOPER_DIR"] = developerDirectory
+            }
             process.standardOutput = output
             process.standardError = output
             try process.run()
@@ -126,6 +129,7 @@ final class LoggerReliabilityTests: XCTestCase {
             let output = String(data: outputs[index].fileHandleForReading.readDataToEndOfFile(),
                                 encoding: .utf8) ?? ""
             XCTAssertEqual(process.terminationStatus, 0, output)
+            XCTAssertTrue(output.contains("Executed 1 test"), output)
         }
         // A handle that predates retention must still address the visible file.
         let sentinel = Data("existing-handle\n".utf8)
