@@ -468,9 +468,9 @@ private final class Fixture {
         session = TranscriptionSession(recorder: recorder, provider: provider, pasteManager: paste)
         session.onEvent = { [weak self] event in
             switch event {
-            case .transcribed(let text, let audioFileName):
+            case .transcribed(let result, let audioFileName):
                 XCTAssertEqual(audioFileName, "recording.wav")
-                self?.history.append(text)
+                self?.history.append(result.text)
             case .providerReady: self?.readyEvents += 1
             case .providerFailed: self?.failureEvents += 1
             case .inserted: self?.insertedEvents += 1

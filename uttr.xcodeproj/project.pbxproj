@@ -44,6 +44,7 @@
 		AB1901012E9B000000000001 /* TranscriptCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900012E9B000000000001 /* TranscriptCleanup.swift */; };
 		AB1901022E9B000000000001 /* AppleCleanupBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900022E9B000000000001 /* AppleCleanupBackend.swift */; };
 		AB1902012E9B000000000001 /* TranscriptCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900012E9B000000000001 /* TranscriptCleanup.swift */; };
+		AB1902022E9B000000000001 /* TranscriptCleanupTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900032E9B000000000001 /* TranscriptCleanupTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +81,7 @@
 		AB1600052E9B000000000001 /* UttrSessionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UttrSessionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB1900012E9B000000000001 /* TranscriptCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptCleanup.swift; path = Swift/Cleanup/TranscriptCleanup.swift; sourceTree = "<group>"; };
 		AB1900022E9B000000000001 /* AppleCleanupBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleCleanupBackend.swift; path = Swift/Cleanup/AppleCleanupBackend.swift; sourceTree = "<group>"; };
+		AB1900032E9B000000000001 /* TranscriptCleanupTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptCleanupTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +152,7 @@
 		AB1600062E9B000000000001 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				AB1900032E9B000000000001 /* TranscriptCleanupTests.swift */,
 				AB1800042E9B000000000001 /* StorageLifecycleTests.swift */,
 				AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */,
 			);
@@ -283,6 +286,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB1902022E9B000000000001 /* TranscriptCleanupTests.swift in Sources */,
 				AB1902012E9B000000000001 /* TranscriptCleanup.swift in Sources */,
 				AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */,
 				AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
