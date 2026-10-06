@@ -23,7 +23,5 @@ uttr.xcodeproj/project.xcworkspace/xcuserdata/
 build/
 DerivedData/
 
-.claude/worktrees/
-
 # Local planning
 /backlog.md
