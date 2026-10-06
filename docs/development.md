@@ -99,10 +99,32 @@ Logs appear in Xcode console. Filter by component:
 
 ## Code Style
 
+Repository guidance lives in [AGENTS.md](../AGENTS.md). For recording, transcription,
+or session-lifecycle work, use the [session-work skill](../.agents/skills/uttr-session-work/SKILL.md).
+
 - One file per component/responsibility
 - Use `Logger` for all logging, not `print()`
 - Prefer `async/await` for asynchronous operations
 - Follow existing patterns in the codebase
+
+## Session Tests
+
+The shared `uttr` scheme includes a hostless `UttrSessionTests` target. It compiles
+the session and provider contract directly, using controlled recorder, provider,
+and paste implementations. It does not launch uttr, load models, or access the
+microphone, history, or clipboard.
+
+```bash
+xcodebuild -project uttr.xcodeproj \
+  -scheme uttr -configuration Debug \
+  -destination 'platform=macOS' \
+  -derivedDataPath /private/tmp/uttr-tests \
+  CODE_SIGNING_ALLOWED=NO test
+```
+
+Tests cover busy input, failure recovery, interruption, deferred provider changes,
+superseded preparation, and shutdown with late callbacks. Live audio capture and
+paste compatibility still require a manual check.
 
 ## Building for Distribution
 
