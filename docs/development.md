@@ -62,11 +62,9 @@ IDs stay `io.github.Rakk301.uttr.debug` and `io.github.Rakk301.uttr`, so macOS k
 their permission grants separate. Settings and transcription history are shared;
 logs follow the app's bundle name under `~/Library/Logs/`.
 
-To regenerate the Debug icon after updating the release wordmark, run:
-
-```bash
-xcrun swift scripts/generate-debug-icon.swift
-```
+Both icons are checked in as static PNGs in `Assets.xcassets/AppIcon.appiconset`
+and `Assets.xcassets/AppIconDebug.appiconset`. Update the corresponding asset set
+when changing either icon.
 
 ## Required Permissions
 
