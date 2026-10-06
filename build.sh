@@ -81,15 +81,20 @@ if [ "$CLEAN" = true ]; then
     echo ""
 fi
 
+# Debug signs the whole app for local use. Release keeps the distribution build's
+# existing unsigned behavior; it must not inherit a developer's local identity.
+SIGNING_SETTINGS=(CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO)
+if [ "$CONFIGURATION" = "Debug" ]; then
+    SIGNING_SETTINGS=(CODE_SIGNING_ALLOWED=YES)
+fi
+
 # Build
 echo -e "${YELLOW}Building...${NC}"
 xcodebuild -project uttr.xcodeproj \
     -scheme uttr \
     -configuration "$CONFIGURATION" \
     -destination 'platform=macOS,arch=arm64' \
-    CODE_SIGN_IDENTITY="-" \
-    CODE_SIGNING_REQUIRED=NO \
-    CODE_SIGNING_ALLOWED=NO \
+    "${SIGNING_SETTINGS[@]}" \
     build
 
 # Find the built app
