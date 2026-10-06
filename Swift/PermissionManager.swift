@@ -128,14 +128,15 @@ class PermissionManager: ObservableObject {
         }
     }
 
-    /// Prompts for Accessibility. macOS shows the System Settings prompt only the
-    /// first time; afterwards refresh()/polling pick up the grant automatically.
+    /// Requests the native prompt and opens Settings whenever access is missing,
+    /// including retries after macOS has stopped showing its one-time prompt.
     func requestAccessibilityPermission() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
         applyAccessibility(trusted: trusted)
         logger.log("Accessibility permission requested, trusted: \(trusted)", level: .info)
         startPollingIfNeeded()
+        if !trusted { openSystemPreferences(for: .accessibility) }
     }
 
     func openSystemPreferences(for permission: PermissionType) {
