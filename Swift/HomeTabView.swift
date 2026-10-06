@@ -102,6 +102,18 @@ struct TranscriptionCard: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
+
+                if let rawText = transcription.rawText, rawText != transcription.text {
+                    DisclosureGroup("Original transcription") {
+                        Text(rawText)
+                            .font(.system(size: 12))
+                            .foregroundColor(.textSecondary(for: scheme))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                    .font(.system(size: 11))
+                    .foregroundColor(.textSecondary(for: scheme))
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -123,6 +135,15 @@ struct TranscriptionCard: View {
             .onHover { isHovered = $0 }
         }
         .padding(16)
+        .contextMenu {
+            Button("Copy transcription", action: copyToClipboard)
+            if transcription.rawText != nil {
+                Button("Copy original transcription") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(transcription.originalText, forType: .string)
+                }
+            }
+        }
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.cardBackground(for: scheme))
@@ -154,4 +175,3 @@ struct TranscriptionCard: View {
 #Preview {
     HomeTabView()
 }
-
