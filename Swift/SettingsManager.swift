@@ -85,9 +85,7 @@ class SettingsManager: ObservableObject {
     // MARK: - Initialization
 
     init() {
-        let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first!.appendingPathComponent("uttr")
-        configFileURL = appSupportURL.appendingPathComponent("settings.yaml")
+        configFileURL = AppPaths().settings
         logger.log("Using config file at: \(configFileURL.path)", level: .debug)
         loadSettings()
     }
