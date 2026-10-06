@@ -91,12 +91,13 @@ struct SettingsTabView: View {
                     } else {
                         HStack(spacing: 6) {
                             KeycapsView(hotkey: settings.getHotkeyDisplayString(), scheme: scheme)
-                            Button("Change") { hotkeyRecorder.startRecording() }
-                                .font(.system(size: 12))
-                                .foregroundColor(.accentLink(for: scheme))
-                                .buttonStyle(.plain)
-                                .padding(.vertical, 4)
-                                .padding(.horizontal, 8)
+                            SettingsActionButton(
+                                icon: "pencil",
+                                label: "Change recording shortcut",
+                                scheme: scheme
+                            ) {
+                                hotkeyRecorder.startRecording()
+                            }
                         }
                     }
                 }
