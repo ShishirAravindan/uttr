@@ -43,8 +43,14 @@ See [Configuration Guide](docs/configuration.md) for all options.
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 15.5 or later
 - Apple Silicon (M1 or later) — required for the Neural Engine
+
+Post-utterance cleanup uses Apple's on-device model on macOS 26 or later when
+Apple Intelligence is available. It removes clear fillers and restarts, fixes
+punctuation, and follows spoken corrections before pasting once. If cleanup is
+unavailable, fails, or exceeds its two-second budget, uttr pastes the raw transcript.
+History keeps the original text when cleanup changes it.
 
 ## Contributing
 
