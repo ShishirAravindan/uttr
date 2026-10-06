@@ -35,7 +35,9 @@
 		AB1801022E9B000000000001 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800022E9B000000000001 /* HistoryStore.swift */; };
 		AB1801032E9B000000000001 /* RecordingFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800032E9B000000000001 /* RecordingFiles.swift */; };
 		AB1802012E9B000000000001 /* AppPaths.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800012E9B000000000001 /* AppPaths.swift */; };
+		AB1802022E9B000000000001 /* HistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800022E9B000000000001 /* HistoryStore.swift */; };
 		AB1802032E9B000000000001 /* RecordingFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800032E9B000000000001 /* RecordingFiles.swift */; };
+		AB1802042E9B000000000001 /* StorageLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1800042E9B000000000001 /* StorageLifecycleTests.swift */; };
 		AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1500012E9B000000000001 /* TranscriptionSession.swift */; };
 		AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */; };
 		AB1600032E9B000000000001 /* TranscriptionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */; };
@@ -70,6 +72,7 @@
 		AB1800012E9B000000000001 /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppPaths.swift; path = Swift/AppPaths.swift; sourceTree = "<group>"; };
 		AB1800022E9B000000000001 /* HistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HistoryStore.swift; path = Swift/HistoryStore.swift; sourceTree = "<group>"; };
 		AB1800032E9B000000000001 /* RecordingFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecordingFiles.swift; path = Swift/RecordingFiles.swift; sourceTree = "<group>"; };
+		AB1800042E9B000000000001 /* StorageLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLifecycleTests.swift; sourceTree = "<group>"; };
 		AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSessionTests.swift; sourceTree = "<group>"; };
 		AB1600052E9B000000000001 /* UttrSessionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UttrSessionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -140,6 +143,7 @@
 		AB1600062E9B000000000001 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				AB1800042E9B000000000001 /* StorageLifecycleTests.swift */,
 				AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */,
 			);
 			path = Tests;
@@ -273,7 +277,9 @@
 				AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */,
 				AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				AB1802012E9B000000000001 /* AppPaths.swift in Sources */,
+				AB1802022E9B000000000001 /* HistoryStore.swift in Sources */,
 				AB1802032E9B000000000001 /* RecordingFiles.swift in Sources */,
+				AB1802042E9B000000000001 /* StorageLifecycleTests.swift in Sources */,
 				AB1600032E9B000000000001 /* TranscriptionSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
