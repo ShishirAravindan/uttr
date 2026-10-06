@@ -17,6 +17,7 @@ enum SessionState: Equatable {
     case idle
     case capturing(startedAt: Date)
     case transcribing(audioURL: URL)
+    case cleaning
     case inserting(text: String)
     case unavailable(message: String)
     case stopped
@@ -28,7 +29,7 @@ enum SessionState: Equatable {
 
     var isBusy: Bool {
         switch self {
-        case .capturing, .transcribing, .inserting: return true
+        case .capturing, .transcribing, .cleaning, .inserting: return true
         default: return false
         }
     }
@@ -43,7 +44,7 @@ enum SessionEvent {
     case recordingFailed(message: String)
     case recordingInterrupted
     case recordingCleanupFailed(message: String)
-    case transcribed(text: String, audioFileName: String)
+    case transcribed(result: TranscriptCleanupResult, audioFileName: String)
     case transcriptionFailed(message: String)
     case inserted
     case insertionFailed
@@ -59,17 +60,20 @@ final class TranscriptionSession: ObservableObject {
     private let recorder: SessionRecording
     private let pasteManager: SessionPasting
     private let removeRecording: (URL) throws -> Void
+    private let cleaner: TranscriptCleaning?
     private var provider: TranscriptionProvider
     private var pendingProvider: TranscriptionProvider?
     private var operationTask: Task<Void, Never>?
     private var revision = 0
 
     init(recorder: SessionRecording, provider: TranscriptionProvider, pasteManager: SessionPasting,
-         removeRecording: @escaping (URL) throws -> Void = RecordingFiles().remove) {
+         removeRecording: @escaping (URL) throws -> Void = RecordingFiles().remove,
+         cleaner: TranscriptCleaning? = nil) {
         self.recorder = recorder
         self.provider = provider
         self.pasteManager = pasteManager
         self.removeRecording = removeRecording
+        self.cleaner = cleaner
     }
 
     func providerStatus(for state: SessionState) -> String {
@@ -144,6 +148,7 @@ final class TranscriptionSession: ObservableObject {
         onEvent?(.recordingStopped)
         let transcriptionRevision = revision
         let provider = self.provider
+        let cleaner = self.cleaner
         let removeRecording = self.removeRecording
         operationTask = Task { [weak self] in
             // Inference can ignore cancellation. Keep its input until the call returns.
@@ -154,10 +159,17 @@ final class TranscriptionSession: ObservableObject {
             do {
                 let text = try await provider.transcribe(audioFileURL: url)
                 guard let self, self.isCurrent(transcriptionRevision) else { return }
-                self.state = .inserting(text: text)
-                self.onEvent?(.transcribed(text: text, audioFileName: url.lastPathComponent))
+                var result = TranscriptCleanupResult.raw(text)
+                if let cleaner {
+                    self.state = .cleaning
+                    do { result = try await cleaner.clean(text) }
+                    catch { result = .raw(text, reason: .failed) }
+                }
                 guard self.isCurrent(transcriptionRevision) else { return }
-                self.pasteManager.pasteText(text) { [weak self] success in
+                self.state = .inserting(text: result.text)
+                self.onEvent?(.transcribed(result: result, audioFileName: url.lastPathComponent))
+                guard self.isCurrent(transcriptionRevision) else { return }
+                self.pasteManager.pasteText(result.text) { [weak self] success in
                     Task { @MainActor [weak self] in
                         guard let self, self.isCurrent(transcriptionRevision),
                               case .inserting = self.state else { return }
@@ -185,8 +197,10 @@ final class TranscriptionSession: ObservableObject {
         let previousTask = operationTask
         previousTask?.cancel()
         let provider = self.provider
+        let cleaner = self.cleaner
         let task = Task {
             await previousTask?.value
+            await cleaner?.shutDown()
             await provider.teardown()
         }
         operationTask = task

@@ -17,8 +17,8 @@ final class HistoryManager: ObservableObject {
         catch { logger.logError(error, context: "Failed to load transcription history; existing files preserved") }
     }
 
-    func addTranscription(_ text: String, audioFileName: String? = nil) {
-        let entry = TranscriptionEntry(text: text, audioFileName: audioFileName)
+    func addTranscription(_ text: String, audioFileName: String? = nil, rawText: String? = nil) {
+        let entry = TranscriptionEntry(text: text, audioFileName: audioFileName, rawText: rawText)
         do { transcriptions = try store.add(entry) }
         catch {
             transcriptions = Array(([entry] + transcriptions).prefix(5))

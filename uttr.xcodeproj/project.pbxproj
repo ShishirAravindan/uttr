@@ -41,6 +41,9 @@
 		AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1500012E9B000000000001 /* TranscriptionSession.swift */; };
 		AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */; };
 		AB1600032E9B000000000001 /* TranscriptionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */; };
+		AB1901012E9B000000000001 /* TranscriptCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900012E9B000000000001 /* TranscriptCleanup.swift */; };
+		AB1901022E9B000000000001 /* AppleCleanupBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900022E9B000000000001 /* AppleCleanupBackend.swift */; };
+		AB1902012E9B000000000001 /* TranscriptCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1900012E9B000000000001 /* TranscriptCleanup.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -75,6 +78,8 @@
 		AB1800042E9B000000000001 /* StorageLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageLifecycleTests.swift; sourceTree = "<group>"; };
 		AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSessionTests.swift; sourceTree = "<group>"; };
 		AB1600052E9B000000000001 /* UttrSessionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UttrSessionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB1900012E9B000000000001 /* TranscriptCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptCleanup.swift; path = Swift/Cleanup/TranscriptCleanup.swift; sourceTree = "<group>"; };
+		AB1900022E9B000000000001 /* AppleCleanupBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleCleanupBackend.swift; path = Swift/Cleanup/AppleCleanupBackend.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -115,6 +120,8 @@
 				AB1800032E9B000000000001 /* RecordingFiles.swift */,
 				00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */,
 				AB1300012E9B000000000001 /* AudioDeviceManager.swift */,
+				AB1900012E9B000000000001 /* TranscriptCleanup.swift */,
+				AB1900022E9B000000000001 /* AppleCleanupBackend.swift */,
 				AB1500012E9B000000000001 /* TranscriptionSession.swift */,
 				AB1500032E9B000000000001 /* TranscriptionProviderFactory.swift */,
 				00EA516B2E24C16D00BE5FC7 /* uttr.swift */,
@@ -243,6 +250,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB1901012E9B000000000001 /* TranscriptCleanup.swift in Sources */,
+				AB1901022E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AB1500022E9B000000000001 /* TranscriptionSession.swift in Sources */,
 				AB1500042E9B000000000001 /* TranscriptionProviderFactory.swift in Sources */,
 				00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */,
@@ -274,6 +283,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB1902012E9B000000000001 /* TranscriptCleanup.swift in Sources */,
 				AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */,
 				AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				AB1802012E9B000000000001 /* AppPaths.swift in Sources */,

@@ -49,7 +49,7 @@ class MenuBarIconManager: ObservableObject {
         case .loading: setLoadingState()
         case .idle: setReadyState()
         case .capturing: setRecordingState()
-        case .transcribing, .inserting: setProcessingState()
+        case .transcribing, .cleaning, .inserting: setProcessingState()
         case .unavailable:
             beginState(.error)
             transitionToIcon("exclamationmark.triangle.fill", withAnimation: true)

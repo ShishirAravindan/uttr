@@ -13,6 +13,7 @@ class PopoverViewModel: ObservableObject {
         switch sessionState {
         case .loading: return "Model loading…"
         case .transcribing: return "Transcribing…"
+        case .cleaning: return "Cleaning up transcript…"
         case .inserting: return "Inserting transcript…"
         case .unavailable: return "Model unavailable"
         case .stopped: return "App stopping…"

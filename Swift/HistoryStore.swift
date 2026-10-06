@@ -7,12 +7,16 @@ struct TranscriptionEntry: Codable, Identifiable {
     let text: String
     let timestamp: Date
     let audioFileName: String?
+    let rawText: String?
 
-    init(text: String, audioFileName: String? = nil) {
+    var originalText: String { rawText ?? text }
+
+    init(text: String, audioFileName: String? = nil, rawText: String? = nil) {
         self.id = UUID()
         self.text = text
         self.timestamp = Date()
         self.audioFileName = audioFileName
+        self.rawText = rawText == text ? nil : rawText
     }
 
     var formattedTimestamp: String {
