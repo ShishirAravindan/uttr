@@ -51,6 +51,17 @@ final class TranscriptCleanupTests: XCTestCase {
     }
 
     @MainActor
+    func testReversedSpokenCorrectionFallsBackToRawQuantity() async throws {
+        let backend = CleanupFake()
+        backend.output = "It failed twice, but only on the built-in microphone."
+        let raw = "It failed twice no three times, but only on the built-in microphone."
+        let result = try await TranscriptCleanup(backend: backend).clean(raw)
+        XCTAssertEqual(result.outcome, .invalidOutput)
+        XCTAssertEqual(result.text, raw)
+        XCTAssertEqual(result.rawText, raw)
+    }
+
+    @MainActor
     func testDeadlineDoesNotWaitForUncooperativeModelOrStartAnotherGeneration() async throws {
         let backend = CleanupFake()
         backend.suspended = true
@@ -188,6 +199,9 @@ final class TranscriptCleanupTests: XCTestCase {
         XCTAssertFalse(CleanupOutput.accepts("Can you explain why.", for: "Can you explain why?"))
         XCTAssertTrue(CleanupOutput.accepts("I think कल सुबह we should try again.", for: "Um I think कल सुबह we should try again."))
         XCTAssertTrue(CleanupOutput.accepts("We should move history.", for: "We should we should move history."))
+        XCTAssertFalse(CleanupOutput.accepts("Let's meet Tuesday.", for: "Let's meet Tuesday no Wednesday."))
+        XCTAssertTrue(CleanupOutput.accepts("Let's meet Wednesday.", for: "Let's meet Tuesday no Wednesday."))
+        XCTAssertTrue(CleanupOutput.accepts("It failed three times.", for: "It failed twice, no, three times."))
     }
 
     @MainActor
