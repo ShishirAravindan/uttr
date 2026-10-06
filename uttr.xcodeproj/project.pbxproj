@@ -31,6 +31,9 @@
 		AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1300012E9B000000000001 /* AudioDeviceManager.swift */; };
 		AB1500022E9B000000000001 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1500012E9B000000000001 /* TranscriptionSession.swift */; };
 		AB1500042E9B000000000001 /* TranscriptionProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1500032E9B000000000001 /* TranscriptionProviderFactory.swift */; };
+		AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1500012E9B000000000001 /* TranscriptionSession.swift */; };
+		AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */; };
+		AB1600032E9B000000000001 /* TranscriptionSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +62,8 @@
 		AB1300012E9B000000000001 /* AudioDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioDeviceManager.swift; path = Swift/AudioDeviceManager.swift; sourceTree = "<group>"; };
 		AB1500012E9B000000000001 /* TranscriptionSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionSession.swift; path = Swift/TranscriptionSession.swift; sourceTree = "<group>"; };
 		AB1500032E9B000000000001 /* TranscriptionProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TranscriptionProviderFactory.swift; path = Swift/Transcription/TranscriptionProviderFactory.swift; sourceTree = "<group>"; };
+		AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionSessionTests.swift; sourceTree = "<group>"; };
+		AB1600052E9B000000000001 /* UttrSessionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = UttrSessionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,6 +74,12 @@
 				00E612A82E593BC4002E23F2 /* Yams in Frameworks */,
 				6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB1600072E9B000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = ();
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -96,6 +107,7 @@
 				00869A142E56E33600D65D58 /* MenuBarIconManager.swift */,
 				000968732E24DD7C000173E2 /* HotkeyManager.swift */,
 				00EA516F2E24D05200BE5FC7 /* Logger.swift */,
+				AB1600062E9B000000000001 /* Tests */,
 				00EA515C2E24C05900BE5FC7 /* Products */,
 				00E612A92E593E66002E23F2 /* HotkeyRecorder.swift */,
 				6AF2A0012E9B000000000001 /* TranscriptionProvider.swift */,
@@ -109,8 +121,17 @@
 			isa = PBXGroup;
 			children = (
 				00EA515B2E24C05900BE5FC7 /* uttr.app */,
+				AB1600052E9B000000000001 /* UttrSessionTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AB1600062E9B000000000001 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				AB1600042E9B000000000001 /* TranscriptionSessionTests.swift */,
+			);
+			path = Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -136,6 +157,20 @@
 			productName = uttr;
 			productReference = 00EA515B2E24C05900BE5FC7 /* uttr.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AB1600092E9B000000000001 /* UttrSessionTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AB16000A2E9B000000000001 /* Build configuration list for PBXNativeTarget "UttrSessionTests" */;
+			buildPhases = (
+				AB1600082E9B000000000001 /* Sources */,
+				AB1600072E9B000000000001 /* Frameworks */,
+			);
+			buildRules = ();
+			dependencies = ();
+			name = UttrSessionTests;
+			productName = UttrSessionTests;
+			productReference = AB1600052E9B000000000001 /* UttrSessionTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -172,6 +207,7 @@
 			projectRoot = "";
 			targets = (
 				00EA515A2E24C05900BE5FC7 /* uttr */,
+				AB1600092E9B000000000001 /* UttrSessionTests */,
 			);
 		};
 /* End PBXProject section */
@@ -213,6 +249,16 @@
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */,
 				AA1100022E9B000000000001 /* DesignTokens.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AB1600082E9B000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AB1600012E9B000000000001 /* TranscriptionSession.swift in Sources */,
+				AB1600022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
+				AB1600032E9B000000000001 /* TranscriptionSessionTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -408,6 +454,44 @@
 			};
 			name = Release;
 		};
+		AB16000B2E9B000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.Rakk301.uttr.session-tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		AB16000C2E9B000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = io.github.Rakk301.uttr.session-tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -425,6 +509,15 @@
 			buildConfigurations = (
 				00EA51682E24C05A00BE5FC7 /* Debug */,
 				00EA51692E24C05A00BE5FC7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AB16000A2E9B000000000001 /* Build configuration list for PBXNativeTarget "UttrSessionTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AB16000B2E9B000000000001 /* Debug */,
+				AB16000C2E9B000000000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
