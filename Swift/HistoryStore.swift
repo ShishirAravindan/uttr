@@ -35,6 +35,8 @@ final class HistoryStore {
     private let paths: AppPaths
     private let fileManager = FileManager.default
     private let maxEntries = 5
+    private let lock = NSLock()
+    private var pendingEntries: [TranscriptionEntry] = []
     private let report: (Error) -> Void
 
     init(paths: AppPaths = AppPaths(), report: @escaping (Error) -> Void = { _ in }) {
@@ -43,22 +45,33 @@ final class HistoryStore {
     }
 
     func load() throws -> [TranscriptionEntry] {
-        try transaction { try loadAndMigrate() }
+        lock.lock()
+        defer { lock.unlock() }
+        return try transaction { try loadAndMigrate() }
     }
 
     func add(_ entry: TranscriptionEntry) throws -> [TranscriptionEntry] {
-        try transaction {
-            let entries = Array(([entry] + (try loadAndMigrate())).prefix(maxEntries))
+        lock.lock()
+        defer { lock.unlock() }
+        pendingEntries = Array(([entry] + pendingEntries).prefix(maxEntries))
+        return try transaction {
+            var seen = Set<UUID>()
+            let merged = (pendingEntries + (try loadAndMigrate())).filter { seen.insert($0.id).inserted }
+            let entries = Array(merged.sorted { $0.timestamp > $1.timestamp }.prefix(maxEntries))
             try write(entries)
+            pendingEntries.removeAll()
             return entries
         }
     }
 
     func clear() throws {
+        lock.lock()
+        defer { lock.unlock() }
         try transaction {
             // Validate existing files before replacing them, including on failed migration.
             _ = try loadAndMigrate()
             try write([])
+            pendingEntries.removeAll()
         }
     }
 
