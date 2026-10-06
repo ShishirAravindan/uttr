@@ -105,6 +105,22 @@ final class StorageLifecycleTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: fixture.paths.legacyHistory), legacy)
     }
 
+    func testFailedAdditionIsRetriedAfterStorageRecovers() throws {
+        let fixture = try StorageFixture()
+        defer { fixture.remove() }
+        try FileManager.default.createDirectory(at: fixture.paths.applicationSupport, withIntermediateDirectories: true)
+        let blocker = fixture.paths.history.deletingLastPathComponent()
+        try Data("blocks directory".utf8).write(to: blocker)
+        let store = HistoryStore(paths: fixture.paths)
+        let first = TranscriptionEntry(text: "Keep failed entry")
+        XCTAssertThrowsError(try store.add(first))
+        try FileManager.default.removeItem(at: blocker)
+        let second = TranscriptionEntry(text: "Recovered entry")
+        let result = try store.add(second)
+        XCTAssertEqual(result.map(\.id), [second.id, first.id])
+        XCTAssertEqual(try HistoryStore(paths: fixture.paths).load().map(\.id), [second.id, first.id])
+    }
+
     func testIndependentStoresDoNotLoseConcurrentEntries() throws {
         let fixture = try StorageFixture()
         defer { fixture.remove() }
