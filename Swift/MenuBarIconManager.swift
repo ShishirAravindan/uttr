@@ -27,8 +27,15 @@ class MenuBarIconManager: ObservableObject {
         // Show a visible icon immediately so the menu bar slot is never blank
         // while the model downloads/loads on first launch.
         if let button = statusItem.button {
+            let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
+            button.toolTip = appName
+            #if DEBUG
+            button.title = "D"
+            button.font = .systemFont(ofSize: 9, weight: .semibold)
+            button.imagePosition = .imageLeft
+            #endif
             button.alphaValue = 1.0
-            button.image = NSImage(systemSymbolName: "mic", accessibilityDescription: "uttr")?
+            button.image = NSImage(systemSymbolName: "mic", accessibilityDescription: appName)?
                 .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .bold))
         }
     }
@@ -176,7 +183,8 @@ class MenuBarIconManager: ObservableObject {
         stopRecordingPulse()
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
-        var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: "uttr")?.withSymbolConfiguration(config)
+        let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
+        var newImage = NSImage(systemSymbolName: iconName, accessibilityDescription: appName)?.withSymbolConfiguration(config)
         
         // Apply tint color if specified
         if let tintColor = tintColor, let image = newImage {

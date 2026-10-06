@@ -24,3 +24,6 @@ build/
 DerivedData/
 
 .claude/worktrees/
+
+# Local planning
+/backlog.md

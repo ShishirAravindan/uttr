@@ -51,6 +51,21 @@ Or use the build script:
 ./build.sh -c Debug
 ```
 
+### Debug and Release identity
+
+Debug builds produce **uttr Debug.app** with an amber DEV badge on the wordmark icon
+(D at smaller sizes). A D beside the menu bar icon and the name in About identify
+the running build. `./build.sh -c Debug --open` opens it from the build directory.
+
+Release builds use **uttr.app** and the original wordmark icon. The existing bundle
+IDs stay `io.github.Rakk301.uttr.debug` and `io.github.Rakk301.uttr`, so macOS keeps
+their permission grants separate. Settings and transcription history are shared;
+logs follow the app's bundle name under `~/Library/Logs/`.
+
+Both icons are checked in as static PNGs in `Assets.xcassets/AppIcon.appiconset`
+and `Assets.xcassets/AppIconDebug.appiconset`. Update the corresponding asset set
+when changing either icon.
+
 ## Required Permissions
 
 When running from Xcode, you'll need to grant:

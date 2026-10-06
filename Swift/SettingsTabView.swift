@@ -109,7 +109,7 @@ struct SettingsTabView: View {
         SectionBlock(label: "About") {
             SettingsCard(scheme: scheme) {
                 HStack(spacing: 14) {
-                    Text("uttr")
+                    Text(appName)
                         .font(.system(size: 22, weight: .medium))
                         .tracking(-0.88)
                         .foregroundColor(.textPrimary(for: scheme))
@@ -139,6 +139,10 @@ struct SettingsTabView: View {
     }
 
     // MARK: - Helpers
+
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
+    }
 
     private var appVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"

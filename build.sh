@@ -93,12 +93,14 @@ xcodebuild -project uttr.xcodeproj \
     build
 
 # Find the built app
-BUILD_DIR=$(xcodebuild -project uttr.xcodeproj \
+BUILD_SETTINGS=$(xcodebuild -project uttr.xcodeproj \
     -scheme uttr \
     -configuration "$CONFIGURATION" \
-    -showBuildSettings 2>/dev/null | grep -m1 "BUILT_PRODUCTS_DIR" | awk '{print $3}')
+    -showBuildSettings 2>/dev/null)
 
-APP_PATH="$BUILD_DIR/uttr.app"
+BUILD_DIR=$(printf '%s\n' "$BUILD_SETTINGS" | sed -n 's/^[[:space:]]*BUILT_PRODUCTS_DIR = //p' | head -n 1)
+APP_BUNDLE_NAME=$(printf '%s\n' "$BUILD_SETTINGS" | sed -n 's/^[[:space:]]*FULL_PRODUCT_NAME = //p' | head -n 1)
+APP_PATH="$BUILD_DIR/$APP_BUNDLE_NAME"
 
 echo ""
 echo -e "${GREEN}=== Build Successful ===${NC}"
@@ -127,4 +129,3 @@ else
         open "$APP_PATH"
     fi
 fi
-
