@@ -1,6 +1,6 @@
 import SwiftUI
 import Cocoa
-import AVFoundation
+import Combine
 
 @main
 struct uttr: App {
@@ -17,14 +17,14 @@ struct uttr: App {
     }
 }
 
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowDelegate {
 
     // MARK: - Properties
     private var statusItem: NSStatusItem?
-    private var audioRecorder: AudioRecorder?
     private var hotkeyManager: HotkeyManager?
-    private var pasteManager: PasteManager?
-    private var transcriptionProvider: TranscriptionProvider?
+    private var session: TranscriptionSession?
+    private var sessionObservation: AnyCancellable?
     private var logger: Logger?
     let settingsManager = SettingsManager()
     let permissionManager = PermissionManager()
@@ -42,15 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindow: NSWindow?
     private var settingsWindowController: NSWindowController?
 
-    private var isRecording = false
-    private var isProviderReady = false
-
     // MARK: - App Lifecycle
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         setupComponents()
         setupMenuBar()
-        startTranscriptionProvider()
+        session?.prepare()
         requestPermissions()
         logger?.log("=== App Setup Complete ===", level: .info)
     }
@@ -69,8 +66,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.logger?.log("Accessibility granted — re-registering global hotkey", level: .info)
-            self?.hotkeyManager?.refreshHotkeyConfiguration()
+            MainActor.assumeIsolated {
+                self?.logger?.log("Accessibility granted — re-registering global hotkey", level: .info)
+                self?.hotkeyManager?.refreshHotkeyConfiguration()
+            }
         }
 
         if !permissionManager.hasAllPermissions {
@@ -84,27 +83,26 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         logger?.log("=== Initializing App Setup ===", level: .debug)
 
         notificationManager = NotificationManager()
-        audioRecorder = AudioRecorder()
-        audioRecorder?.preferredInputDeviceUID = settingsManager.inputDeviceUID
-        audioRecorder?.onInterrupted = { [weak self] in
-            self?.handleRecordingInterrupted()
+        let recorder = AudioRecorder()
+        recorder.preferredInputDeviceUID = settingsManager.inputDeviceUID
+        let session = TranscriptionSession(
+            recorder: recorder,
+            provider: TranscriptionProviderFactory.make(id: settingsManager.transcriptionProviderID),
+            pasteManager: PasteManager()
+        )
+        self.session = session
+        session.onEvent = { [weak self] event in self?.handleSessionEvent(event) }
+        sessionObservation = session.$state.sink { [weak self] state in
+            self?.renderSessionState(state)
         }
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
-        pasteManager = PasteManager()
-        transcriptionProvider = TranscriptionProviderFactory.make(
-            id: settingsManager.transcriptionProviderID
-        )
-        logger?.log("TranscriptionProvider initialized: \(settingsManager.transcriptionProviderID)", level: .debug)
-
-        hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
-            self?.handleTranscribeHotkeyPress()
+        hotkeyManager?.onTranscribeHotkeyPressed = { [weak session] in
+            session?.toggleRecording()
         }
 
-        // Wire popover callbacks
         popoverViewModel.hotkeyDisplay = settingsManager.getHotkeyDisplayString()
-        popoverViewModel.onStartRecording = { [weak self] in self?.startRecording() }
-        popoverViewModel.onStopRecording  = { [weak self] in self?.stopRecording() }
+        popoverViewModel.onToggleRecording = { [weak session] in session?.toggleRecording() }
         popoverViewModel.onOpenSettings   = { [weak self] in self?.openSettingsWindow() }
         popoverViewModel.onOpenHistory    = { [weak self] in self?.openHistoryWindow() }
 
@@ -112,7 +110,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             forName: .transcriptionProviderChanged,
             object: nil,
             queue: .main
-        ) { [weak self] _ in self?.handleSettingsChanged() }
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleSettingsChanged() }
+        }
 
         // The recorder builds a fresh engine per recording, so the new device
         // takes effect on the next one — no need to rebuild anything here.
@@ -121,8 +121,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            self.audioRecorder?.preferredInputDeviceUID = self.settingsManager.inputDeviceUID
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.session?.setInputDevice(uid: self.settingsManager.inputDeviceUID)
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -130,8 +132,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.hotkeyManager?.refreshHotkeyConfiguration()
-            self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
+            MainActor.assumeIsolated {
+                self?.hotkeyManager?.refreshHotkeyConfiguration()
+                self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
+            }
         }
 
         // Show dock icon whenever a titled window is active
@@ -160,34 +164,60 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         logger?.log("App Components Initialized", level: .debug)
     }
 
-    private func startTranscriptionProvider() {
-        isProviderReady = false
-        settingsManager.providerStatus = "Loading…"
-        menuBarIconManager?.setLoadingState()
-        Task { [weak self] in
-            guard let self, let provider = self.transcriptionProvider else { return }
-            do {
-                try await provider.prepare()
-                await MainActor.run {
-                    self.isProviderReady = true
-                    self.logger?.log("Transcription provider ready: \(provider.displayName)", level: .info)
-                    self.updateProviderStatus()
-                    self.notificationManager?.showAppInitializationSuccess()
-                    self.menuBarIconManager?.playStartupAnimation()
-                }
-            } catch {
-                await MainActor.run {
-                    self.logger?.log("Failed to prepare transcription provider: \(error)", level: .error)
-                    self.settingsManager.providerStatus = "Failed — \(error.localizedDescription)"
-                    self.notificationManager?.showAppInitializationError("Failed to prepare transcription provider")
-                    self.menuBarIconManager?.showErrorState()
-                }
-            }
-        }
+    // MARK: - Session presentation
+
+    private func renderSessionState(_ state: SessionState) {
+        popoverViewModel.sessionState = state
+        settingsManager.providerStatus = session?.providerStatus(for: state) ?? "Loading…"
+        menuBarIconManager?.renderSessionState(state)
     }
 
-    private func updateProviderStatus() {
-        settingsManager.providerStatus = "Loaded · ~600 MB"
+    private func handleSessionEvent(_ event: SessionEvent) {
+        let restoreIcon = { [weak self] in
+            guard let self, let session = self.session else { return }
+            self.menuBarIconManager?.renderSessionState(session.state)
+        }
+        switch event {
+        case .providerReady(let name):
+            logger?.log("Transcription provider ready: \(name)")
+            notificationManager?.showAppInitializationSuccess()
+            menuBarIconManager?.playStartupAnimation()
+        case .providerFailed(let message):
+            logger?.log("Failed to prepare transcription provider: \(message)", level: .error)
+            notificationManager?.showAppInitializationError("Failed to prepare transcription provider")
+        case .notReady:
+            logger?.log("Recording blocked — transcription model unavailable", level: .warning)
+            notificationManager?.showTranscriptionError("Model unavailable")
+        case .recordingStarted:
+            logger?.log("Recording started")
+            notificationManager?.showRecordingStarted()
+        case .recordingStopped:
+            logger?.log("Recording stopped; processing audio")
+            notificationManager?.showRecordingStopped()
+        case .recordingFailed(let message):
+            logger?.log(message, level: .error)
+            notificationManager?.showTranscriptionError(message)
+            menuBarIconManager?.showErrorState(restore: restoreIcon)
+        case .recordingInterrupted:
+            logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
+            notificationManager?.showTranscriptionError("Microphone disconnected")
+            menuBarIconManager?.showErrorState(restore: restoreIcon)
+        case .transcribed(let text, let audioFileName):
+            logger?.log("Handling transcribed text: \(text)")
+            HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
+        case .transcriptionFailed(let message):
+            logger?.log("Transcription failed: \(message)", level: .error)
+            notificationManager?.showTranscriptionError("Transcription failed: \(message)")
+            menuBarIconManager?.showErrorState(restore: restoreIcon)
+        case .inserted:
+            logger?.log("Text pasted at cursor successfully")
+            notificationManager?.showTranscriptionSuccess()
+            menuBarIconManager?.showSuccessState(restore: restoreIcon)
+        case .insertionFailed:
+            logger?.log("Failed to paste text at cursor", level: .error)
+            notificationManager?.showTranscriptionError("Failed to paste text at cursor")
+            menuBarIconManager?.showErrorState(restore: restoreIcon)
+        }
     }
 
     private func setupMenuBar() {
@@ -201,6 +231,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         menuBarIconManager = MenuBarIconManager(statusItem: statusItem!)
         setupPopover()
+        if let session { renderSessionState(session.state) }
     }
 
     private func setupPopover() {
@@ -218,7 +249,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Event Handlers
     @objc private func menuBarClicked() {
-        guard let button = statusItem?.button else { return }
+        guard statusItem?.button != nil else { return }
         if popover?.isShown == true { closePopover() } else { showPopover() }
     }
 
@@ -235,113 +266,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
-        }
-    }
-
-    private func handleTranscribeHotkeyPress() {
-        if isRecording { stopRecording() } else { startRecording() }
-    }
-
-    private func startRecording() {
-        guard !isRecording else { return }
-
-        // Don't start a recording the model can't yet transcribe — the audio would
-        // be captured and then lost to a confusing "not prepared" error.
-        guard isProviderReady else {
-            logger?.log("Recording blocked — transcription model still loading", level: .warning)
-            settingsManager.providerStatus = "Loading… (try again in a moment)"
-            notificationManager?.showTranscriptionError("Model still loading")
-            menuBarIconManager?.setLoadingState()
-            return
-        }
-
-        do {
-            try audioRecorder?.startRecording()
-            isRecording = true
-            popoverViewModel.isRecording = true
-            menuBarIconManager?.setRecordingState()
-            notificationManager?.showRecordingStarted()
-            logger?.log("Recording started")
-        } catch {
-            logger?.logError(error, context: "Failed to start recording")
-            notificationManager?.showTranscriptionError("Failed to start recording")
-            menuBarIconManager?.showErrorState()
-        }
-    }
-
-    private func stopRecording() {
-        guard isRecording else { return }
-
-        // Clear the flag as soon as we commit to stopping — we are no longer
-        // recording whatever the recorder hands back. Clearing it only on the
-        // success path left the app stuck: handleTranscribeHotkeyPress routes
-        // on isRecording, so every later press re-entered this method, hit the
-        // same nil, and returned again.
-        isRecording = false
-        popoverViewModel.isRecording = false
-
-        guard let audioFileURL = audioRecorder?.stopRecording() else {
-            logger?.log("Failed to get audio file", level: .error)
-            notificationManager?.showTranscriptionError("Failed to save audio file")
-            menuBarIconManager?.showErrorState()
-            return
-        }
-
-        notificationManager?.showRecordingStopped()
-        logger?.log("Audio file successfully saved to: \(audioFileURL.path)", level: .debug)
-        menuBarIconManager?.setProcessingState()
-        processAudioFile(audioFileURL)
-    }
-
-    /// Some devices only hold a pinned capture format for a couple of seconds
-    /// before CoreAudio forces the engine to stop (see `AudioRecorderInterruption`).
-    /// The recording is already discarded by the time this fires — surface it
-    /// rather than silently returning to the idle state.
-    private func handleRecordingInterrupted() {
-        guard isRecording else { return }
-
-        isRecording = false
-        popoverViewModel.isRecording = false
-        logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
-        notificationManager?.showTranscriptionError("Microphone disconnected")
-        menuBarIconManager?.showErrorState()
-    }
-
-    private func processAudioFile(_ audioFileURL: URL) {
-        logger?.log("Starting audio file processing for: \(audioFileURL.path)", level: .info)
-        Task { [weak self] in
-            guard let self, let provider = self.transcriptionProvider else { return }
-            do {
-                let transcribedText = try await provider.transcribe(audioFileURL: audioFileURL)
-                await MainActor.run {
-                    self.logger?.log("Transcription completed successfully", level: .info)
-                    self.handleTranscribedText(transcribedText, audioFileName: audioFileURL.lastPathComponent)
-                }
-            } catch {
-                await MainActor.run {
-                    self.logger?.logError(error, context: "Transcription failed")
-                    self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
-                    self.menuBarIconManager?.showErrorState()
-                }
-            }
-        }
-    }
-
-    private func handleTranscribedText(_ text: String, audioFileName: String? = nil) {
-        logger?.log("Handling transcribed text: \(text)", level: .info)
-        HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
-        pasteManager?.pasteText(text) { [weak self] success in
-            DispatchQueue.main.async {
-                if success {
-                    self?.logger?.log("Text pasted at cursor successfully", level: .info)
-                    self?.notificationManager?.showTranscriptionSuccess()
-                    self?.menuBarIconManager?.showSuccessState()
-                } else {
-                    self?.logger?.log("Failed to paste text at cursor", level: .error)
-                    self?.notificationManager?.showTranscriptionError("Failed to paste text at cursor")
-                    self?.menuBarIconManager?.showErrorState()
-                }
-            }
         }
     }
 
@@ -420,24 +344,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Settings Handler
     private func handleSettingsChanged() {
-        logger?.log("Settings changed, swapping transcription provider", level: .info)
-        hotkeyManager?.refreshHotkeyConfiguration()
-
-        settingsManager.providerStatus = "Loading…"
-        Task { [weak self] in
-            guard let self else { return }
-            await self.transcriptionProvider?.teardown()
-            self.transcriptionProvider = TranscriptionProviderFactory.make(
-                id: settingsManager.transcriptionProviderID
-            )
-            self.startTranscriptionProvider()
-        }
+        session?.changeProvider(
+            TranscriptionProviderFactory.make(id: settingsManager.transcriptionProviderID)
+        )
+        if let session { renderSessionState(session.state) }
     }
 
     // MARK: - Cleanup
     private func cleanup() {
-        if isRecording { _ = audioRecorder?.stopRecording() }
-        Task { await transcriptionProvider?.teardown() }
+        session?.shutDown()
+        sessionObservation = nil
         closePopover()
         historyWindow?.close()
         historyWindow = nil

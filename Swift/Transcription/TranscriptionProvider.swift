@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 protocol TranscriptionProvider: AnyObject {
     /// Stable identifier used in settings persistence, e.g. "fluidaudio.parakeet.v3"
     var id: String { get }
@@ -11,15 +12,4 @@ protocol TranscriptionProvider: AnyObject {
     func transcribe(audioFileURL: URL) async throws -> String
     /// Called when switching away from this provider. Releases models/processes.
     func teardown() async
-}
-
-enum TranscriptionProviderFactory {
-    static func make(id: String) -> TranscriptionProvider {
-        switch id {
-        case "fluidaudio.parakeet.v2":
-            return FluidAudioProvider(version: .v2)
-        default:
-            return FluidAudioProvider(version: .v3)
-        }
-    }
 }

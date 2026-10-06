@@ -29,7 +29,7 @@ enum AudioRecorderInterruption: Error, LocalizedError {
     }
 }
 
-class AudioRecorder {
+class AudioRecorder: SessionRecording {
 
     // MARK: - Properties
 
@@ -273,4 +273,4 @@ class AudioRecorder {
         inputNode = nil
         audioEngine = nil
     }
-} 
+}

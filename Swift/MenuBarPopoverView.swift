@@ -3,16 +3,30 @@ import SwiftUI
 // MARK: - View model (owned by AppDelegate, observed by the view)
 
 class PopoverViewModel: ObservableObject {
-    @Published var isRecording = false
+    @Published var sessionState: SessionState = .loading
     @Published var hotkeyDisplay: String = "⌥L"
 
-    var onStartRecording: (() -> Void)?
-    var onStopRecording: (() -> Void)?
+    var isRecording: Bool { sessionState.isRecording }
+    var canToggleRecording: Bool { sessionState == .idle || isRecording }
+
+    var recordingTooltip: String {
+        switch sessionState {
+        case .loading: return "Model loading…"
+        case .transcribing: return "Transcribing…"
+        case .inserting: return "Inserting transcript…"
+        case .unavailable: return "Model unavailable"
+        case .stopped: return "App stopping…"
+        case .idle: return "Start recording  \(hotkeyDisplay)"
+        case .capturing: return "Stop recording  \(hotkeyDisplay)"
+        }
+    }
+
+    var onToggleRecording: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onOpenHistory: (() -> Void)?
 
     func toggleRecording() {
-        if isRecording { onStopRecording?() } else { onStartRecording?() }
+        onToggleRecording?()
     }
 }
 
@@ -27,11 +41,10 @@ struct MenuBarPopoverView: View {
             ToolButton(
                 icon: viewModel.isRecording ? "stop.fill" : "mic",
                 tint: viewModel.isRecording ? recordingTint : Color.textPrimary(for: scheme),
-                tooltip: viewModel.isRecording
-                    ? "Stop recording  \(viewModel.hotkeyDisplay)"
-                    : "Start recording  \(viewModel.hotkeyDisplay)",
+                tooltip: viewModel.recordingTooltip,
                 scheme: scheme,
-                action: viewModel.toggleRecording
+                action: viewModel.toggleRecording,
+                isEnabled: viewModel.canToggleRecording
             )
             divider
             ToolButton(
@@ -80,6 +93,7 @@ private struct ToolButton: View {
     let tooltip: String
     let scheme: ColorScheme
     let action: () -> Void
+    var isEnabled = true
 
     @State private var isHovered = false
 
@@ -96,6 +110,8 @@ private struct ToolButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.4)
         .help(tooltip)
         .onHover { isHovered = $0 }
     }

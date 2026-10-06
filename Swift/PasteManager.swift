@@ -18,7 +18,7 @@ enum PasteManagerError: Error, LocalizedError {
     }
 }
 
-class PasteManager {
+class PasteManager: SessionPasting {
     
     // MARK: - Properties
     private let pasteboard = NSPasteboard.general
@@ -124,4 +124,4 @@ class PasteManager {
         logger.log("Sent Cmd+V key events", level: .debug)
         return true
     }
-} 
+}
