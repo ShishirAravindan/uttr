@@ -42,8 +42,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindow: NSWindow?
     private var settingsWindowController: NSWindowController?
 
-    private var isRecording = false
-    private var isProviderReady = false
+    private enum WorkflowState { case loading, ready, recording, processing, unavailable, stopped }
+    private var state: WorkflowState = .loading {
+        didSet { renderWorkflowState() }
+    }
+    private var workflowTask: Task<Void, Never>?
+    private var pendingProviderID: String?
 
     // MARK: - App Lifecycle
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -92,10 +96,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
         pasteManager = PasteManager()
-        transcriptionProvider = TranscriptionProviderFactory.make(
-            id: settingsManager.transcriptionProviderID
-        )
-        logger?.log("TranscriptionProvider initialized: \(settingsManager.transcriptionProviderID)", level: .debug)
 
         hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
             self?.handleTranscribeHotkeyPress()
@@ -161,28 +161,64 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func startTranscriptionProvider() {
-        isProviderReady = false
+        pendingProviderID = settingsManager.transcriptionProviderID
+        loadPendingProvider()
+    }
+
+    private func loadPendingProvider() {
+        guard pendingProviderID != nil, workflowTask == nil,
+              state != .recording, state != .processing, state != .stopped else { return }
+        state = .loading
         settingsManager.providerStatus = "Loading…"
-        menuBarIconManager?.setLoadingState()
-        Task { [weak self] in
-            guard let self, let provider = self.transcriptionProvider else { return }
-            do {
-                try await provider.prepare()
-                await MainActor.run {
-                    self.isProviderReady = true
+        workflowTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.workflowTask = nil }
+            // One task owns switching. A newer choice is picked up on the next pass.
+            while let id = self.pendingProviderID {
+                self.pendingProviderID = nil
+                await self.transcriptionProvider?.teardown()
+                guard self.state != .stopped else { return }
+                let provider = TranscriptionProviderFactory.make(id: id)
+                self.transcriptionProvider = provider
+                do {
+                    try await provider.prepare()
+                    guard self.state != .stopped else { return }
+                    if self.pendingProviderID != nil { continue }
+                    self.state = .ready
                     self.logger?.log("Transcription provider ready: \(provider.displayName)", level: .info)
                     self.updateProviderStatus()
                     self.notificationManager?.showAppInitializationSuccess()
                     self.menuBarIconManager?.playStartupAnimation()
-                }
-            } catch {
-                await MainActor.run {
+                } catch {
+                    guard self.state != .stopped else { return }
+                    if self.pendingProviderID != nil { continue }
+                    self.state = .unavailable
                     self.logger?.log("Failed to prepare transcription provider: \(error)", level: .error)
                     self.settingsManager.providerStatus = "Failed — \(error.localizedDescription)"
                     self.notificationManager?.showAppInitializationError("Failed to prepare transcription provider")
-                    self.menuBarIconManager?.showErrorState()
                 }
             }
+        }
+    }
+
+    private func renderWorkflowState() {
+        popoverViewModel.isRecording = state == .recording
+        popoverViewModel.canToggleRecording = state == .ready || state == .recording
+        switch state {
+        case .loading:
+            popoverViewModel.recordingStatus = "Model loading…"
+            menuBarIconManager?.setLoadingState()
+        case .ready: menuBarIconManager?.setReadyState()
+        case .recording: menuBarIconManager?.setRecordingState()
+        case .processing:
+            popoverViewModel.recordingStatus = "Transcribing…"
+            menuBarIconManager?.setProcessingState()
+        case .unavailable:
+            popoverViewModel.recordingStatus = "Model unavailable"
+            menuBarIconManager?.showErrorState(restoreReady: false)
+        case .stopped:
+            popoverViewModel.recordingStatus = "App stopping…"
+            menuBarIconManager?.hideIcon()
         }
     }
 
@@ -201,6 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         menuBarIconManager = MenuBarIconManager(statusItem: statusItem!)
         setupPopover()
+        renderWorkflowState()
     }
 
     private func setupPopover() {
@@ -239,27 +276,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func handleTranscribeHotkeyPress() {
-        if isRecording { stopRecording() } else { startRecording() }
+        if state == .recording { stopRecording() } else { startRecording() }
     }
 
     private func startRecording() {
-        guard !isRecording else { return }
-
-        // Don't start a recording the model can't yet transcribe — the audio would
-        // be captured and then lost to a confusing "not prepared" error.
-        guard isProviderReady else {
-            logger?.log("Recording blocked — transcription model still loading", level: .warning)
-            settingsManager.providerStatus = "Loading… (try again in a moment)"
-            notificationManager?.showTranscriptionError("Model still loading")
-            menuBarIconManager?.setLoadingState()
+        guard state == .ready else {
+            if state == .loading || state == .unavailable {
+                notificationManager?.showTranscriptionError("Model unavailable")
+            }
             return
         }
 
         do {
             try audioRecorder?.startRecording()
-            isRecording = true
-            popoverViewModel.isRecording = true
-            menuBarIconManager?.setRecordingState()
+            state = .recording
             notificationManager?.showRecordingStarted()
             logger?.log("Recording started")
         } catch {
@@ -270,26 +300,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     private func stopRecording() {
-        guard isRecording else { return }
-
-        // Clear the flag as soon as we commit to stopping — we are no longer
-        // recording whatever the recorder hands back. Clearing it only on the
-        // success path left the app stuck: handleTranscribeHotkeyPress routes
-        // on isRecording, so every later press re-entered this method, hit the
-        // same nil, and returned again.
-        isRecording = false
-        popoverViewModel.isRecording = false
+        guard state == .recording else { return }
+        state = .processing
 
         guard let audioFileURL = audioRecorder?.stopRecording() else {
+            state = .ready
             logger?.log("Failed to get audio file", level: .error)
             notificationManager?.showTranscriptionError("Failed to save audio file")
             menuBarIconManager?.showErrorState()
+            loadPendingProvider()
             return
         }
 
         notificationManager?.showRecordingStopped()
         logger?.log("Audio file successfully saved to: \(audioFileURL.path)", level: .debug)
-        menuBarIconManager?.setProcessingState()
         processAudioFile(audioFileURL)
     }
 
@@ -298,31 +322,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     /// The recording is already discarded by the time this fires — surface it
     /// rather than silently returning to the idle state.
     private func handleRecordingInterrupted() {
-        guard isRecording else { return }
-
-        isRecording = false
-        popoverViewModel.isRecording = false
+        guard state == .recording else { return }
+        state = .ready
         logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
         notificationManager?.showTranscriptionError("Microphone disconnected")
         menuBarIconManager?.showErrorState()
+        loadPendingProvider()
     }
 
     private func processAudioFile(_ audioFileURL: URL) {
         logger?.log("Starting audio file processing for: \(audioFileURL.path)", level: .info)
-        Task { [weak self] in
+        workflowTask = Task { @MainActor [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
+            defer {
+                self.workflowTask = nil
+                self.loadPendingProvider()
+            }
             do {
-                let transcribedText = try await provider.transcribe(audioFileURL: audioFileURL)
-                await MainActor.run {
-                    self.logger?.log("Transcription completed successfully", level: .info)
-                    self.handleTranscribedText(transcribedText, audioFileName: audioFileURL.lastPathComponent)
-                }
+                let text = try await provider.transcribe(audioFileURL: audioFileURL)
+                guard self.state == .processing else { return }
+                self.handleTranscribedText(text, audioFileName: audioFileURL.lastPathComponent)
             } catch {
-                await MainActor.run {
-                    self.logger?.logError(error, context: "Transcription failed")
-                    self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
-                    self.menuBarIconManager?.showErrorState()
-                }
+                guard self.state == .processing else { return }
+                self.state = .ready
+                self.logger?.logError(error, context: "Transcription failed")
+                self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
+                self.menuBarIconManager?.showErrorState()
             }
         }
     }
@@ -332,15 +357,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
         pasteManager?.pasteText(text) { [weak self] success in
             DispatchQueue.main.async {
+                guard let self, self.state == .processing else { return }
+                self.state = .ready
                 if success {
-                    self?.logger?.log("Text pasted at cursor successfully", level: .info)
-                    self?.notificationManager?.showTranscriptionSuccess()
-                    self?.menuBarIconManager?.showSuccessState()
+                    self.logger?.log("Text pasted at cursor successfully", level: .info)
+                    self.notificationManager?.showTranscriptionSuccess()
+                    self.menuBarIconManager?.showSuccessState()
                 } else {
-                    self?.logger?.log("Failed to paste text at cursor", level: .error)
-                    self?.notificationManager?.showTranscriptionError("Failed to paste text at cursor")
-                    self?.menuBarIconManager?.showErrorState()
+                    self.logger?.log("Failed to paste text at cursor", level: .error)
+                    self.notificationManager?.showTranscriptionError("Failed to paste text at cursor")
+                    self.menuBarIconManager?.showErrorState()
                 }
+                self.loadPendingProvider()
             }
         }
     }
@@ -420,24 +448,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Settings Handler
     private func handleSettingsChanged() {
-        logger?.log("Settings changed, swapping transcription provider", level: .info)
         hotkeyManager?.refreshHotkeyConfiguration()
-
-        settingsManager.providerStatus = "Loading…"
-        Task { [weak self] in
-            guard let self else { return }
-            await self.transcriptionProvider?.teardown()
-            self.transcriptionProvider = TranscriptionProviderFactory.make(
-                id: settingsManager.transcriptionProviderID
-            )
-            self.startTranscriptionProvider()
+        startTranscriptionProvider()
+        if state == .recording || state == .processing {
+            settingsManager.providerStatus = "Switching after this transcription…"
         }
     }
 
     // MARK: - Cleanup
     private func cleanup() {
-        if isRecording { _ = audioRecorder?.stopRecording() }
-        Task { await transcriptionProvider?.teardown() }
+        let wasRecording = state == .recording
+        state = .stopped
+        workflowTask?.cancel()
+        pendingProviderID = nil
+        audioRecorder?.onInterrupted = nil
+        if wasRecording { _ = audioRecorder?.stopRecording() }
+        // Quit is immediate; process exit releases models without racing inference.
         closePopover()
         historyWindow?.close()
         historyWindow = nil

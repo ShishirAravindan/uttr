@@ -8,6 +8,11 @@ uttr is a single-tier Swift app. All transcription happens in-process via FluidA
 
 Hotkey → `AudioRecorder` writes WAV → `FluidAudioProvider.transcribe()` → `PasteManager` pastes at cursor
 
+AppDelegate keeps one workflow state and one task. A new recording waits until
+transcription and the paste callback finish. Model changes wait for the current
+utterance, then a single loading loop uses the latest choice. Quit remains
+immediate and ignores late results.
+
 ## Components
 
 | File | Responsibility |

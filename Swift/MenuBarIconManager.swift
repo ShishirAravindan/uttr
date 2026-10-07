@@ -19,6 +19,7 @@ class MenuBarIconManager: ObservableObject {
     private let logger = Logger()
     private weak var statusItem: NSStatusItem?
     private var currentState: MenuBarIconState = .startup
+    private var stateRevision = 0
     
     // MARK: - Initialization
     init(statusItem: NSStatusItem) {
@@ -45,8 +46,8 @@ class MenuBarIconManager: ObservableObject {
     /// Indicate the transcription model is still downloading or loading.
     func setLoadingState() {
         logger.log("[MenuBarIconManager] Setting loading state", level: .debug)
+        beginState(.processing)
         transitionToIcon("ellipsis.circle", withAnimation: true)
-        currentState = .processing
     }
 
     /// Play the startup animation sequence
@@ -60,19 +61,23 @@ class MenuBarIconManager: ObservableObject {
         
         // Start invisible
         button.alphaValue = 0.0
-        currentState = .startup
+        beginState(.startup)
+        let revision = stateRevision
         
         // Sequence: invisible → mic → mic.fill → mic
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard self.stateRevision == revision else { return }
             self.transitionToIcon("mic", withAnimation: false)
             self.fadeInIcon()
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            guard self.stateRevision == revision else { return }
             self.transitionToIcon("mic.fill", withAnimation: false)
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            guard self.stateRevision == revision else { return }
             self.transitionToIcon("mic", withAnimation: false)
             self.currentState = .ready
         }
@@ -81,8 +86,8 @@ class MenuBarIconManager: ObservableObject {
     /// Transition to ready state (default mic icon)
     func setReadyState() {
         logger.log("[MenuBarIconManager] Setting ready state", level: .debug)
+        beginState(.ready)
         transitionToIcon("mic", withAnimation: true)
-        currentState = .ready
     }
     
     /// Transition to recording state.
@@ -93,45 +98,49 @@ class MenuBarIconManager: ObservableObject {
     /// stays exactly where the user expects it, fully under the app's control.
     func setRecordingState() {
         logger.log("[MenuBarIconManager] Setting recording state — breathing pulse", level: .debug)
+        beginState(.recording)
         transitionToIcon("mic.fill", withAnimation: false)
-        currentState = .recording
         startRecordingPulse()
     }
     
     /// Show processing state after recording stops
     func setProcessingState() {
         logger.log("[MenuBarIconManager] Setting processing state", level: .debug)
+        beginState(.processing)
         transitionToIcon("clock", withAnimation: true)
-        currentState = .processing
     }
     
     /// Show transform processing state (banana yellow)
     func setTransformingState() {
         logger.log("[MenuBarIconManager] Setting transforming state", level: .debug)
+        beginState(.transforming)
         transitionToIcon("arrow.triangle.2.circlepath", withAnimation: true, tintColor: .systemYellow)
-        currentState = .transforming
     }
     
     /// Show success state briefly
     func showSuccessState() {
         logger.log("[MenuBarIconManager] Showing success state", level: .debug)
+        beginState(.success)
+        let revision = stateRevision
         transitionToIcon("checkmark.circle.fill", withAnimation: true)
-        currentState = .success
         
         // Return to ready state after brief flash
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            guard self.stateRevision == revision else { return }
             self.setReadyState()
         }
     }
     
     /// Show error state briefly
-    func showErrorState() {
+    func showErrorState(restoreReady: Bool = true) {
         logger.log("[MenuBarIconManager] Showing error state", level: .debug)
+        beginState(.error)
+        let revision = stateRevision
         transitionToIcon("exclamationmark.triangle.fill", withAnimation: true)
-        currentState = .error
         
         // Return to ready state after brief flash
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            guard restoreReady, self.stateRevision == revision else { return }
             self.setReadyState()
         }
     }
@@ -139,9 +148,8 @@ class MenuBarIconManager: ObservableObject {
     /// Hide the icon completely
     func hideIcon() {
         logger.log("[MenuBarIconManager] Hiding icon", level: .debug)
-        fadeOutIcon {
-            self.currentState = .hidden
-        }
+        beginState(.hidden)
+        fadeOutIcon()
     }
     
     /// Show the icon if it was hidden
@@ -154,6 +162,11 @@ class MenuBarIconManager: ObservableObject {
     }
     
     // MARK: - Private Methods
+
+    private func beginState(_ state: MenuBarIconState) {
+        stateRevision += 1
+        currentState = state
+    }
 
     private let recordingPulseKey = "recordingPulse"
 
@@ -191,6 +204,7 @@ class MenuBarIconManager: ObservableObject {
             newImage = image.tinted(with: tintColor)
         }
         
+        let revision = stateRevision
         if withAnimation {
             // Use NSAnimationContext for smooth macOS animations
             NSAnimationContext.runAnimationGroup({ context in
@@ -200,6 +214,7 @@ class MenuBarIconManager: ObservableObject {
                 // Fade out
                 button.animator().alphaValue = 0.0
             }, completionHandler: {
+                guard self.stateRevision == revision else { return }
                 // Change icon
                 button.image = newImage
                 
@@ -211,6 +226,7 @@ class MenuBarIconManager: ObservableObject {
                 })
             })
         } else {
+            button.alphaValue = 1.0
             button.image = newImage
         }
     }
@@ -225,19 +241,15 @@ class MenuBarIconManager: ObservableObject {
         })
     }
     
-    private func fadeOutIcon(completion: @escaping () -> Void) {
-        guard let button = statusItem?.button else {
-            completion()
-            return
-        }
-        
+    private func fadeOutIcon() {
+        guard let button = statusItem?.button else { return }
         NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2
             context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
             button.animator().alphaValue = 0.0
-        }, completionHandler: completion)
+        })
     }
-    
+
     // MARK: - Debug
     func getCurrentState() -> MenuBarIconState {
         return currentState
