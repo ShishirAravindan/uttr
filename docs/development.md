@@ -97,6 +97,15 @@ Logs appear in Xcode console. Filter by component:
 - The Parakeet model (~600 MB) downloads on first use — wait for completion
 - Check network connectivity if download stalls
 
+## Logger Checks
+
+These checks use a temporary file and do not launch the app:
+
+```bash
+swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o /tmp/uttr-logger-checks
+/tmp/uttr-logger-checks
+```
+
 ## Code Style
 
 - One file per component/responsibility
