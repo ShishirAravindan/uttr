@@ -40,7 +40,7 @@
 		00AE3B722E42D5EB00CD52A8 /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NotificationManager.swift; path = Swift/NotificationManager.swift; sourceTree = "<group>"; };
 		00AE3B742E42D5EB00CD52A8 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SettingsManager.swift; path = Swift/SettingsManager.swift; sourceTree = "<group>"; };
 		00E612A92E593E66002E23F2 /* HotkeyRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HotkeyRecorder.swift; path = Swift/HotkeyRecorder.swift; sourceTree = "<group>"; };
-		00EA515B2E24C05900BE5FC7 /* uttr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = uttr.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		00EA515B2E24C05900BE5FC7 /* uttr Debug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "uttr Debug.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioRecorder.swift; path = Swift/AudioRecorder.swift; sourceTree = "<group>"; };
 		00EA516B2E24C16D00BE5FC7 /* uttr.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = uttr.swift; path = Swift/uttr.swift; sourceTree = "<group>"; };
 		00EA516E2E24C49D00BE5FC7 /* uttr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = uttr.entitlements; sourceTree = "<group>"; };
@@ -102,7 +102,7 @@
 		00EA515C2E24C05900BE5FC7 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				00EA515B2E24C05900BE5FC7 /* uttr.app */,
+				00EA515B2E24C05900BE5FC7 /* uttr Debug.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -128,7 +128,7 @@
 				6AF1A0022E9B000000000001 /* FluidAudio */,
 			);
 			productName = uttr;
-			productReference = 00EA515B2E24C05900BE5FC7 /* uttr.app */;
+			productReference = 00EA515B2E24C05900BE5FC7 /* uttr Debug.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -336,11 +336,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = uttr.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Manual;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 2JA378N26R;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "uttr-Info.plist";
@@ -358,6 +359,7 @@
 				MICROPHONE_USAGE_DESCRIPTION = "This app needs microphone access to transcribe your speech.";
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.Rakk301.uttr.debug;
 				PRODUCT_NAME = "uttr Debug";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -372,11 +374,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = uttr.entitlements;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 2JA378N26R;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=macosx*]" = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "uttr-Info.plist";
@@ -394,6 +398,7 @@
 				MICROPHONE_USAGE_DESCRIPTION = "This app needs microphone access to transcribe your speech.";
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.Rakk301.uttr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				REGISTER_APP_GROUPS = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
