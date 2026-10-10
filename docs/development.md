@@ -57,6 +57,10 @@ Debug builds produce **uttr Debug.app** with an amber DEV badge on the wordmark 
 (D at smaller sizes). A D beside the menu bar icon and the name in About identify
 the running build. `./build.sh -c Debug --open` opens it from the build directory.
 
+Debug uses Xcode's “Sign to Run Locally” (ad-hoc signing), including the complete
+app bundle and its Info.plist. The script enables signing for Debug; no developer
+certificate or team is required. Release's script signing flags stay unchanged.
+
 Release builds use **uttr.app** and the original wordmark icon. The existing bundle
 IDs stay `io.github.Rakk301.uttr.debug` and `io.github.Rakk301.uttr`, so macOS keeps
 their permission grants separate. Settings and transcription history are shared;
@@ -75,7 +79,16 @@ When running from Xcode, you'll need to grant:
 | Microphone | Audio recording | Prompt appears, or System Settings → Privacy |
 | Accessibility | Global hotkeys, paste | System Settings → Privacy → Accessibility |
 
-**Tip:** If hotkeys stop working, check that Xcode (or the built app) is in the Accessibility list.
+Enable **uttr Debug** separately from **uttr**. The Accessibility action opens
+System Settings even on repeated requests. If the app is missing from the list,
+use the folder action beside the guidance to select the running app in Finder,
+then add that app with **+** in System Settings. This works for Xcode, script,
+and temporary build locations; it does not assume the app is in `/Applications`.
+
+Ad-hoc signatures identify a particular build, so macOS may require a fresh grant
+after rebuilding. For permission continuity across builds, use your own Apple
+Development certificate/team in Xcode. Grant the app's permission; granting Xcode
+does not replace the app's own approval.
 
 ## Debugging
 
