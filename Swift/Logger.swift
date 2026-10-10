@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 
 enum LogLevel: String {
     case debug = "DEBUG"
@@ -7,115 +8,65 @@ enum LogLevel: String {
     case error = "ERROR"
 }
 
-class Logger {
-
-    // MARK: - Properties
-    private let logFileURL: URL
-    private let dateFormatter: DateFormatter
-    private let fileHandle: FileHandle?
+final class Logger {
     private let componentName: String?
-    
-    // MARK: - Initialization
-    init(componentName: String? = nil) {
+    private let writer: LogWriter
+
+    init(componentName: String? = nil, writer: LogWriter = .shared) {
         self.componentName = componentName
-        
-        // Use proper macOS logs directory: ~/Library/Logs/<AppName>/
-        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "uttr"
-        let logsDirectory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
-            .first?.appendingPathComponent("Logs")
-            .appendingPathComponent(appName)
-        
-        if let logsDir = logsDirectory {
-            try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)
-            logFileURL = logsDir.appendingPathComponent("transcriptions.log")
-        } else {
-            // Fallback to temporary directory
-            logFileURL = FileManager.default.temporaryDirectory.appendingPathComponent("transcriptions.log")
-        }
-        
-        // Set up date formatter
-        dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        
-        // Create log file if it doesn't exist
-        if !FileManager.default.fileExists(atPath: logFileURL.path) {
-            FileManager.default.createFile(atPath: logFileURL.path, contents: nil)
-        }
-        
-        // Open file handle for writing
-        do {
-            fileHandle = try FileHandle(forWritingTo: logFileURL)
-            fileHandle?.seekToEndOfFile()
-        } catch {
-            print("Failed to open log file: \(error)")
-            fileHandle = nil
-        }
+        self.writer = writer
     }
-    
-    deinit {
-        fileHandle?.closeFile()
-    }
-    
-    // MARK: - Public Methods
+
     func log(_ message: String, level: LogLevel = .info) {
-        let timestamp = dateFormatter.string(from: Date())
-        let prefix = componentName != nil ? "[\(componentName!)] " : ""
-        let logEntry = "[\(timestamp)] [\(level.rawValue)] \(prefix)\(message)\n"
-        
-        // Write to file
-        if let data = logEntry.data(using: .utf8) {
-            fileHandle?.write(data)
-            fileHandle?.synchronizeFile()
-        }
-        
-        // Also print to console for debugging
-        print(logEntry.trimmingCharacters(in: .whitespacesAndNewlines))
+        writer.log(message, level: level, componentName: componentName)
     }
-    
+
     func logTranscription(_ text: String, audioFile: String) {
-        let message = "Transcription completed - Audio: \(audioFile), Text: \"\(text)\""
-        log(message, level: .info)
+        log("Transcription completed - Audio: \(audioFile), Text: \"\(text)\"")
     }
-    
+
     func logError(_ error: Error, context: String = "") {
-        let message = "\(context.isEmpty ? "" : "\(context): ")\(error.localizedDescription)"
-        log(message, level: .error)
+        log("\(context.isEmpty ? "" : "\(context): ")\(error.localizedDescription)", level: .error)
     }
-    
-    // MARK: - Utility Methods
-    func getLogContents() -> String? {
+}
+
+/// Component loggers share one handle and formatter, protected by one lock.
+final class LogWriter {
+    static let shared: LogWriter = {
+        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "uttr"
+        let directory = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)
+            .first?.appendingPathComponent("Logs").appendingPathComponent(appName)
+        return LogWriter(fileURL: (directory ?? FileManager.default.temporaryDirectory)
+            .appendingPathComponent("transcriptions.log"))
+    }()
+
+    private let fileURL: URL
+    private let lock = NSLock()
+    private let formatter = DateFormatter()
+    private var handle: FileHandle?
+
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+    }
+
+    func log(_ message: String, level: LogLevel, componentName: String?) {
+        lock.lock()
+        defer { lock.unlock() }
+        let prefix = componentName.map { "[\($0)] " } ?? ""
+        let entry = "[\(formatter.string(from: Date()))] [\(level.rawValue)] \(prefix)\(message)\n"
         do {
-            return try String(contentsOf: logFileURL, encoding: .utf8)
-        } catch {
-            print("Failed to read log file: \(error)")
-            return nil
-        }
-    }
-    
-    func clearLogs() {
-        do {
-            try "".write(to: logFileURL, atomically: true, encoding: .utf8)
-            fileHandle?.seekToEndOfFile()
-        } catch {
-            print("Failed to clear log file: \(error)")
-        }
-    }
-    
-    func rotateLogs() {
-        // Simple log rotation - keep only last 1000 lines
-        guard let contents = getLogContents() else { return }
-        
-        let lines = contents.components(separatedBy: .newlines)
-        if lines.count > 1000 {
-            let recentLines = Array(lines.suffix(1000))
-            let newContents = recentLines.joined(separator: "\n")
-            
-            do {
-                try newContents.write(to: logFileURL, atomically: true, encoding: .utf8)
-                fileHandle?.seekToEndOfFile()
-            } catch {
-                print("Failed to rotate log file: \(error)")
+            if handle == nil {
+                try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(),
+                                                        withIntermediateDirectories: true)
+                let descriptor = open(fileURL.path, O_WRONLY | O_APPEND | O_CREAT | O_CLOEXEC, 0o644)
+                guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+                handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
             }
+            try handle?.write(contentsOf: Data(entry.utf8))
+        } catch {
+            print("Failed to write log file: \(error)")
         }
+        print(entry.trimmingCharacters(in: .whitespacesAndNewlines))
     }
-} 
+}
