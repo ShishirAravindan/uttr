@@ -4,9 +4,14 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 15+** — [Download from Mac App Store](https://apps.apple.com/app/xcode/id497799835)
-- **macOS 14 (Sonoma)+** — Required for deployment target
+- **Xcode 16.1 or later** — CI currently builds with 16.1
+- **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
+
+Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio) and
+[Yams](https://github.com/jpsim/Yams) through Swift Package Manager. The checked-in
+`Package.resolved` pins the versions. Building requires access to those packages;
+running the app also needs network access for its first model download.
 
 ## Repository Structure
 
@@ -19,7 +24,8 @@ uttr/
 │   ├── Transcription/              # Provider protocol + implementations
 │   └── ...
 ├── docs/                           # Documentation
-├── Casks/uttr.rb                   # Homebrew cask formula
+├── Tests/LoggerChecks.swift        # Standalone logger checks
+├── .github/workflows/              # PR build and release automation
 ├── uttr.xcodeproj/                 # Xcode project
 └── README.md
 ```
@@ -29,8 +35,8 @@ uttr/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Rakk301/homebrew-uttr.git
-cd homebrew-uttr
+git clone https://github.com/ShishirAravindan/uttr.git
+cd uttr
 ```
 
 ### 2. Open in Xcode
@@ -103,12 +109,17 @@ Logs appear in Xcode console. Filter by component:
 ### Common Issues
 
 **Hotkey not working:**
+
 - Verify Accessibility permission is granted
 - Check another app isn't using the same hotkey
 
 **Transcription fails on first run:**
-- The Parakeet model (~600 MB) downloads on first use — wait for completion
+
+- The Parakeet model (~600 MB) downloads during provider preparation on launch — wait for completion
 - Check network connectivity if download stalls
+
+File logs are under `~/Library/Logs/uttr/` for Release and
+`~/Library/Logs/uttr Debug/` for Debug. See [Troubleshooting](troubleshooting.md).
 
 ## Logger Checks
 
@@ -133,6 +144,47 @@ swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o /tmp/uttr-logger-checks
 ```
 
 This builds, then installs to `/Applications/uttr.app`. See [Releasing Guide](releasing.md) for the full release process.
+
+For build verification without replacing an installed app, use Xcode or an
+isolated unsigned build:
+
+```bash
+xcodebuild -project uttr.xcodeproj -scheme uttr \
+  -configuration Release -destination 'platform=macOS,arch=arm64' \
+  -derivedDataPath /tmp/uttr-docs-build CODE_SIGNING_ALLOWED=NO build
+```
+
+Use a fresh temporary derived-data directory for separate verification runs.
+
+## Architecture Diagrams
+
+Create or edit diagrams in [Excalidraw](https://excalidraw.com). Save local working
+scenes as `.excalidraw` files under `docs/assets/diagrams/`; Git ignores these
+sources. Keep your working scene locally for later edits. A fresh checkout contains
+the rendered images only.
+
+Export PNGs into the same directory and reference them directly from Markdown,
+for example `![uttr architecture](assets/diagrams/architecture.png)` in
+`docs/architecture.md`. Use a light background, readable labels, and alt text that
+describes the diagram. Update the image and its explanation together when the
+implementation changes.
+
+For local CLI rendering, the [official Excalidraw CLI](https://github.com/excalidraw/cli)
+requires Node.js 22+ and an installed Chrome, Chromium, Edge, or Firefox. It renders
+local scenes without an account or API key:
+
+```bash
+npx --yes @excalidraw/cli@0.2.0 render \
+  docs/assets/diagrams/architecture.excalidraw \
+  --out docs/assets/diagrams/architecture.png --scale 2 \
+  --max-width 4096 --max-height 4096
+```
+
+Validate edits ad hoc: check scene JSON, unique element IDs, binding/container
+references, and any embedded assets; render and inspect for clipping, overlapping
+labels, and ambiguous arrows; then check Markdown image links and ensure sources
+remain ignored. Review the diagram against current code. These checks are not
+installed as repository scripts or CI jobs.
 
 ## Related Docs
 

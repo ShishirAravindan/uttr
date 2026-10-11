@@ -7,6 +7,8 @@ uttr uses a YAML configuration file stored at:
 ```
 
 Edit settings via the app's Settings UI or by editing the YAML directly.
+Quit the app before editing the file, then relaunch to load it. The app does not
+watch the YAML for external changes. Debug and Release share this file.
 
 ## Settings Reference
 
@@ -19,7 +21,7 @@ provider: "fluidaudio.parakeet.v3"
 | Value | Description |
 |-------|-------------|
 | `fluidaudio.parakeet.v3` | Parakeet v3 — multilingual (recommended) |
-| `fluidaudio.parakeet.v2` | Parakeet v2 — English only, faster |
+| `fluidaudio.parakeet.v2` | Parakeet v2 — English only |
 
 ### Fluid Audio
 
@@ -28,7 +30,10 @@ fluid_audio:
   model_version: "v3"   # v2 or v3
 ```
 
-This mirrors the `provider` selection. Changing the provider in Settings updates both fields.
+This field is retained in the serialized configuration. The provider factory uses
+`provider` to select the model; `fluid_audio.model_version` does not override it.
+Changing the provider in Settings updates `provider`, but does not synchronize
+this field. Keep them consistent when editing YAML for clarity.
 
 ### Audio
 

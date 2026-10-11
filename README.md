@@ -2,9 +2,9 @@
 
 # uttr
 
-A macOS menu bar app for fast, local speech-to-text transcription. Press a hotkey, speak, and the transcribed text is automatically pasted at your cursor — no cloud, no Python, no dependencies.
+A macOS menu bar app for fast, local speech-to-text transcription. Press a hotkey, speak, and the transcribed text is automatically pasted at your cursor. No cloud transcription, Python, or separate runtime to install.
 
-Powered by [Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2) running on the Apple Neural Engine via [FluidAudio](https://github.com/FluidAudio/FluidAudio).
+Powered by Parakeet v3 (multilingual) or v2 (English) running locally via [FluidAudio](https://github.com/FluidInference/FluidAudio).
 
 ## Installation
 
@@ -40,10 +40,11 @@ See [Configuration Guide](docs/configuration.md) for all options.
 - [Architecture](docs/architecture.md) — How it works (for contributors)
 - [Development](docs/development.md) — Building from source
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and fixes
+- [Releasing](docs/releasing.md) — GitHub Actions and Homebrew tap updates
 
 ## Requirements
 
-- macOS 14 (Sonoma) or later
+- macOS 15.5 or later
 - Apple Silicon (M1 or later) — required for the Neural Engine
 
 ## Contributing
