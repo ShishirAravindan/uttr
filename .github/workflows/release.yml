@@ -3,6 +3,13 @@ name: Release
 on:
   push:
     branches: [main]
+    paths:
+      - 'Swift/**'
+      - 'Assets.xcassets/**'
+      - 'uttr.xcodeproj/**'
+      - 'uttr-Info.plist'
+      - 'uttr.entitlements'
+      - 'build.sh'
 
 permissions:
   contents: write
