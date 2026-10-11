@@ -27,3 +27,6 @@ DerivedData/
 
 # Local planning
 /backlog.md
+
+# Local diagram sources; commit rendered images in docs/assets/diagrams
+*.excalidraw

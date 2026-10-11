@@ -7,8 +7,8 @@ Contributions are welcome. This guide will help you get started.
 1. **Fork the repository** on GitHub
 2. **Clone your fork:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/homebrew-uttr.git
-   cd homebrew-uttr
+   git clone https://github.com/YOUR_USERNAME/uttr.git
+   cd uttr
    ```
 3. **Set up the development environment** — See [Development Guide](development.md)
 
@@ -30,16 +30,21 @@ git checkout -b fix/your-bug-fix
 
 ### 3. Test Your Changes
 
-- Build and run in Xcode
-- Test the affected functionality manually
-- Verify transcription still works end-to-end
+- For app changes, build the affected configuration and test the changed behavior
+  manually, including capture, transcription, and paste when those paths change.
+- For logger changes, run the standalone [logger checks](development.md#logger-checks).
+- For documentation changes, check relative links and image references. Inspect
+  diagram exports at a readable size and verify their claims against current code.
+
+PR builds run the Release build and logger checks. A successful build does not
+establish live microphone, model inference, or paste behavior.
 
 ### 4. Commit Your Changes
 
 ```bash
 # Good
-git commit -m "Add language detection hint to FluidAudioProvider"
-git commit -m "Fix hotkey not registering on app restart"
+git commit -m "docs: correct first-run model preparation"
+git commit -m "fix: re-register hotkeys after permission changes"
 
 # Bad
 git commit -m "Fixed stuff"
@@ -52,6 +57,9 @@ git push origin feature/your-feature-name
 ```
 
 Open a Pull Request with a clear description of what changed and why, and steps to test.
+Use conventional commits and keep each commit focused on one change. Tests get
+their own commits within the same PR. Changes to agent instructions should include
+a commit body explaining why the guidance is needed.
 
 ## Code Style
 
