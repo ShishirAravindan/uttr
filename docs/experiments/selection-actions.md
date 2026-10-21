@@ -103,7 +103,9 @@ Known costs of the copy path:
 - Clipboard managers record the copied selection.
 - With nothing selected, the press waits the full 350 ms before reporting so.
 - Editors such as VS Code and JetBrains copy the whole current line when nothing is
-  selected, so Tidy would act on that line.
+  selected. A copy that is a single line ending in its newline, or only whitespace,
+  counts as no selection. A deliberately selected line that includes its newline is
+  rejected too.
 
 ## How this fits uttr
 

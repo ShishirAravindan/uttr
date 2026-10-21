@@ -39,12 +39,20 @@ final class SelectionReader {
         restorePasteboard(saved)
 
         let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-        guard let text, !text.isEmpty else {
+        guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !Self.isLineCopy(text) else {
             logger.log("No selection found after \(elapsed) ms", level: .info)
             return nil
         }
         logger.log("Read \(text.count) characters in \(elapsed) ms", level: .info)
         return Selection(text: text, elapsedMilliseconds: elapsed)
+    }
+
+    /// VS Code, Cursor, JetBrains, and Sublime copy the whole current line, newline
+    /// included, when nothing is selected. A deliberately selected line that ends
+    /// in its newline is rejected too; selecting it without the newline works.
+    static func isLineCopy(_ text: String) -> Bool {
+        text.last?.isNewline == true && !text.dropLast().contains(where: \.isNewline)
     }
 
     private func snapshotPasteboard() -> [[NSPasteboard.PasteboardType: Data]] {
