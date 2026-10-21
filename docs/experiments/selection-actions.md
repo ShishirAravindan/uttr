@@ -45,7 +45,7 @@ warm-up is a separate concern from per-request latency.
 Every stage logs its latency to `~/Library/Logs/uttr Debug/transcriptions.log`:
 
 ```text
-[SelectionReader] Read 412 characters via accessibility in 9 ms
+[SelectionReader] Read 412 characters in 38 ms
 [SelectionActions] Transformed 412 → 398 characters in 740 ms
 [SpeechPlayer] First audio after 180 ms
 [SpeechPlayer] Synthesized 21.4 s of audio in 2.10 s (10.2x real time, 5 chunks)
@@ -87,12 +87,23 @@ the baseline to beat.
 
 ## Reading the selection
 
-Selecting text does not copy it. `SelectionReader` first asks Accessibility for the
-focused element's `kAXSelectedTextAttribute`. That works in native Cocoa text views
-and leaves the clipboard untouched. Browsers and Electron apps often don't expose the
-selection, so the fallback sends Cmd+C and waits up to 350 ms for the pasteboard
-change count to move. It then restores every pasteboard item. An unchanged count
-means nothing was selected. The log records which path ran and how long it took.
+Selecting text does not copy it. On every press, `SelectionReader` sends Cmd+C and
+waits up to 350 ms for the pasteboard change count to move. It then restores every
+pasteboard item, the same clipboard round-trip PasteManager already makes around
+Cmd+V. An unchanged count means nothing was selected.
+
+Reading `kAXSelectedTextAttribute` through Accessibility would avoid the clipboard
+and take a few milliseconds instead of tens. However, Chrome and Electron apps only
+expose it once something switches their accessibility tree on, so it needed a copy
+fallback anyway. One path works in every app that supports Cmd+C. Both need the same
+Accessibility grant.
+
+Known costs of the copy path:
+
+- Clipboard managers record the copied selection.
+- With nothing selected, the press waits the full 350 ms before reporting so.
+- Editors such as VS Code and JetBrains copy the whole current line when nothing is
+  selected, so Tidy would act on that line.
 
 ## How this fits uttr
 
@@ -101,8 +112,8 @@ explicit product decision. This experiment touches both:
 
 - **Context access is per press and user-initiated.** Each request uses a fresh model
   session and includes nothing from the clipboard or earlier requests. Rewrites go
-  into history like transcriptions do. The copy fallback replaces the clipboard for
-  up to 350 ms.
+  into history like transcriptions do. Reading the selection replaces the clipboard
+  for up to 350 ms.
 - **Selected text is untrusted.** The prompt treats it all as text to edit, and
   nothing is executed. A crafted selection can still steer the rewrite, and the
   output is pasted.
@@ -143,7 +154,7 @@ transcribe callbacks.
 3. On macOS 27, Apple's model vs a 1–2B MLX model behind the same session, for
    Instruct quality and latency.
 4. Memory with Parakeet, Kokoro, and an MLX model loaded together.
-5. Which apps answer through Accessibility and which need the copy fallback.
+5. Copy round-trip time across apps, and any that ignore a synthetic Cmd+C.
 
 Sources: [FluidAudio](https://github.com/FluidInference/FluidAudio) (source at
 0.14.3 and the repo docs for PocketTTS/KokoroAne),
