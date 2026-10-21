@@ -45,6 +45,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var isRecording = false
     private var isProviderReady = false
 
+    // Experimental selection actions (see docs/experiments/selection-actions.md)
+    private var selectionActions: SelectionActionRunner?
+    /// Set while dictating an instruction for this selection.
+    private var pendingInstruction: Selection?
+
     // MARK: - App Lifecycle
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -99,6 +104,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
             self?.handleTranscribeHotkeyPress()
+        }
+        if settingsManager.selectionActions.enabled {
+            setupSelectionActions()
         }
 
         // Wire popover callbacks
@@ -158,6 +166,64 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
 
         logger?.log("App Components Initialized", level: .debug)
+    }
+
+    private func setupSelectionActions() {
+        let settings = settingsManager.selectionActions
+        MainActor.assumeIsolated {
+            guard let pasteManager else { return }
+            let runner = SelectionActionRunner(settings: settings, paste: pasteManager)
+            runner.onWorking = { [weak self] in self?.menuBarIconManager?.setTransformingState() }
+            runner.onIdle = { [weak self] in self?.menuBarIconManager?.setReadyState() }
+            runner.onDelivered = { [weak self] in
+                self?.notificationManager?.showTranscriptionSuccess()
+                self?.menuBarIconManager?.showSuccessState()
+            }
+            runner.onFailed = { [weak self] message in
+                self?.notificationManager?.showTranscriptionError(message)
+                self?.menuBarIconManager?.showErrorState()
+            }
+            selectionActions = runner
+            Task { await runner.prepare() }
+        }
+
+        hotkeyManager?.actionHotkeys = Dictionary(uniqueKeysWithValues: SelectionAction.allCases.map {
+            ($0.rawValue, settings.hotkey(for: $0))
+        })
+        hotkeyManager?.onActionHotkeyPressed = { [weak self] id in
+            self?.handleSelectionActionHotkey(id)
+        }
+        hotkeyManager?.refreshHotkeyConfiguration()
+        logger?.log("Selection actions enabled (speech: \(settings.speechEngine.rawValue))", level: .info)
+    }
+
+    private func handleSelectionActionHotkey(_ id: UInt32) {
+        guard let action = SelectionAction(rawValue: id) else { return }
+        MainActor.assumeIsolated {
+            guard let runner = selectionActions else { return }
+            switch action {
+            case .tidy: runner.tidy()
+            case .speak: runner.toggleSpeak()
+            case .instruct: toggleInstruction(runner)
+            }
+        }
+    }
+
+    /// Select text, press to start dictating an instruction, press again (or the
+    /// dictation hotkey) to stop. The transcript rewrites the selection.
+    @MainActor
+    private func toggleInstruction(_ runner: SelectionActionRunner) {
+        if isRecording {
+            stopRecording()
+            return
+        }
+        guard !runner.isBusy else { return }
+        Task { @MainActor [weak self] in
+            guard let self, let selection = await runner.captureSelectionForInstruction() else { return }
+            self.pendingInstruction = selection
+            self.startRecording()
+            if !self.isRecording { self.pendingInstruction = nil }
+        }
     }
 
     private func startTranscriptionProvider() {
@@ -281,6 +347,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         popoverViewModel.isRecording = false
 
         guard let audioFileURL = audioRecorder?.stopRecording() else {
+            pendingInstruction = nil
             logger?.log("Failed to get audio file", level: .error)
             notificationManager?.showTranscriptionError("Failed to save audio file")
             menuBarIconManager?.showErrorState()
@@ -302,6 +369,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         isRecording = false
         popoverViewModel.isRecording = false
+        pendingInstruction = nil
         logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
         notificationManager?.showTranscriptionError("Microphone disconnected")
         menuBarIconManager?.showErrorState()
@@ -319,6 +387,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 }
             } catch {
                 await MainActor.run {
+                    self.pendingInstruction = nil
                     self.logger?.logError(error, context: "Transcription failed")
                     self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
                     self.menuBarIconManager?.showErrorState()
@@ -329,6 +398,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func handleTranscribedText(_ text: String, audioFileName: String? = nil) {
         logger?.log("Handling transcribed text: \(text)", level: .info)
+        if let selection = pendingInstruction {
+            pendingInstruction = nil
+            MainActor.assumeIsolated { selectionActions?.applyInstruction(text, to: selection) }
+            return
+        }
         HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
         pasteManager?.pasteText(text) { [weak self] success in
             DispatchQueue.main.async {
@@ -438,6 +512,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func cleanup() {
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
+        if let selectionActions { Task { await selectionActions.teardown() } }
         closePopover()
         historyWindow?.close()
         historyWindow = nil

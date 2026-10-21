@@ -31,12 +31,15 @@ private struct SerializedAppConfig: Codable {
     /// Optional so configs written before input-device selection still decode —
     /// a decode failure here would reset every other setting.
     var audio: AudioSettings?
+    /// Experimental; optional for the same reason as `audio`.
+    var selectionActions: SelectionActionSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
         case fluidAudio = "fluid_audio"
         case hotkey
         case audio
+        case selectionActions = "selection_actions"
     }
 }
 
@@ -76,6 +79,9 @@ class SettingsManager: ObservableObject {
     @Published var hotkeyKeyCode: Int = 37  // L key
     @Published var hotkeyModifiers: [String] = ["option"]
     @Published var providerStatus: String = "Loading…"
+
+    /// Read at launch; edit `selection_actions` in settings.yaml and relaunch.
+    var selectionActions = SelectionActionSettings()
 
     // MARK: - Properties
 
@@ -123,7 +129,8 @@ class SettingsManager: ObservableObject {
                 provider: transcriptionProviderID,
                 fluidAudio: fluidAudio,
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
-                audio: AudioSettings(inputDeviceUID: inputDeviceUID)
+                audio: AudioSettings(inputDeviceUID: inputDeviceUID),
+                selectionActions: selectionActions
             )
 
             let encoder = YAMLEncoder()
@@ -190,6 +197,7 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = config.hotkey.keyCode
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
+        selectionActions = config.selectionActions ?? SelectionActionSettings()
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -202,6 +210,7 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = 37
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil
+        selectionActions = SelectionActionSettings()
         logger.log("Default settings applied", level: .info)
     }
 
