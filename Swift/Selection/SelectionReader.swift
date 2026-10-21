@@ -1,22 +1,15 @@
 import Cocoa
 import ApplicationServices
 
-/// Where a selection came from. Accessibility leaves the clipboard alone; the
-/// copy fallback briefly replaces it and restores every item afterward.
-enum SelectionSource: String {
-    case accessibility
-    case copyFallback
-}
-
 struct Selection {
     let text: String
-    let source: SelectionSource
     let elapsedMilliseconds: Int
 }
 
-/// Reads the frontmost app's selected text. Selecting text does not copy it, so
-/// this asks Accessibility first (native Cocoa text views answer) and falls back
-/// to a simulated Cmd+C (browsers and Electron apps often expose no selection).
+/// Reads the frontmost app's selected text by simulating Cmd+C. Selecting text
+/// does not copy it, so the copy is briefly placed on the clipboard and every
+/// pasteboard item is restored afterward, as PasteManager does around Cmd+V.
+/// Posting the key event needs the Accessibility grant uttr already uses for paste.
 @MainActor
 final class SelectionReader {
     private let pasteboard = NSPasteboard.general
@@ -32,43 +25,6 @@ final class SelectionReader {
             return nil
         }
 
-        if let text = readViaAccessibility(), !text.isEmpty {
-            return finish(text, source: .accessibility, started: started)
-        }
-        if let text = await readViaCopy(), !text.isEmpty {
-            return finish(text, source: .copyFallback, started: started)
-        }
-        logger.log("No selection found", level: .info)
-        return nil
-    }
-
-    private func finish(_ text: String, source: SelectionSource, started: Date) -> Selection {
-        let elapsed = Int(Date().timeIntervalSince(started) * 1000)
-        logger.log("Read \(text.count) characters via \(source.rawValue) in \(elapsed) ms", level: .info)
-        return Selection(text: text, source: source, elapsedMilliseconds: elapsed)
-    }
-
-    // MARK: - Accessibility
-
-    private func readViaAccessibility() -> String? {
-        let systemWide = AXUIElementCreateSystemWide()
-        // A hung target app would otherwise block the main thread for the default ~6 s.
-        AXUIElementSetMessagingTimeout(systemWide, 0.25)
-        var focused: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
-              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else {
-            return nil
-        }
-        var selected: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(focused as! AXUIElement, kAXSelectedTextAttribute as CFString, &selected) == .success else {
-            return nil
-        }
-        return selected as? String
-    }
-
-    // MARK: - Copy fallback
-
-    private func readViaCopy() async -> String? {
         let saved = snapshotPasteboard()
         let before = pasteboard.changeCount
         postCopy()
@@ -81,7 +37,14 @@ final class SelectionReader {
         // An unchanged count means nothing was selected (or the app ignored Cmd+C).
         let text = pasteboard.changeCount == before ? nil : pasteboard.string(forType: .string)
         restorePasteboard(saved)
-        return text
+
+        let elapsed = Int(Date().timeIntervalSince(started) * 1000)
+        guard let text, !text.isEmpty else {
+            logger.log("No selection found after \(elapsed) ms", level: .info)
+            return nil
+        }
+        logger.log("Read \(text.count) characters in \(elapsed) ms", level: .info)
+        return Selection(text: text, elapsedMilliseconds: elapsed)
     }
 
     private func snapshotPasteboard() -> [[NSPasteboard.PasteboardType: Data]] {
