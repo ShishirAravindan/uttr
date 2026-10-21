@@ -31,6 +31,7 @@ class HotkeyManager {
     
     // MARK: - Properties
     private var transcribeHotkeyRef: EventHotKeyRef?
+    private var actionHotkeyRefs: [EventHotKeyRef] = []
     private var eventHandler: EventHandlerRef?
     private var localMonitor: Any?
     
@@ -39,6 +40,11 @@ class HotkeyManager {
     
     // Callbacks for hotkey presses
     var onTranscribeHotkeyPressed: (() -> Void)?
+    var onActionHotkeyPressed: ((UInt32) -> Void)?
+
+    /// Extra global hotkeys keyed by Carbon ID (2 and up). Set before
+    /// `refreshHotkeyConfiguration()`; ID 1 stays the transcribe hotkey.
+    var actionHotkeys: [UInt32: HotkeyConfig] = [:]
     
     // MARK: - Initialization
     init(settingsManager: SettingsManager) {
@@ -112,6 +118,20 @@ class HotkeyManager {
         }
         logger.log("[HotkeyManager] Transcribe hotkey registered successfully: \(transcribeDisplay)", level: .info)
 
+        // A conflicting action hotkey should not take dictation down with it.
+        for (id, config) in actionHotkeys.sorted(by: { $0.key < $1.key }) {
+            var ref: EventHotKeyRef?
+            let hotkeyID = try getUniqueHotkeyID(id: id)
+            let status = RegisterEventHotKey(UInt32(config.keyCode), carbonModifiers(config.modifiers),
+                                             hotkeyID, GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                actionHotkeyRefs.append(ref)
+                logger.log("[HotkeyManager] Action hotkey \(id) registered", level: .info)
+            } else {
+                logger.log("[HotkeyManager] Action hotkey \(id) failed with status \(status)", level: .warning)
+            }
+        }
+
         try installGlobalHotkeyEventHandler()
     }
     
@@ -159,6 +179,9 @@ class HotkeyManager {
                 let display = self.settingsManager.getHotkeyDisplayString()
                 self.logger.log("[HotkeyManager] Transcribe hotkey pressed: \(display)", level: .info)
                 self.onTranscribeHotkeyPressed?()
+            } else if self.actionHotkeys[hotkeyID.id] != nil {
+                self.logger.log("[HotkeyManager] Action hotkey \(hotkeyID.id) pressed", level: .info)
+                self.onActionHotkeyPressed?(hotkeyID.id)
             }
         }
     }
@@ -207,9 +230,12 @@ class HotkeyManager {
     }
     
     private func getTranscribeHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
-        let keyCode = UInt32(settingsManager.hotkeyKeyCode)
+        (UInt32(settingsManager.hotkeyKeyCode), carbonModifiers(settingsManager.hotkeyModifiers))
+    }
+
+    private func carbonModifiers(_ names: [String]) -> UInt32 {
         var modifiers: UInt32 = 0
-        for modifier in settingsManager.hotkeyModifiers {
+        for modifier in names {
             switch modifier {
             case "command": modifiers |= UInt32(cmdKey)
             case "shift":   modifiers |= UInt32(shiftKey)
@@ -218,7 +244,7 @@ class HotkeyManager {
             default: break
             }
         }
-        return (keyCode, modifiers)
+        return modifiers
     }
     
     private func getTranscribeHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
@@ -253,6 +279,8 @@ class HotkeyManager {
             self.transcribeHotkeyRef = nil
             logger.log("[HotkeyManager] Transcribe hotkey unregistered", level: .debug)
         }
+        actionHotkeyRefs.forEach { UnregisterEventHotKey($0) }
+        actionHotkeyRefs.removeAll()
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
