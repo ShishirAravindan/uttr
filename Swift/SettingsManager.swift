@@ -22,6 +22,26 @@ struct AudioSettings: Codable {
     }
 }
 
+struct CleanupSettings: Codable {
+    var prompt: String = TextCleaner.defaultPrompt
+    /// Clean dictation after transcription, before pasting.
+    var cleanDictation: Bool = false
+
+    enum CodingKeys: String, CodingKey {
+        case prompt
+        case cleanDictation = "clean_dictation"
+    }
+
+    init() {}
+
+    /// Missing keys keep their defaults so a partial YAML block still decodes.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        prompt = try container.decodeIfPresent(String.self, forKey: .prompt) ?? prompt
+        cleanDictation = try container.decodeIfPresent(Bool.self, forKey: .cleanDictation) ?? cleanDictation
+    }
+}
+
 // MARK: - Serialization schema (written to disk)
 
 private struct SerializedAppConfig: Codable {
@@ -31,20 +51,36 @@ private struct SerializedAppConfig: Codable {
     /// Optional so configs written before input-device selection still decode —
     /// a decode failure here would reset every other setting.
     var audio: AudioSettings?
+    // Optional for the same reason as `audio`.
+    var speakHotkey: HotkeyConfig?
+    var cleanupHotkey: HotkeyConfig?
+    var cleanup: CleanupSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
         case fluidAudio = "fluid_audio"
         case hotkey
         case audio
+        case speakHotkey = "speak_hotkey"
+        case cleanupHotkey = "cleanup_hotkey"
+        case cleanup
     }
 }
 
 // MARK: - Hotkey config (shared schema)
 
-struct HotkeyConfig: Codable {
+struct HotkeyConfig: Codable, Equatable {
     var keyCode: Int
     var modifiers: [String]
+
+    static let defaultRecording = HotkeyConfig(keyCode: 37, modifiers: ["option"])  // ⌥L
+    static let defaultSpeak = HotkeyConfig(keyCode: 15, modifiers: ["option"])      // ⌥R
+    static let defaultCleanup = HotkeyConfig(keyCode: 8, modifiers: ["option"])     // ⌥C
+
+    /// Same key and modifiers, whatever order the modifiers were stored in.
+    func matches(_ other: HotkeyConfig) -> Bool {
+        keyCode == other.keyCode && Set(modifiers) == Set(other.modifiers)
+    }
 
     enum CodingKeys: String, CodingKey {
         case keyCode = "key_code"
@@ -59,6 +95,8 @@ extension Notification.Name {
     static let inputDeviceChanged = Notification.Name("inputDeviceChanged")
     static let hotkeyChanged = Notification.Name("hotkeyChanged")
     static let hotkeySettingsChanged = Notification.Name("hotkeySettingsChanged")
+    static let hotkeyCaptureBegan = Notification.Name("hotkeyCaptureBegan")
+    static let hotkeyCaptureEnded = Notification.Name("hotkeyCaptureEnded")
 }
 
 // MARK: - Settings Manager
@@ -76,6 +114,11 @@ class SettingsManager: ObservableObject {
     @Published var hotkeyKeyCode: Int = 37  // L key
     @Published var hotkeyModifiers: [String] = ["option"]
     @Published var providerStatus: String = "Loading…"
+
+    @Published var speakHotkey: HotkeyConfig = .defaultSpeak
+    @Published var cleanupHotkey: HotkeyConfig = .defaultCleanup
+    @Published var cleanupPrompt: String = TextCleaner.defaultPrompt
+    @Published var cleanDictation: Bool = false
 
     // MARK: - Properties
 
@@ -123,7 +166,10 @@ class SettingsManager: ObservableObject {
                 provider: transcriptionProviderID,
                 fluidAudio: fluidAudio,
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
-                audio: AudioSettings(inputDeviceUID: inputDeviceUID)
+                audio: AudioSettings(inputDeviceUID: inputDeviceUID),
+                speakHotkey: speakHotkey,
+                cleanupHotkey: cleanupHotkey,
+                cleanup: cleanupSettings
             )
 
             let encoder = YAMLEncoder()
@@ -164,19 +210,69 @@ class SettingsManager: ObservableObject {
         saveSettings()
     }
 
+    func updateSpeakHotkey(_ hotkey: HotkeyConfig) {
+        speakHotkey = hotkey
+        NotificationCenter.default.post(name: .hotkeyChanged, object: self)
+        logger.log("Read-aloud hotkey changed", level: .info)
+        saveSettings()
+    }
+
+    func updateCleanupHotkey(_ hotkey: HotkeyConfig) {
+        cleanupHotkey = hotkey
+        NotificationCenter.default.post(name: .hotkeyChanged, object: self)
+        logger.log("Cleanup hotkey changed", level: .info)
+        saveSettings()
+    }
+
+    func updateCleanupPrompt(_ prompt: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        cleanupPrompt = trimmed.isEmpty ? TextCleaner.defaultPrompt : prompt
+        logger.log("Cleanup prompt changed", level: .info)
+        saveSettings()
+    }
+
+    func updateCleanDictation(_ enabled: Bool) {
+        cleanDictation = enabled
+        logger.log("Dictation cleanup \(enabled ? "enabled" : "disabled")", level: .info)
+        saveSettings()
+    }
+
     // MARK: - Utility
 
+    var recordingHotkey: HotkeyConfig {
+        HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers)
+    }
+
+    /// The name of the other action already using `hotkey`, if any.
+    func actionUsing(_ hotkey: HotkeyConfig, otherThan action: String) -> String? {
+        let actions: [(String, HotkeyConfig)] = [
+            ("Recording", recordingHotkey), ("Read aloud", speakHotkey), ("Cleanup", cleanupHotkey),
+        ]
+        return actions.first { $0.0 != action && $0.1.matches(hotkey) }?.0
+    }
+
     func getHotkeyDisplayString() -> String {
+        displayString(for: recordingHotkey)
+    }
+
+    func displayString(for hotkey: HotkeyConfig) -> String {
         var display = ""
-        if hotkeyModifiers.contains("command") { display += "⌘" }
-        if hotkeyModifiers.contains("shift")   { display += "⇧" }
-        if hotkeyModifiers.contains("option")  { display += "⌥" }
-        if hotkeyModifiers.contains("control") { display += "⌃" }
-        display += keyCodeToCharacter(hotkeyKeyCode)
+        if hotkey.modifiers.contains("command") { display += "⌘" }
+        if hotkey.modifiers.contains("shift")   { display += "⇧" }
+        if hotkey.modifiers.contains("option")  { display += "⌥" }
+        if hotkey.modifiers.contains("control") { display += "⌃" }
+        display += keyCodeToCharacter(hotkey.keyCode)
         return display
     }
 
     // MARK: - Private
+
+    private var cleanupSettings: CleanupSettings {
+        var settings = CleanupSettings()
+        settings.prompt = cleanupPrompt
+        settings.cleanDictation = cleanDictation
+        return settings
+    }
 
     private func parseYAMLSettings(_ yamlString: String) throws {
         let decoder = YAMLDecoder()
@@ -190,6 +286,11 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = config.hotkey.keyCode
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
+        speakHotkey = config.speakHotkey ?? .defaultSpeak
+        cleanupHotkey = config.cleanupHotkey ?? .defaultCleanup
+        let cleanup = config.cleanup ?? CleanupSettings()
+        cleanupPrompt = cleanup.prompt
+        cleanDictation = cleanup.cleanDictation
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -202,6 +303,10 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = 37
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil
+        speakHotkey = .defaultSpeak
+        cleanupHotkey = .defaultCleanup
+        cleanupPrompt = TextCleaner.defaultPrompt
+        cleanDictation = false
         logger.log("Default settings applied", level: .info)
     }
 

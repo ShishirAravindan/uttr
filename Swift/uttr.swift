@@ -42,6 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindow: NSWindow?
     private var settingsWindowController: NSWindowController?
 
+    private var textActions: TextActions?
+
     private var isRecording = false
     private var isProviderReady = false
 
@@ -100,6 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
             self?.handleTranscribeHotkeyPress()
         }
+        setupTextActions()
 
         // Wire popover callbacks
         popoverViewModel.hotkeyDisplay = settingsManager.getHotkeyDisplayString()
@@ -158,6 +161,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
 
         logger?.log("App Components Initialized", level: .debug)
+    }
+
+    private func setupTextActions() {
+        MainActor.assumeIsolated {
+            guard let pasteManager else { return }
+            let actions = TextActions(settings: settingsManager, paste: pasteManager)
+            actions.onSpeaking = { [weak self] in self?.menuBarIconManager?.setSpeakingState() }
+            actions.onCleaning = { [weak self] in self?.menuBarIconManager?.setTransformingState() }
+            actions.onIdle = { [weak self] in self?.menuBarIconManager?.setReadyState() }
+            actions.onDelivered = { [weak self] in
+                self?.notificationManager?.showTranscriptionSuccess()
+                self?.menuBarIconManager?.showSuccessState()
+            }
+            actions.onFailed = { [weak self] message in
+                self?.notificationManager?.showTranscriptionError(message)
+                self?.menuBarIconManager?.showErrorState()
+            }
+            textActions = actions
+            Task { await actions.prepare() }
+        }
+
+        hotkeyManager?.onSpeakSelectionHotkeyPressed = { [weak self] in
+            MainActor.assumeIsolated { self?.textActions?.toggleSpeakSelection() }
+        }
+        hotkeyManager?.onCleanSelectionHotkeyPressed = { [weak self] in
+            MainActor.assumeIsolated { self?.textActions?.cleanSelection() }
+        }
     }
 
     private func startTranscriptionProvider() {
@@ -330,6 +360,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func handleTranscribedText(_ text: String, audioFileName: String? = nil) {
         logger?.log("Handling transcribed text: \(text)", level: .info)
         HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
+        guard settingsManager.cleanDictation, let textActions else {
+            pasteDictation(text)
+            return
+        }
+        // The transcript is already in history; the cleaned text becomes a second entry.
+        menuBarIconManager?.setTransformingState()
+        MainActor.assumeIsolated {
+            Task { @MainActor [weak self] in
+                let cleaned = await textActions.cleanDictation(text)
+                self?.pasteDictation(cleaned ?? text)
+            }
+        }
+    }
+
+    private func pasteDictation(_ text: String) {
         pasteManager?.pasteText(text) { [weak self] success in
             DispatchQueue.main.async {
                 if success {
@@ -438,6 +483,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func cleanup() {
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
+        if let textActions { Task { await textActions.teardown() } }
         closePopover()
         historyWindow?.close()
         historyWindow = nil

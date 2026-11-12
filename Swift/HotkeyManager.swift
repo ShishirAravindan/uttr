@@ -26,11 +26,19 @@ enum HotkeyManagerError: Error, LocalizedError {
     }
 }
 
+/// Global shortcuts, identified by their Carbon hotkey ID.
+enum HotkeyAction: UInt32, CaseIterable {
+    case record = 1
+    case speakSelection = 2
+    case cleanSelection = 3
+}
+
 // MARK: - HotkeyManager Class
 class HotkeyManager {
     
     // MARK: - Properties
     private var transcribeHotkeyRef: EventHotKeyRef?
+    private var selectionHotkeyRefs: [EventHotKeyRef] = []
     private var eventHandler: EventHandlerRef?
     private var localMonitor: Any?
     
@@ -39,6 +47,8 @@ class HotkeyManager {
     
     // Callbacks for hotkey presses
     var onTranscribeHotkeyPressed: (() -> Void)?
+    var onSpeakSelectionHotkeyPressed: (() -> Void)?
+    var onCleanSelectionHotkeyPressed: (() -> Void)?
     
     // MARK: - Initialization
     init(settingsManager: SettingsManager) {
@@ -51,6 +61,21 @@ class HotkeyManager {
             self,
             selector: #selector(handleHotkeySettingsChanged),
             name: .hotkeySettingsChanged,
+            object: nil
+        )
+
+        // Settings captures new shortcuts with a local key monitor. Registered
+        // shortcuts would swallow those keys first, so pause them meanwhile.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleHotkeyCaptureBegan),
+            name: .hotkeyCaptureBegan,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleHotkeyCaptureEnded),
+            name: .hotkeyCaptureEnded,
             object: nil
         )
     }
@@ -73,6 +98,15 @@ class HotkeyManager {
         refreshHotkeyConfiguration()
     }
     
+    @objc private func handleHotkeyCaptureBegan() {
+        logger.log("[HotkeyManager] Pausing hotkeys while a shortcut is captured", level: .debug)
+        cleanup()
+    }
+
+    @objc private func handleHotkeyCaptureEnded() {
+        refreshHotkeyConfiguration()
+    }
+
     // MARK: - Setup
     private func setupHotkeys() {
         // First, set up the local hotkey which always works
@@ -111,6 +145,26 @@ class HotkeyManager {
             throw HotkeyManagerError.hotkeyRegistrationFailed(status: transcribeStatus)
         }
         logger.log("[HotkeyManager] Transcribe hotkey registered successfully: \(transcribeDisplay)", level: .info)
+
+        // A selection shortcut that another app already holds should not take
+        // recording down with it, so these only log on failure.
+        let selectionHotkeys: [(HotkeyAction, HotkeyConfig)] = [
+            (.speakSelection, settingsManager.speakHotkey),
+            (.cleanSelection, settingsManager.cleanupHotkey),
+        ]
+        for (action, hotkey) in selectionHotkeys {
+            let display = settingsManager.displayString(for: hotkey)
+            let hotkeyID = try getUniqueHotkeyID(id: action.rawValue)
+            var ref: EventHotKeyRef?
+            let status = RegisterEventHotKey(UInt32(hotkey.keyCode), carbonModifiers(hotkey.modifiers),
+                                             hotkeyID, GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                selectionHotkeyRefs.append(ref)
+                logger.log("[HotkeyManager] \(action) hotkey registered: \(display)", level: .info)
+            } else {
+                logger.log("[HotkeyManager] \(action) hotkey \(display) failed with status \(status)", level: .warning)
+            }
+        }
 
         try installGlobalHotkeyEventHandler()
     }
@@ -154,11 +208,19 @@ class HotkeyManager {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
-            if hotkeyID.id == 1 {
-                // Transcribe hotkey
+            switch HotkeyAction(rawValue: hotkeyID.id) {
+            case .record:
                 let display = self.settingsManager.getHotkeyDisplayString()
                 self.logger.log("[HotkeyManager] Transcribe hotkey pressed: \(display)", level: .info)
                 self.onTranscribeHotkeyPressed?()
+            case .speakSelection:
+                self.logger.log("[HotkeyManager] Read-aloud hotkey pressed", level: .info)
+                self.onSpeakSelectionHotkeyPressed?()
+            case .cleanSelection:
+                self.logger.log("[HotkeyManager] Cleanup hotkey pressed", level: .info)
+                self.onCleanSelectionHotkeyPressed?()
+            case nil:
+                break
             }
         }
     }
@@ -207,9 +269,12 @@ class HotkeyManager {
     }
     
     private func getTranscribeHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
-        let keyCode = UInt32(settingsManager.hotkeyKeyCode)
+        (UInt32(settingsManager.hotkeyKeyCode), carbonModifiers(settingsManager.hotkeyModifiers))
+    }
+
+    private func carbonModifiers(_ names: [String]) -> UInt32 {
         var modifiers: UInt32 = 0
-        for modifier in settingsManager.hotkeyModifiers {
+        for modifier in names {
             switch modifier {
             case "command": modifiers |= UInt32(cmdKey)
             case "shift":   modifiers |= UInt32(shiftKey)
@@ -218,7 +283,7 @@ class HotkeyManager {
             default: break
             }
         }
-        return (keyCode, modifiers)
+        return modifiers
     }
     
     private func getTranscribeHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
@@ -253,6 +318,8 @@ class HotkeyManager {
             self.transcribeHotkeyRef = nil
             logger.log("[HotkeyManager] Transcribe hotkey unregistered", level: .debug)
         }
+        selectionHotkeyRefs.forEach { UnregisterEventHotKey($0) }
+        selectionHotkeyRefs.removeAll()
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
