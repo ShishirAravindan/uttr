@@ -1,11 +1,32 @@
 import SwiftUI
 
+/// The global shortcuts Settings can change.
+private enum ShortcutAction: String, CaseIterable, Identifiable {
+    case recording = "Recording"
+    case speak = "Read aloud"
+    case cleanup = "Cleanup"
+
+    var id: String { rawValue }
+
+    var rowLabel: String {
+        switch self {
+        case .recording: return "Record and paste"
+        case .speak: return "Read selection aloud"
+        case .cleanup: return "Clean up selection"
+        }
+    }
+}
+
 struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
+
+    @State private var capturingShortcut: ShortcutAction?
+    @State private var shortcutError: String?
+    @State private var promptDraft: String = ""
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -16,6 +37,7 @@ struct SettingsTabView: View {
                     audioSection
                     transcriptionSection
                     hotkeySection
+                    cleanupSection
                     aboutSection
                 }
                 .padding(.top, 24)
@@ -23,13 +45,53 @@ struct SettingsTabView: View {
                 .padding(.bottom, 28)
             }
         }
-        .onAppear { permissions.refresh() }
+        .onAppear {
+            permissions.refresh()
+            promptDraft = settings.cleanupPrompt
+        }
+        .onDisappear { endShortcutCapture() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
-            guard complete else { return }
+            guard complete, let action = capturingShortcut else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
-            settings.updateHotkey(keyCode: keyCode, modifiers: modifiers)
-            NotificationCenter.default.post(name: .hotkeySettingsChanged, object: nil)
-            hotkeyRecorder.stopRecording()
+            saveShortcut(HotkeyConfig(keyCode: keyCode, modifiers: modifiers), for: action)
+            endShortcutCapture()
+        }
+    }
+
+    // MARK: - Shortcut capture
+
+    private func beginShortcutCapture(for action: ShortcutAction) {
+        endShortcutCapture()
+        shortcutError = nil
+        capturingShortcut = action
+        NotificationCenter.default.post(name: .hotkeyCaptureBegan, object: nil)
+        hotkeyRecorder.startRecording()
+    }
+
+    private func endShortcutCapture() {
+        guard capturingShortcut != nil else { return }
+        capturingShortcut = nil
+        hotkeyRecorder.stopRecording()
+        NotificationCenter.default.post(name: .hotkeyCaptureEnded, object: nil)
+    }
+
+    private func saveShortcut(_ hotkey: HotkeyConfig, for action: ShortcutAction) {
+        if let other = settings.actionUsing(hotkey, otherThan: action.rawValue) {
+            shortcutError = "\(settings.displayString(for: hotkey)) is already the \(other.lowercased()) shortcut."
+            return
+        }
+        switch action {
+        case .recording: settings.updateHotkey(keyCode: hotkey.keyCode, modifiers: hotkey.modifiers)
+        case .speak: settings.updateSpeakHotkey(hotkey)
+        case .cleanup: settings.updateCleanupHotkey(hotkey)
+        }
+    }
+
+    private func hotkey(for action: ShortcutAction) -> HotkeyConfig {
+        switch action {
+        case .recording: return settings.recordingHotkey
+        case .speak: return settings.speakHotkey
+        case .cleanup: return settings.cleanupHotkey
         }
     }
 
@@ -81,26 +143,115 @@ struct SettingsTabView: View {
     }
 
     private var hotkeySection: some View {
-        SectionBlock(label: "Hotkey") {
+        SectionBlock(label: "Shortcuts") {
             SettingsCard(scheme: scheme) {
-                SettingRow(label: "Recording shortcut", scheme: scheme) {
-                    if hotkeyRecorder.isRecording {
-                        Text("Press your shortcut…")
-                            .font(.system(size: 13))
-                            .foregroundColor(.textTertiary(for: scheme))
-                    } else {
-                        HStack(spacing: 6) {
-                            KeycapsView(hotkey: settings.getHotkeyDisplayString(), scheme: scheme)
-                            SettingsActionButton(
-                                icon: "pencil",
-                                label: "Change recording shortcut",
-                                scheme: scheme
-                            ) {
-                                hotkeyRecorder.startRecording()
+                ForEach(Array(ShortcutAction.allCases.enumerated()), id: \.element) { index, action in
+                    if index > 0 { RowDivider(scheme: scheme) }
+                    SettingRow(label: action.rowLabel, scheme: scheme) {
+                        if capturingShortcut == action {
+                            HStack(spacing: 6) {
+                                Text("Press your shortcut…")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.textTertiary(for: scheme))
+                                SettingsActionButton(icon: "xmark", label: "Cancel", scheme: scheme) {
+                                    endShortcutCapture()
+                                }
+                            }
+                        } else {
+                            HStack(spacing: 6) {
+                                KeycapsView(hotkey: settings.displayString(for: hotkey(for: action)), scheme: scheme)
+                                SettingsActionButton(
+                                    icon: "pencil",
+                                    label: "Change \(action.rowLabel.lowercased()) shortcut",
+                                    scheme: scheme
+                                ) {
+                                    beginShortcutCapture(for: action)
+                                }
                             }
                         }
                     }
                 }
+                if let shortcutError {
+                    RowDivider(scheme: scheme)
+                    Text(shortcutError)
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(nsColor: .systemRed))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 16)
+                }
+            }
+        }
+    }
+
+    private var cleanupSection: some View {
+        SectionBlock(label: "Cleanup") {
+            SettingsCard(scheme: scheme) {
+                Toggle(isOn: Binding(
+                    get: { settings.cleanDictation },
+                    set: { settings.updateCleanDictation($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Clean up dictation")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textPrimary(for: scheme))
+                        Text("After \(settings.getHotkeyDisplayString()) transcribes, clean the text with the prompt below before pasting. History keeps both versions.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.textTertiary(for: scheme))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+
+                RowDivider(scheme: scheme)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Cleanup prompt")
+                        .font(.system(size: 13))
+                        .foregroundColor(.textPrimary(for: scheme))
+                    Text("Used by \(settings.displayString(for: settings.cleanupHotkey)) and by dictation cleanup.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.textTertiary(for: scheme))
+                    TextEditor(text: $promptDraft)
+                        .font(.system(size: 12))
+                        .scrollContentBackground(.hidden)
+                        .padding(6)
+                        .frame(height: 110)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(Color.pickerBackground(for: scheme))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .strokeBorder(Color.pickerBorder(for: scheme), lineWidth: 0.5)
+                                )
+                        )
+                        .accessibilityLabel("Cleanup prompt")
+                    HStack(spacing: 8) {
+                        if !TextCleaner.isModelAvailable {
+                            Text("Cleanup needs Apple Intelligence on macOS 26 or later.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.textSecondary(for: scheme))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                        Button("Restore default") {
+                            promptDraft = TextCleaner.defaultPrompt
+                            settings.updateCleanupPrompt(promptDraft)
+                        }
+                        .disabled(settings.cleanupPrompt == TextCleaner.defaultPrompt && promptDraft == TextCleaner.defaultPrompt)
+                        Button("Save") {
+                            settings.updateCleanupPrompt(promptDraft)
+                            promptDraft = settings.cleanupPrompt
+                        }
+                        .disabled(promptDraft == settings.cleanupPrompt)
+                    }
+                    .controlSize(.small)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
             }
         }
     }
