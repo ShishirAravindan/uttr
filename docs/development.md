@@ -4,7 +4,8 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 16.1 or later** — CI currently builds with 16.1
+- **Xcode 26 or later** — CI builds with 26.3. Older Xcode versions build the app
+  without cleanup, because their SDK lacks Apple's Foundation Models framework
 - **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
 
@@ -22,9 +23,10 @@ uttr/
 │   ├── AudioRecorder.swift         # Audio capture
 │   ├── HotkeyManager.swift         # Global hotkeys
 │   ├── Transcription/              # Provider protocol + implementations
+│   ├── TextActions/                # Selection reading, cleanup, read-aloud
 │   └── ...
 ├── docs/                           # Documentation
-├── Tests/LoggerChecks.swift        # Standalone logger checks
+├── Tests/                          # Standalone logger and text-action checks
 ├── .github/workflows/              # PR build and release automation
 ├── uttr.xcodeproj/                 # Xcode project
 └── README.md
@@ -128,6 +130,17 @@ These checks use a temporary file and do not launch the app:
 ```bash
 swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o /tmp/uttr-logger-checks
 /tmp/uttr-logger-checks
+```
+
+## Text Action Checks
+
+These cover the selection rules and history decoding without the clipboard,
+microphone, or models:
+
+```bash
+swiftc Swift/Logger.swift Swift/HistoryManager.swift Swift/TextActions/SelectionReader.swift \
+  Tests/TextActionsChecks.swift -o /tmp/uttr-text-actions-checks
+/tmp/uttr-text-actions-checks
 ```
 
 ## Code Style

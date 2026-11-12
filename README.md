@@ -23,6 +23,15 @@ That's it. No Python, no `uv`, no setup.
 4. Speak, then press the hotkey again to stop
 5. Transcribed text is pasted at your cursor
 
+Two more shortcuts act on text you have selected in any app:
+
+- `⌥R` reads the selection aloud. Press it again to stop.
+- `⌥C` cleans up the selection (fillers, spelling, punctuation) and replaces it.
+  Cleanup uses Apple's on-device model and needs Apple Intelligence on macOS 26 or later.
+
+Settings can change all three shortcuts, edit the cleanup prompt, and clean up
+dictation automatically before it is pasted.
+
 On first launch, uttr downloads the Parakeet model (~600 MB) in the background. The menu bar shows a loading indicator until it's ready.
 
 ## Configuration
