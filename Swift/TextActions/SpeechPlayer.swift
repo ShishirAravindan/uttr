@@ -28,11 +28,33 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
         speakTask != nil || pendingBuffers > 0 || synthesizer.isSpeaking
     }
 
+    private var isEngineConfigured = false
+
     override init() {
         super.init()
         synthesizer.delegate = self
+    }
+
+    /// Wired on first use rather than at launch, so uttr does not touch the
+    /// output device until something is read aloud.
+    private func configureEngineIfNeeded() {
+        guard !isEngineConfigured else { return }
         audioEngine.attach(playerNode)
         audioEngine.connect(playerNode, to: audioEngine.mainMixerNode, format: kokoroFormat)
+        // Changing the output device stops the engine and drops scheduled buffers.
+        NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: audioEngine, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.handleConfigurationChange() }
+        }
+        isEngineConfigured = true
+    }
+
+    private func handleConfigurationChange() {
+        logger.log("Audio output changed; stopping read-aloud", level: .warning)
+        let wasSpeaking = isSpeaking
+        stop()
+        if wasSpeaking { onFinished?() }
     }
 
     /// Loads Kokoro ahead of the first request. The first run downloads the
@@ -74,7 +96,7 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
 
     func teardown() async {
         stop()
-        audioEngine.stop()
+        if isEngineConfigured { audioEngine.stop() }
         await kokoro?.cleanup()
         kokoro = nil
     }
@@ -88,6 +110,7 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
     private func speakWithKokoro(_ text: String, manager: KokoroAneManager) {
         let chunks = Self.chunks(of: text)
         let started = Date()
+        logger.log("Speaking \(text.count) characters with Kokoro in \(chunks.count) chunks", level: .info)
         speakTask = Task { [weak self] in
             var synthesisSeconds = 0.0
             var audioSeconds = 0.0
@@ -121,22 +144,32 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
         buffer.frameLength = buffer.frameCapacity
         samples.withUnsafeBufferPointer { channel.update(from: $0.baseAddress!, count: samples.count) }
 
+        configureEngineIfNeeded()
         if !audioEngine.isRunning {
-            do { try audioEngine.start() } catch {
+            do {
+                try audioEngine.start()
+                logger.log("Audio output started", level: .debug)
+            } catch {
                 logger.logError(error, context: "Failed to start audio output")
                 return
             }
         }
         pendingBuffers += 1
         let scheduledGeneration = generation
-        playerNode.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self, self.generation == scheduledGeneration, self.pendingBuffers > 0 else { return }
-                self.pendingBuffers -= 1
-                if self.pendingBuffers == 0, self.speakTask == nil { self.onFinished?() }
-            }
+        // AVAudioPlayerNode calls this on its own audio thread. Formed inside this
+        // main-actor class, an unannotated closure would be inferred main-actor
+        // isolated, and the Swift runtime traps when it runs off the main thread.
+        // @Sendable keeps it nonisolated; it hops to the main actor explicitly.
+        playerNode.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { @Sendable [weak self] _ in
+            Task { @MainActor [weak self] in self?.bufferPlayed(generation: scheduledGeneration) }
         }
         if !playerNode.isPlaying { playerNode.play() }
+    }
+
+    private func bufferPlayed(generation scheduledGeneration: Int) {
+        guard generation == scheduledGeneration, pendingBuffers > 0 else { return }
+        pendingBuffers -= 1
+        if pendingBuffers == 0, speakTask == nil { onFinished?() }
     }
 
     /// Sentences, with long ones split at word boundaries to stay under
