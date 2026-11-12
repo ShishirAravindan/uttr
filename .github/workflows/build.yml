@@ -33,3 +33,8 @@ jobs:
           swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o "$RUNNER_TEMP/uttr-logger-checks"
           "$RUNNER_TEMP/uttr-logger-checks"
 
+      - name: Check Text Actions
+        run: |
+          swiftc Swift/Logger.swift Swift/HistoryManager.swift Swift/TextActions/SelectionReader.swift \
+            Tests/TextActionsChecks.swift -o "$RUNNER_TEMP/uttr-text-actions-checks"
+          "$RUNNER_TEMP/uttr-text-actions-checks"
