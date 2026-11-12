@@ -60,6 +60,38 @@ Common key codes: `37` = L, `0` = A, `49` = Space, `36` = Return.
 
 Use the Settings UI to record a new hotkey — it sets these values automatically.
 
+### Selection Shortcuts
+
+```yaml
+speak_hotkey:            # read the selection aloud
+  key_code: 15           # 15 = R
+  modifiers: ["option"]
+cleanup_hotkey:          # clean up the selection and replace it
+  key_code: 8            # 8 = C
+  modifiers: ["option"]
+```
+
+Omitted blocks use these defaults. Settings rejects a shortcut that another uttr
+action already uses.
+
+### Cleanup
+
+```yaml
+cleanup:
+  prompt: "Clean up this text. Keep all of the words and the meaning. ..."
+  clean_dictation: false
+```
+
+`prompt` is the instruction the cleanup shortcut and dictation cleanup follow. An
+empty prompt restores the default. uttr adds one fixed line after it, telling the
+model to treat the selected text only as text to clean.
+
+`clean_dictation` cleans dictation after transcription and before pasting. History
+then records both the transcript and the cleaned text. If cleanup is unavailable or
+fails, the transcript is pasted unchanged.
+
+Cleanup needs Apple Intelligence on macOS 26 or later.
+
 ## Full Example
 
 ```yaml
@@ -71,4 +103,13 @@ hotkey:
   modifiers: ["option"]
 audio:
   input_device_uid: null
+speak_hotkey:
+  key_code: 15
+  modifiers: ["option"]
+cleanup_hotkey:
+  key_code: 8
+  modifiers: ["option"]
+cleanup:
+  prompt: "Clean up this text. Keep all of the words and the meaning. ..."
+  clean_dictation: false
 ```

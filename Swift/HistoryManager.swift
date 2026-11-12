@@ -1,17 +1,43 @@
 import Foundation
 import SwiftUI
 
+/// What produced a history entry.
+enum HistoryEntryKind: String, Codable {
+    /// Speech transcribed with the recording shortcut.
+    case dictation
+    /// Text cleaned by the cleanup shortcut, or dictation cleaned after transcription.
+    case cleanup
+    /// Selected text read aloud.
+    case speech
+}
+
 struct TranscriptionEntry: Codable, Identifiable {
     let id: UUID
     let text: String
     let timestamp: Date
     let audioFileName: String?
-    
-    init(text: String, audioFileName: String? = nil) {
+    let kind: HistoryEntryKind
+
+    init(text: String, kind: HistoryEntryKind = .dictation, audioFileName: String? = nil) {
         self.id = UUID()
         self.text = text
         self.timestamp = Date()
         self.audioFileName = audioFileName
+        self.kind = kind
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, text, timestamp, audioFileName, kind
+    }
+
+    /// Entries saved before `kind` existed were all dictation.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+        kind = try container.decodeIfPresent(HistoryEntryKind.self, forKey: .kind) ?? .dictation
     }
     
     var formattedTimestamp: String {
@@ -36,7 +62,8 @@ class HistoryManager: ObservableObject {
     @Published var transcriptions: [TranscriptionEntry] = []
     
     // MARK: - Properties
-    private let maxEntries = 5
+    // A cleaned dictation writes two entries, so keep room for five of those.
+    private let maxEntries = 10
     private let historyFileURL: URL
     private let logger = Logger()
     
@@ -55,7 +82,11 @@ class HistoryManager: ObservableObject {
     
     // MARK: - Public Methods
     func addTranscription(_ text: String, audioFileName: String? = nil) {
-        let entry = TranscriptionEntry(text: text, audioFileName: audioFileName)
+        add(text, kind: .dictation, audioFileName: audioFileName)
+    }
+
+    func add(_ text: String, kind: HistoryEntryKind, audioFileName: String? = nil) {
+        let entry = TranscriptionEntry(text: text, kind: kind, audioFileName: audioFileName)
         
         DispatchQueue.main.async {
             // Add to beginning of array
@@ -69,7 +100,7 @@ class HistoryManager: ObservableObject {
             self.saveHistory()
         }
         
-        logger.log("Added transcription to history: \(text.prefix(30))...", level: .info)
+        logger.log("Added \(kind.rawValue) to history: \(text.prefix(30))...", level: .info)
     }
     
     func copyToClipboard(_ entry: TranscriptionEntry) {

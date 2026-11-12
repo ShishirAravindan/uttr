@@ -29,6 +29,10 @@
 		AA1100022E9B000000000001 /* DesignTokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1100012E9B000000000001 /* DesignTokens.swift */; };
 		AA1100042E9B000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA1100032E9B000000000001 /* Assets.xcassets */; };
 		AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1300012E9B000000000001 /* AudioDeviceManager.swift */; };
+		AD1500022E9B000000000001 /* SelectionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1500012E9B000000000001 /* SelectionReader.swift */; };
+		AD1500122E9B000000000001 /* TextCleaner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1500112E9B000000000001 /* TextCleaner.swift */; };
+		AD1500222E9B000000000001 /* SpeechPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1500212E9B000000000001 /* SpeechPlayer.swift */; };
+		AD1500322E9B000000000001 /* TextActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1500312E9B000000000001 /* TextActions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +59,10 @@
 		AA1100012E9B000000000001 /* DesignTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DesignTokens.swift; path = Swift/Design/DesignTokens.swift; sourceTree = "<group>"; };
 		AA1100032E9B000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB1300012E9B000000000001 /* AudioDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioDeviceManager.swift; path = Swift/AudioDeviceManager.swift; sourceTree = "<group>"; };
+		AD1500012E9B000000000001 /* SelectionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionReader.swift; path = Swift/TextActions/SelectionReader.swift; sourceTree = "<group>"; };
+		AD1500112E9B000000000001 /* TextCleaner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextCleaner.swift; path = Swift/TextActions/TextCleaner.swift; sourceTree = "<group>"; };
+		AD1500212E9B000000000001 /* SpeechPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechPlayer.swift; path = Swift/TextActions/SpeechPlayer.swift; sourceTree = "<group>"; };
+		AD1500312E9B000000000001 /* TextActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextActions.swift; path = Swift/TextActions/TextActions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +104,10 @@
 				6AF2A0032E9B000000000001 /* FluidAudioProvider.swift */,
 				AA1100012E9B000000000001 /* DesignTokens.swift */,
 				AA1100032E9B000000000001 /* Assets.xcassets */,
+				AD1500012E9B000000000001 /* SelectionReader.swift */,
+				AD1500112E9B000000000001 /* TextCleaner.swift */,
+				AD1500212E9B000000000001 /* SpeechPlayer.swift */,
+				AD1500312E9B000000000001 /* TextActions.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -205,6 +217,10 @@
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */,
 				AA1100022E9B000000000001 /* DesignTokens.swift in Sources */,
+				AD1500022E9B000000000001 /* SelectionReader.swift in Sources */,
+				AD1500122E9B000000000001 /* TextCleaner.swift in Sources */,
+				AD1500222E9B000000000001 /* SpeechPlayer.swift in Sources */,
+				AD1500322E9B000000000001 /* TextActions.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

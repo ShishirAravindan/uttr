@@ -73,6 +73,22 @@ on the recording and hardware.
 4. Press the hotkey again to **stop recording**
 5. Transcribed text is automatically pasted at your cursor
 
+### Selected Text
+
+Select text in any app, then:
+
+- Press `⌥R` to **read it aloud**. Press `⌥R` again to stop.
+- Press `⌥C` to **clean it up**. The cleaned text replaces the selection.
+
+Both shortcuts briefly copy the selection with Cmd+C and then restore your
+clipboard. An empty line, or the current line that code editors copy when nothing
+is selected, counts as no selection.
+
+Read-aloud uses the Kokoro voice, which runs on the Neural Engine. The first launch
+downloads and compiles it in the background; until it is ready, the macOS system
+voice reads instead. Cleanup uses Apple's on-device model, which needs Apple
+Intelligence on macOS 26 or later; uttr downloads nothing for it.
+
 ### Settings
 
 Access via menu bar icon → Settings:
@@ -80,14 +96,18 @@ Access via menu bar icon → Settings:
 | Setting | Description |
 |---------|-------------|
 | **Provider** | Parakeet v3 (multilingual) or v2 (English only) |
-| **Hotkey** | Click "Change" to record a new shortcut |
+| **Shortcuts** | Change the record (`⌥L`), read-aloud (`⌥R`), and cleanup (`⌥C`) shortcuts |
+| **Clean up dictation** | Off by default. When on, dictation is cleaned before it is pasted |
+| **Cleanup prompt** | The instructions cleanup follows; edit and save, or restore the default |
 | **Input device** | Use the system default microphone or pin a specific device |
 
 ### History
 
-Open History from the menu-bar popover to review the latest five transcriptions
-and copy one again. Use it to recover text if automatic insertion fails. Debug and
-Release share this history and the settings file.
+Open History from the menu-bar popover to review the latest ten entries and copy
+one again. Each entry is labeled Dictation, Cleanup, or Read aloud. A cleaned
+dictation appears twice: the transcript and the cleaned text. Use it to recover
+text if automatic insertion fails. Debug and Release share this history and the
+settings file.
 
 ## Next Steps
 

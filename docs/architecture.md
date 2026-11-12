@@ -20,6 +20,33 @@ recording-to-paste flow:
 4. On the main actor, AppDelegate queues a history update and calls `PasteManager`.
    Paste uses the clipboard and simulated `Cmd+V` events; success/error feedback
    updates the menu-bar icon and notifications.
+5. When **Clean up dictation** is on, `TextActions.cleanDictation` runs between
+   step 4's history update and the paste. The cleaned text is a second history
+   entry. If cleanup is unavailable or fails, the transcript is pasted unchanged.
+
+## Selection Actions
+
+Two more registered shortcuts act on the frontmost app's selected text.
+`TextActions` coordinates them on the main actor:
+
+- **Read aloud** (`⌥R`): `SelectionReader` copies the selection with a simulated
+  `Cmd+C`, waits up to 350 ms for the pasteboard to change, and restores every
+  pasteboard item. `SpeechPlayer` reads the text with FluidAudio's Kokoro model,
+  sentence by sentence, so the first sentence plays while the next is synthesized.
+  Kokoro's seven Core ML stages run on the Neural Engine and CPU; uttr keeps the
+  three that FluidAudio would let Core ML place on the GPU off it, because that
+  path fails Metal API validation and aborts Debug runs. Until Kokoro has
+  loaded at launch, or if it fails to, `AVSpeechSynthesizer` reads instead. The
+  same shortcut stops playback.
+- **Cleanup** (`⌥C`): the selection is read the same way, then `TextCleaner` sends
+  it to Apple's on-device Foundation Models with the prompt from Settings, in a
+  fresh session per request, with a 20-second limit. The result is pasted over the
+  still-active selection.
+
+Both record history: read-alouds with the text read, cleanups with the cleaned
+text. Cleanup needs Apple Intelligence on macOS 26 or later and a build made with
+the macOS 26 SDK; otherwise it reports that it is unavailable. The diagrams above
+predate these actions.
 
 The recording flag is cleared before transcription starts. The current app does
 not serialize the entire capture/transcription/paste flow or keep its asynchronous
@@ -34,16 +61,20 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `uttr.swift` | App lifecycle, component wiring, recording/transcription orchestration, windows |
 | `AudioRecorder.swift` | AVAudioEngine capture to a native-format temporary WAV; interruption reporting |
 | `AudioDeviceManager.swift` | Core Audio input enumeration and UID → runtime device ID lookup |
-| `HotkeyManager.swift` | Registered global hotkey via Carbon |
+| `HotkeyManager.swift` | Registered global hotkeys via Carbon: record, read aloud, cleanup; paused while Settings captures a shortcut |
 | `PasteManager.swift` | Clipboard write, simulated paste, delayed restoration of previous plain text |
-| `SettingsManager.swift` | YAML persistence, provider/device/hotkey changes |
+| `SettingsManager.swift` | YAML persistence, provider/device/hotkey/cleanup changes |
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
-| `HistoryManager.swift` | Latest five transcriptions, JSON persistence, copy/clear APIs |
+| `HistoryManager.swift` | Latest ten dictation, cleanup, and read-aloud entries, JSON persistence, copy/clear APIs |
 | `MenuBarPopoverView.swift` | Recording controls and callbacks through `PopoverViewModel` |
 | `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings, permissions, and history UI |
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
+| `TextActions/TextActions.swift` | Read-aloud and cleanup orchestration, dictation cleanup |
+| `TextActions/SelectionReader.swift` | Selected text via a `Cmd+C` round trip that restores the clipboard |
+| `TextActions/TextCleaner.swift` | Apple on-device model cleanup with the configured prompt |
+| `TextActions/SpeechPlayer.swift` | Kokoro (Neural Engine) read-aloud with system-voice fallback |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection
@@ -75,7 +106,7 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Data | Current location and behavior |
 |------|-------------------------------|
 | Settings | `~/Library/Application Support/uttr/settings.yaml`; shared by Debug and Release |
-| History | User Documents directory + `History/transcription_history.json`; latest five entries; shared by both builds |
+| History | User Documents directory + `History/transcription_history.json`; latest ten entries; shared by both builds |
 | Release logs | `~/Library/Logs/uttr/transcriptions.log` |
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
 | Recordings | macOS temporary directory; filenames include a recording timestamp |

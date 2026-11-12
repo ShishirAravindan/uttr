@@ -9,7 +9,7 @@ struct HomeTabView: View {
             // Header
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text("Transcription history")
+                    Text("History")
                         .font(.system(size: 22, weight: .medium))
                         .tracking(-0.88)
                         .foregroundColor(.textPrimary(for: scheme))
@@ -21,7 +21,7 @@ struct HomeTabView: View {
                     }
                 }
 
-                Text("Your latest transcriptions, ready to copy.")
+                Text("Your latest dictations, cleanups, and read-alouds, ready to copy.")
                     .font(.system(size: 12))
                     .foregroundColor(.textSecondary(for: scheme))
             }
@@ -39,11 +39,11 @@ struct HomeTabView: View {
                             .foregroundColor(.textTertiary(for: scheme))
                             .accessibilityHidden(true)
 
-                        Text("No transcriptions yet")
+                        Text("No history yet")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.textPrimary(for: scheme))
 
-                        Text("Record with your shortcut to see recent transcriptions here.")
+                        Text("Dictate, clean up, or read text aloud with your shortcuts to see it here.")
                             .font(.system(size: 12))
                             .foregroundColor(.textSecondary(for: scheme))
                             .multilineTextAlignment(.center)
@@ -90,10 +90,19 @@ struct TranscriptionCard: View {
         HStack(alignment: .top, spacing: 12) {
             // Main Content
             VStack(alignment: .leading, spacing: 8) {
-                // Timestamp
-                Text(transcription.timestamp, format: .dateTime.month(.abbreviated).day().year().hour().minute())
-                    .font(.system(size: 11))
-                    .foregroundColor(.textTertiary(for: scheme))
+                // Kind and timestamp
+                HStack(spacing: 6) {
+                    Label(transcription.kind.displayName, systemImage: transcription.kind.symbolName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.textSecondary(for: scheme))
+                    Text("·")
+                        .font(.system(size: 11))
+                        .foregroundColor(.textTertiary(for: scheme))
+                        .accessibilityHidden(true)
+                    Text(transcription.timestamp, format: .dateTime.month(.abbreviated).day().year().hour().minute())
+                        .font(.system(size: 11))
+                        .foregroundColor(.textTertiary(for: scheme))
+                }
                 
                 // Transcription Text
                 Text(transcription.text)
@@ -118,8 +127,8 @@ struct TranscriptionCard: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help(isCopied ? "Copied" : "Copy transcription")
-            .accessibilityLabel(isCopied ? "Transcription copied" : "Copy transcription")
+            .help(isCopied ? "Copied" : "Copy text")
+            .accessibilityLabel(isCopied ? "Text copied" : "Copy text")
             .onHover { isHovered = $0 }
         }
         .padding(16)
@@ -149,6 +158,24 @@ struct TranscriptionCard: View {
         }
     }
     
+}
+
+private extension HistoryEntryKind {
+    var displayName: String {
+        switch self {
+        case .dictation: return "Dictation"
+        case .cleanup: return "Cleanup"
+        case .speech: return "Read aloud"
+        }
+    }
+
+    var symbolName: String {
+        switch self {
+        case .dictation: return "mic"
+        case .cleanup: return "wand.and.stars"
+        case .speech: return "speaker.wave.2"
+        }
+    }
 }
 
 #Preview {
