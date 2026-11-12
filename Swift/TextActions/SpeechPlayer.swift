@@ -1,15 +1,25 @@
 import AVFoundation
+import CoreML
 import FluidAudio
 import NaturalLanguage
 
-/// Reads text aloud with FluidAudio's Kokoro 82M model, four of whose seven
-/// Core ML stages run on the Neural Engine. Kokoro synthesizes a whole buffer per
+/// Reads text aloud with FluidAudio's Kokoro 82M model, whose seven Core ML
+/// stages run on the Neural Engine and CPU. Kokoro synthesizes a whole buffer per
 /// call, so text is split into sentences and each one is scheduled as soon as it
 /// is ready: the first sentence plays while the next is synthesized. Until Kokoro
 /// has loaded, or if it fails to, the macOS system voice reads instead.
 @MainActor
 final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
     private let logger = Logger(componentName: "SpeechPlayer")
+
+    /// FluidAudio runs Prosody, Noise, and Tail with `.all`, which lets Core ML
+    /// schedule them on the GPU. There, MPSGraph allocates a tensor that fails
+    /// Metal API validation (`MTLReportFailure` in `allocateTensorDataForValue`),
+    /// which Xcode enables for Debug runs, so read-aloud aborted. Keeping every
+    /// stage on the Neural Engine or CPU avoids the GPU path.
+    private static let kokoroComputeUnits = KokoroAneComputeUnits(
+        prosody: .cpuAndNeuralEngine, noise: .cpuAndNeuralEngine, tail: .cpuAndNeuralEngine
+    )
 
     private var kokoro: KokoroAneManager?
     private let audioEngine = AVAudioEngine()
@@ -62,7 +72,7 @@ final class SpeechPlayer: NSObject, AVSpeechSynthesizerDelegate {
     func prepare() async {
         guard kokoro == nil else { return }
         let started = Date()
-        let manager = KokoroAneManager()
+        let manager = KokoroAneManager(computeUnits: Self.kokoroComputeUnits)
         do {
             try await manager.initialize()
             kokoro = manager
