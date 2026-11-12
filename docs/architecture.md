@@ -33,7 +33,9 @@ Two more registered shortcuts act on the frontmost app's selected text.
   `Cmd+C`, waits up to 350 ms for the pasteboard to change, and restores every
   pasteboard item. `SpeechPlayer` reads the text with FluidAudio's Kokoro model,
   sentence by sentence, so the first sentence plays while the next is synthesized.
-  Four of Kokoro's seven Core ML stages run on the Neural Engine. Until Kokoro has
+  Kokoro's seven Core ML stages run on the Neural Engine and CPU; uttr keeps the
+  three that FluidAudio would let Core ML place on the GPU off it, because that
+  path fails Metal API validation and aborts Debug runs. Until Kokoro has
   loaded at launch, or if it fails to, `AVSpeechSynthesizer` reads instead. The
   same shortcut stops playback.
 - **Cleanup** (`⌥C`): the selection is read the same way, then `TextCleaner` sends
