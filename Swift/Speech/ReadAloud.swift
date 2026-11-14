@@ -9,14 +9,15 @@ final class ReadAloud {
     /// A voice that became ready mid-sentence; it takes over once speech ends.
     private var nextEngine: SpeechEngine?
     private var isReadingSelection = false
-    private let logger = Logger(componentName: "ReadAloud")
+    private let logger: Logger
 
     // Status feedback, wired to the menu-bar icon and notifications by AppDelegate.
     var onSpeaking: (() -> Void)?
     var onIdle: (() -> Void)?
     var onFailed: ((String) -> Void)?
 
-    init(engine: SpeechEngine? = nil) {
+    init(engine: SpeechEngine? = nil, logger: Logger = Logger(componentName: "ReadAloud")) {
+        self.logger = logger
         let engine = engine ?? SystemSpeechEngine()
         self.engine = engine
         engine.onFinished = { [weak self] in self?.speechEnded() }
