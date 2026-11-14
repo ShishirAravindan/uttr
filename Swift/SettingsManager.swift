@@ -22,6 +22,24 @@ struct AudioSettings: Codable {
     }
 }
 
+struct HistorySettings: Codable {
+    var maxEntries: Int = HistoryManager.defaultMaxEntries
+
+    enum CodingKeys: String, CodingKey {
+        case maxEntries = "max_entries"
+    }
+
+    init(maxEntries: Int = HistoryManager.defaultMaxEntries) {
+        self.maxEntries = maxEntries
+    }
+
+    /// A missing key keeps its default, so a partial block doesn't reset every setting.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        maxEntries = try container.decodeIfPresent(Int.self, forKey: .maxEntries) ?? maxEntries
+    }
+}
+
 // MARK: - Serialization schema (written to disk)
 
 private struct SerializedAppConfig: Codable {
@@ -31,12 +49,15 @@ private struct SerializedAppConfig: Codable {
     /// Optional so configs written before input-device selection still decode —
     /// a decode failure here would reset every other setting.
     var audio: AudioSettings?
+    // Optional for the same reason as `audio`.
+    var history: HistorySettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
         case fluidAudio = "fluid_audio"
         case hotkey
         case audio
+        case history
     }
 }
 
@@ -61,6 +82,7 @@ extension Notification.Name {
     static let hotkeySettingsChanged = Notification.Name("hotkeySettingsChanged")
     static let hotkeyCaptureBegan = Notification.Name("hotkeyCaptureBegan")
     static let hotkeyCaptureEnded = Notification.Name("hotkeyCaptureEnded")
+    static let historyMaxEntriesChanged = Notification.Name("historyMaxEntriesChanged")
 }
 
 // MARK: - Settings Manager
@@ -78,6 +100,7 @@ class SettingsManager: ObservableObject {
     @Published var hotkeyKeyCode: Int = 37  // L key
     @Published var hotkeyModifiers: [String] = ["option"]
     @Published var providerStatus: String = "Loading…"
+    @Published var historyMaxEntries: Int = HistoryManager.defaultMaxEntries
 
     // MARK: - Properties
 
@@ -125,7 +148,8 @@ class SettingsManager: ObservableObject {
                 provider: transcriptionProviderID,
                 fluidAudio: fluidAudio,
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
-                audio: AudioSettings(inputDeviceUID: inputDeviceUID)
+                audio: AudioSettings(inputDeviceUID: inputDeviceUID),
+                history: HistorySettings(maxEntries: historyMaxEntries)
             )
 
             let encoder = YAMLEncoder()
@@ -169,6 +193,13 @@ class SettingsManager: ObservableObject {
         saveSettings()
     }
 
+    func updateHistoryMaxEntries(_ count: Int) {
+        historyMaxEntries = max(1, count)
+        NotificationCenter.default.post(name: .historyMaxEntriesChanged, object: self)
+        logger.log("History limit changed to \(historyMaxEntries)", level: .info)
+        saveSettings()
+    }
+
     // MARK: - Utility
 
     var recordingHotkey: HotkeyConfig {
@@ -209,6 +240,7 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = config.hotkey.keyCode
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
+        historyMaxEntries = max(1, config.history?.maxEntries ?? HistoryManager.defaultMaxEntries)
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -221,6 +253,7 @@ class SettingsManager: ObservableObject {
         hotkeyKeyCode = 37
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil
+        historyMaxEntries = HistoryManager.defaultMaxEntries
         logger.log("Default settings applied", level: .info)
     }
 

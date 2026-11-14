@@ -127,6 +127,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             self.audioRecorder?.preferredInputDeviceUID = self.settingsManager.inputDeviceUID
         }
 
+        HistoryManager.shared.setMaxEntries(settingsManager.historyMaxEntries)
+        NotificationCenter.default.addObserver(
+            forName: .historyMaxEntriesChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            HistoryManager.shared.setMaxEntries(self.settingsManager.historyMaxEntries)
+        }
+
         NotificationCenter.default.addObserver(
             forName: .hotkeyChanged,
             object: nil,

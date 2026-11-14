@@ -64,7 +64,8 @@ class HistoryManager: ObservableObject {
     @Published var transcriptions: [TranscriptionEntry] = []
     
     // MARK: - Properties
-    private let maxEntries = 5
+    static let defaultMaxEntries = 5
+    private var maxEntries = HistoryManager.defaultMaxEntries
     private let historyFileURL: URL
     /// Where AudioRecorder writes recordings. An entry's recording is deleted when
     /// the entry leaves history.
@@ -94,12 +95,7 @@ class HistoryManager: ObservableObject {
             // Add to beginning of array
             self.transcriptions.insert(entry, at: 0)
             
-            // Keep only the last N entries
-            if self.transcriptions.count > self.maxEntries {
-                self.deleteRecordings(of: self.transcriptions[self.maxEntries...])
-                self.transcriptions = Array(self.transcriptions.prefix(self.maxEntries))
-            }
-            
+            self.trimToMaxEntries()
             self.saveHistory()
         }
         
@@ -114,6 +110,19 @@ class HistoryManager: ObservableObject {
         logger.log("Copied transcription to clipboard: \(entry.id)", level: .info)
     }
     
+    /// Raising the limit keeps more entries from now on. Lowering it removes the
+    /// oldest entries, and their recordings, right away.
+    func setMaxEntries(_ limit: Int) {
+        let limit = max(1, limit)
+        DispatchQueue.main.async {
+            self.maxEntries = limit
+            if self.trimToMaxEntries() {
+                self.saveHistory()
+            }
+        }
+        logger.log("History keeps \(limit) entries", level: .info)
+    }
+
     func clearHistory() {
         DispatchQueue.main.async {
             self.deleteRecordings(of: self.transcriptions)
@@ -129,6 +138,14 @@ class HistoryManager: ObservableObject {
     }
     
     // MARK: - Private Methods
+    @discardableResult
+    private func trimToMaxEntries() -> Bool {
+        guard transcriptions.count > maxEntries else { return false }
+        deleteRecordings(of: transcriptions[maxEntries...])
+        transcriptions = Array(transcriptions.prefix(maxEntries))
+        return true
+    }
+
     private func deleteRecordings<S: Sequence>(of entries: S) where S.Element == TranscriptionEntry {
         for name in entries.compactMap(\.audioFileName) {
             // Only a bare file name, so an edited history file can't point elsewhere.
@@ -154,8 +171,10 @@ class HistoryManager: ObservableObject {
             let data = try Data(contentsOf: historyFileURL)
             let loadedTranscriptions = try JSONDecoder().decode([TranscriptionEntry].self, from: data)
             
+            // Not trimmed here: the configured limit, which may be higher than the
+            // default, is applied by setMaxEntries once settings load.
             DispatchQueue.main.async {
-                self.transcriptions = Array(loadedTranscriptions.prefix(self.maxEntries))
+                self.transcriptions = loadedTranscriptions
             }
             
             logger.log("Loaded \(loadedTranscriptions.count) transcriptions from history", level: .info)
