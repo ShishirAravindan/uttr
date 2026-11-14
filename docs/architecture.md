@@ -34,7 +34,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `uttr.swift` | App lifecycle, component wiring, recording/transcription orchestration, windows |
 | `AudioRecorder.swift` | AVAudioEngine capture to a native-format temporary WAV; interruption reporting |
 | `AudioDeviceManager.swift` | Core Audio input enumeration and UID → runtime device ID lookup |
-| `HotkeyManager.swift` | Registered global hotkey via Carbon |
+| `HotkeyManager.swift` | Global shortcuts registered per action (recording, read aloud) via Carbon |
 | `PasteManager.swift` | Clipboard write, simulated paste, delayed restoration of previous plain text |
 | `SettingsManager.swift` | YAML persistence, provider/device/hotkey changes |
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
@@ -45,6 +45,8 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
 | `Cleanup/TextCleanup.swift`, `Cleanup/CleanupOutputChecks.swift`, `Cleanup/AppleCleanupBackend.swift` | On-device text cleanup with deadlines and output checks; not wired to the UI yet. See [Cleanup](cleanup.md). |
+| `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, restoring the clipboard |
+| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the ⌥R toggle that records a history entry |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection

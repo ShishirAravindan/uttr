@@ -58,9 +58,19 @@ hotkey:
 
 Common key codes: `37` = L, `0` = A, `49` = Space, `36` = Return.
 
+The read-aloud shortcut uses the same shape under its own key (default `⌥R`, key
+code 15):
+
+```yaml
+read_aloud_hotkey:
+  key_code: 15
+  modifiers: ["option"]
+```
+
 Use Settings → Shortcuts to record a new hotkey — it sets these values automatically.
-A shortcut needs at least one of command, option or control. If another app already
-holds a shortcut, uttr logs the failure and registers the rest.
+A shortcut needs at least one of command, option or control, and Settings rejects
+one that another action already uses. If another app already holds a shortcut,
+uttr logs the failure and registers the rest.
 
 ### History
 
@@ -86,4 +96,7 @@ audio:
   input_device_uid: null
 history:
   max_entries: 5
+read_aloud_hotkey:
+  key_code: 15
+  modifiers: ["option"]
 ```
