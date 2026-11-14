@@ -63,9 +63,10 @@ struct CleanupResult {
 /// something the user explicitly asked for and waits on.
 struct CleanupProfile {
     var timeout: TimeInterval
+    var checks: CleanupChecks
 
-    static let dictation = CleanupProfile(timeout: 2)
-    static let selection = CleanupProfile(timeout: 10)
+    static let dictation = CleanupProfile(timeout: 2, checks: [.general, .speech])
+    static let selection = CleanupProfile(timeout: 10, checks: .general)
 }
 
 /// Cleans text with a backend, bounded by the profile's deadline. The deadline returns
@@ -101,12 +102,13 @@ final class TextCleanup {
         let pending = PendingCleanup()
         let backend = self.backend
         let timeoutNanoseconds = profile.timeout * 1_000_000_000
+        let checks = profile.checks
         let task = Task { [weak self] in
             do {
                 let candidate = try await backend.generate(body, instructions: instructions)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 var result: CleanupResult
-                if candidate.isEmpty {
+                if candidate.isEmpty || !checks.accepts(candidate, for: body) {
                     result = .original(text, .rejected)
                 } else if candidate == body {
                     result = .original(text, .unchanged)

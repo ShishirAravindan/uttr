@@ -31,6 +31,7 @@
 		AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1300012E9B000000000001 /* AudioDeviceManager.swift */; };
 		AE1600022E9B000000000001 /* TextCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600012E9B000000000001 /* TextCleanup.swift */; };
 		AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600112E9B000000000001 /* AppleCleanupBackend.swift */; };
+		AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600212E9B000000000001 /* CleanupOutputChecks.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -59,6 +60,7 @@
 		AB1300012E9B000000000001 /* AudioDeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AudioDeviceManager.swift; path = Swift/AudioDeviceManager.swift; sourceTree = "<group>"; };
 		AE1600012E9B000000000001 /* TextCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextCleanup.swift; path = Swift/Cleanup/TextCleanup.swift; sourceTree = "<group>"; };
 		AE1600112E9B000000000001 /* AppleCleanupBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleCleanupBackend.swift; path = Swift/Cleanup/AppleCleanupBackend.swift; sourceTree = "<group>"; };
+		AE1600212E9B000000000001 /* CleanupOutputChecks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CleanupOutputChecks.swift; path = Swift/Cleanup/CleanupOutputChecks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 				00EA516E2E24C49D00BE5FC7 /* uttr.entitlements */,
 				00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */,
 				AB1300012E9B000000000001 /* AudioDeviceManager.swift */,
+				AE1600212E9B000000000001 /* CleanupOutputChecks.swift */,
 				AE1600112E9B000000000001 /* AppleCleanupBackend.swift */,
 				AE1600012E9B000000000001 /* TextCleanup.swift */,
 				00EA516B2E24C16D00BE5FC7 /* uttr.swift */,
@@ -208,6 +211,7 @@
 				00EA51702E24D05200BE5FC7 /* Logger.swift in Sources */,
 				00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */,
 				AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */,
+				AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */,
 				AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AE1600022E9B000000000001 /* TextCleanup.swift in Sources */,
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
