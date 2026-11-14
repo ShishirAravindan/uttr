@@ -12,9 +12,14 @@ on:
         description: Exact version (X.Y.Z), used instead of the bump
         type: string
         required: false
+      title:
+        description: Release title; defaults to the latest merged PR's title
+        type: string
+        required: false
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: release
@@ -70,6 +75,28 @@ jobs:
           echo "Releasing v$VERSION (previous: $LATEST)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Name release
+        id: name
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED: ${{ inputs.title }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          TITLE="$REQUESTED"
+          if [ -z "$TITLE" ]; then
+            TITLE=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --state merged --limit 30 \
+              --json title,mergedAt --jq 'sort_by(.mergedAt) | last | .title // ""')
+            TITLE=$(sed -E 's/^[a-z]+(\([^)]*\))?!?: //' <<< "$TITLE")
+            TITLE="$(tr '[:lower:]' '[:upper:]' <<< "${TITLE:0:1}")${TITLE:1}"
+          fi
+
+          NAME="uttr $TAG"
+          if [ -n "$TITLE" ]; then
+            NAME="$NAME: $TITLE"
+          fi
+          echo "Release name: $NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -129,6 +156,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.name.outputs.name }}
           files: ${{ runner.temp }}/uttr.zip
           body: |
             ## Installation
@@ -171,6 +199,6 @@ jobs:
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           path: homebrew-tap
           commit-message: "chore: bump uttr to ${{ steps.tag.outputs.tag }}"
-          title: "chore: bump uttr to ${{ steps.tag.outputs.tag }}"
+          title: ${{ steps.name.outputs.name }}
           body: "Automated cask update for release [${{ steps.tag.outputs.tag }}](https://github.com/ShishirAravindan/uttr/releases/tag/${{ steps.tag.outputs.tag }})."
           branch: "bump/uttr-${{ steps.tag.outputs.tag }}"
