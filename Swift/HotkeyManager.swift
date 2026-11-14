@@ -103,10 +103,10 @@ class HotkeyManager {
         let transcribeDisplay = settingsManager.getHotkeyDisplayString()
         logger.log("[HotkeyManager] Attempting to register transcribe hotkey: \(transcribeDisplay)", level: .debug)
         
-        let (transcribeKeyCode, transcribeModifiers) = try getTranscribeHotkeyConfiguration()
+        let hotkey = settingsManager.recordingHotkey
         let transcribeHotkeyID = try getUniqueHotkeyID(id: 1)
         
-        let transcribeStatus = RegisterEventHotKey(transcribeKeyCode, transcribeModifiers, transcribeHotkeyID, GetApplicationEventTarget(), 0, &transcribeHotkeyRef)
+        let transcribeStatus = RegisterEventHotKey(UInt32(hotkey.keyCode), hotkey.carbonModifiers, transcribeHotkeyID, GetApplicationEventTarget(), 0, &transcribeHotkeyRef)
         guard transcribeStatus == noErr else {
             throw HotkeyManagerError.hotkeyRegistrationFailed(status: transcribeStatus)
         }
@@ -174,12 +174,11 @@ class HotkeyManager {
             let actualModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
             // Check transcribe hotkey
-            if let (expectedKeyCode, expectedModifiers) = try? self.getTranscribeHotkeyConfigurationForLocalMonitor() {
-                if actualModifiers == expectedModifiers && event.keyCode == expectedKeyCode {
-                    self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
-                    self.onTranscribeHotkeyPressed?()
-                    return nil // Swallow the event
-                }
+            let hotkey = self.settingsManager.recordingHotkey
+            if actualModifiers == hotkey.cocoaModifiers && Int(event.keyCode) == hotkey.keyCode {
+                self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
+                self.onTranscribeHotkeyPressed?()
+                return nil // Swallow the event
             }
 
             return event
@@ -206,36 +205,6 @@ class HotkeyManager {
         return hash
     }
     
-    private func getTranscribeHotkeyConfiguration() throws -> (keyCode: UInt32, modifiers: UInt32) {
-        let keyCode = UInt32(settingsManager.hotkeyKeyCode)
-        var modifiers: UInt32 = 0
-        for modifier in settingsManager.hotkeyModifiers {
-            switch modifier {
-            case "command": modifiers |= UInt32(cmdKey)
-            case "shift":   modifiers |= UInt32(shiftKey)
-            case "option":  modifiers |= UInt32(optionKey)
-            case "control": modifiers |= UInt32(controlKey)
-            default: break
-            }
-        }
-        return (keyCode, modifiers)
-    }
-    
-    private func getTranscribeHotkeyConfigurationForLocalMonitor() throws -> (keyCode: UInt16, modifiers: NSEvent.ModifierFlags) {
-        let keyCode = UInt16(settingsManager.hotkeyKeyCode)
-        var modifiers: NSEvent.ModifierFlags = []
-        for modifier in settingsManager.hotkeyModifiers {
-            switch modifier {
-            case "command": modifiers.insert(.command)
-            case "shift":   modifiers.insert(.shift)
-            case "option":  modifiers.insert(.option)
-            case "control": modifiers.insert(.control)
-            default: break
-            }
-        }
-        return (keyCode, modifiers)
-    }
-
     private func checkAccessibilityPermissions() -> Bool {
         // Check without prompting — PermissionManager owns prompting and re-triggers
         // registration via refreshHotkeyConfiguration() once the grant lands.
@@ -274,5 +243,36 @@ class HotkeyManager {
         logger.log("[HotkeyManager] 2. Select 'Accessibility'", level: .warning)
         logger.log("[HotkeyManager] 3. Find 'uttr' and enable it.", level: .warning)
         logger.log("[HotkeyManager] 4. A restart of the app may be required.", level: .warning)
+    }
+}
+
+// MARK: - Modifier conversion
+extension HotkeyConfig {
+    var carbonModifiers: UInt32 {
+        var flags: UInt32 = 0
+        for modifier in modifiers {
+            switch modifier {
+            case "command": flags |= UInt32(cmdKey)
+            case "shift":   flags |= UInt32(shiftKey)
+            case "option":  flags |= UInt32(optionKey)
+            case "control": flags |= UInt32(controlKey)
+            default: break
+            }
+        }
+        return flags
+    }
+
+    var cocoaModifiers: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        for modifier in modifiers {
+            switch modifier {
+            case "command": flags.insert(.command)
+            case "shift":   flags.insert(.shift)
+            case "option":  flags.insert(.option)
+            case "control": flags.insert(.control)
+            default: break
+            }
+        }
+        return flags
     }
 }
