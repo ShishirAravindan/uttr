@@ -25,10 +25,12 @@ and additional interaction surfaces need an explicit product decision.
 - Validate the changed behavior. Build verification should use Xcode or a temporary
   derived-data directory; `build.sh` in Release replaces `/Applications/uttr.app`.
   Builds do not establish live microphone, model inference, or paste behavior.
-- `Tests/LoggerChecks.swift` and `Tests/HistoryChecks.swift` are the standalone
-  checks, each compiled with `swiftc` and run in CI. There is no lifecycle
-  XCTest target on main. Keep tests free of the user's history, clipboard, audio,
-  and permission grants unless a live check is explicitly intended.
+- `Tests/LoggerChecks.swift`, `Tests/HistoryChecks.swift` and
+  `Tests/CleanupEngineChecks.swift` are the standalone checks, each compiled with
+  `swiftc` and run in CI. `Tools/CleanupEvaluation.swift` needs the on-device model,
+  so it runs locally; re-run it when changing the cleanup prompt or checks. There
+  is no lifecycle XCTest target on main. Keep tests free of the user's history,
+  clipboard, audio, and permission grants unless a live check is explicitly intended.
 
 ## Docs and diagrams
 
