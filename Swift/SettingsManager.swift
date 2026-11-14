@@ -158,11 +158,14 @@ class SettingsManager: ObservableObject {
         saveSettings()
     }
 
-    func updateHotkey(keyCode: Int, modifiers: [String]) {
-        hotkeyKeyCode = keyCode
-        hotkeyModifiers = modifiers
+    func updateHotkey(_ hotkey: HotkeyConfig, for action: HotkeyAction) {
+        switch action {
+        case .record:
+            hotkeyKeyCode = hotkey.keyCode
+            hotkeyModifiers = hotkey.modifiers
+        }
         NotificationCenter.default.post(name: .hotkeyChanged, object: self)
-        logger.log("Hotkey changed", level: .info)
+        logger.log("\(action.title) hotkey changed", level: .info)
         saveSettings()
     }
 
