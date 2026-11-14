@@ -268,7 +268,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         MainActor.assumeIsolated {
             guard let pasteManager else { return }
             let cleanup = TextCleanup(backend: CleanupBackendFactory.make())
-            let selection = SelectionCleanup(cleanup: cleanup, paste: pasteManager) { CleanupPrompt.standard }
+            let settings = settingsManager
+            let selection = SelectionCleanup(cleanup: cleanup, paste: pasteManager) { settings.cleanupPrompt }
             selection.onCleaning = { [weak self] in self?.menuBarIconManager?.setTransformingState() }
             selection.onDelivered = { [weak self] in
                 self?.notificationManager?.showTranscriptionSuccess()
