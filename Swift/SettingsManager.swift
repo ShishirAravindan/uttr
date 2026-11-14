@@ -221,6 +221,16 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    /// The other action whose shortcut is already `hotkey`, whatever order its
+    /// modifiers were stored in.
+    func action(using hotkey: HotkeyConfig, otherThan action: HotkeyAction) -> HotkeyAction? {
+        HotkeyAction.allCases.first { other in
+            let existing = self.hotkey(for: other)
+            return other != action && existing.keyCode == hotkey.keyCode
+                && Set(existing.modifiers) == Set(hotkey.modifiers)
+        }
+    }
+
     func getHotkeyDisplayString() -> String {
         displayString(for: recordingHotkey)
     }
