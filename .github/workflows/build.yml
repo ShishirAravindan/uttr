@@ -37,3 +37,9 @@ jobs:
         run: |
           swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -o "$RUNNER_TEMP/uttr-history-checks"
           "$RUNNER_TEMP/uttr-history-checks"
+
+      - name: Check Cleanup
+        run: |
+          swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
+            Tests/CleanupEngineChecks.swift -o "$RUNNER_TEMP/uttr-cleanup-checks"
+          "$RUNNER_TEMP/uttr-cleanup-checks"
