@@ -320,6 +320,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                     self.handleTranscribedText(transcribedText, audioFileName: audioFileURL.lastPathComponent)
                 }
             } catch {
+                // No history entry will own this recording, so nothing else deletes it.
+                try? FileManager.default.removeItem(at: audioFileURL)
                 await MainActor.run {
                     self.logger?.logError(error, context: "Transcription failed")
                     self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
