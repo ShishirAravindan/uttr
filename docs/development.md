@@ -24,7 +24,8 @@ uttr/
 │   ├── Transcription/              # Provider protocol + implementations
 │   └── ...
 ├── docs/                           # Documentation
-├── Tests/                          # Standalone logger and history checks
+├── Tests/                          # Standalone checks; cleanup evaluation corpus in Fixtures/
+├── Tools/CleanupEvaluation.swift   # Local cleanup evaluation with the on-device model
 ├── .github/workflows/              # PR build and release automation
 ├── uttr.xcodeproj/                 # Xcode project
 └── README.md
@@ -123,14 +124,20 @@ File logs are under `~/Library/Logs/uttr/` for Release and
 
 ## Standalone Checks
 
-These checks use temporary files and do not launch the app or touch your history:
+These checks use temporary files and do not launch the app or touch your history.
+The cleanup check runs the engine against a fake backend, with no model:
 
 ```bash
 swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o /tmp/uttr-logger-checks
 /tmp/uttr-logger-checks
 swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -o /tmp/uttr-history-checks
 /tmp/uttr-history-checks
+swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
+  Tests/CleanupEngineChecks.swift -o /tmp/uttr-cleanup-checks
+/tmp/uttr-cleanup-checks
 ```
+
+The evaluation with the real model is described in [Cleanup](cleanup.md#evaluation).
 
 ## Code Style
 
