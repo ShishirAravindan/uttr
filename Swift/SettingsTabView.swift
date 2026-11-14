@@ -6,6 +6,7 @@ struct SettingsTabView: View {
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var capturingAction: HotkeyAction?
     @State private var shortcutConflict: (action: HotkeyAction, message: String)?
+    @State private var promptDraft = ""
     @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
 
@@ -19,6 +20,7 @@ struct SettingsTabView: View {
                     transcriptionSection
                     shortcutsSection
                     historySection
+                    cleanupSection
                     aboutSection
                 }
                 .padding(.top, 24)
@@ -26,7 +28,10 @@ struct SettingsTabView: View {
                 .padding(.bottom, 28)
             }
         }
-        .onAppear { permissions.refresh() }
+        .onAppear {
+            permissions.refresh()
+            promptDraft = settings.cleanupPrompt
+        }
         .onDisappear { hotkeyRecorder.stopRecording() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
             guard complete, let action = capturingAction else { return }
@@ -133,6 +138,58 @@ struct SettingsTabView: View {
                         hotkeyRecorder.startRecording()
                     }
                 }
+            }
+        }
+    }
+
+    private var cleanupSection: some View {
+        SectionBlock(label: "Cleanup") {
+            SettingsCard(scheme: scheme) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Cleanup prompt")
+                        .font(.system(size: 13))
+                        .foregroundColor(.textPrimary(for: scheme))
+                    Text("Used by \(settings.displayString(for: settings.cleanupHotkey)). Cleanup still rejects results that lose numbers, negations, questions, or technical text.")
+                        .font(.system(size: 11))
+                        .foregroundColor(.textTertiary(for: scheme))
+                        .fixedSize(horizontal: false, vertical: true)
+                    TextEditor(text: $promptDraft)
+                        .font(.system(size: 12))
+                        .scrollContentBackground(.hidden)
+                        .padding(6)
+                        .frame(height: 140)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(Color.pickerBackground(for: scheme))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 5)
+                                        .strokeBorder(Color.pickerBorder(for: scheme), lineWidth: 0.5)
+                                )
+                        )
+                        .accessibilityLabel("Cleanup prompt")
+                    HStack(spacing: 8) {
+                        if !CleanupBackendFactory.isModelAvailable {
+                            Text("Cleanup needs Apple Intelligence on macOS 26 or later.")
+                                .font(.system(size: 11))
+                                .foregroundColor(.textSecondary(for: scheme))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                        Button("Restore default") {
+                            settings.updateCleanupPrompt(CleanupPrompt.standard)
+                            promptDraft = settings.cleanupPrompt
+                        }
+                        .disabled(settings.customCleanupPrompt == nil && promptDraft == CleanupPrompt.standard)
+                        Button("Save") {
+                            settings.updateCleanupPrompt(promptDraft)
+                            promptDraft = settings.cleanupPrompt
+                        }
+                        .disabled(promptDraft == settings.cleanupPrompt)
+                    }
+                    .controlSize(.small)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
             }
         }
     }

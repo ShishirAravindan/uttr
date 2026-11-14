@@ -12,6 +12,8 @@ enum CleanupBackendFactory {
         #endif
         return UnavailableCleanupBackend()
     }
+
+    static var isModelAvailable: Bool { make().isAvailable }
 }
 
 @MainActor

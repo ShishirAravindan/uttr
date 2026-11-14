@@ -40,6 +40,21 @@ struct HistorySettings: Codable {
     }
 }
 
+struct CleanupSettings: Codable {
+    /// `nil` uses the built-in prompt, so improvements to it reach anyone who hasn't edited it.
+    var prompt: String?
+
+    init(prompt: String? = nil) {
+        self.prompt = prompt
+    }
+
+    /// Missing keys keep their defaults, so a partial block doesn't reset every setting.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        prompt = try container.decodeIfPresent(String.self, forKey: .prompt)
+    }
+}
+
 // MARK: - Serialization schema (written to disk)
 
 private struct SerializedAppConfig: Codable {
@@ -53,6 +68,7 @@ private struct SerializedAppConfig: Codable {
     var history: HistorySettings?
     var readAloudHotkey: HotkeyConfig?
     var cleanupHotkey: HotkeyConfig?
+    var cleanup: CleanupSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
@@ -62,6 +78,7 @@ private struct SerializedAppConfig: Codable {
         case history
         case readAloudHotkey = "read_aloud_hotkey"
         case cleanupHotkey = "cleanup_hotkey"
+        case cleanup
     }
 }
 
@@ -110,6 +127,8 @@ class SettingsManager: ObservableObject {
     @Published var historyMaxEntries: Int = HistoryManager.defaultMaxEntries
     @Published var readAloudHotkey: HotkeyConfig = .defaultReadAloud
     @Published var cleanupHotkey: HotkeyConfig = .defaultCleanSelection
+    /// An edited cleanup prompt; `nil` means the built-in one.
+    @Published var customCleanupPrompt: String?
 
     // MARK: - Properties
 
@@ -160,7 +179,8 @@ class SettingsManager: ObservableObject {
                 audio: AudioSettings(inputDeviceUID: inputDeviceUID),
                 history: HistorySettings(maxEntries: historyMaxEntries),
                 readAloudHotkey: readAloudHotkey,
-                cleanupHotkey: cleanupHotkey
+                cleanupHotkey: cleanupHotkey,
+                cleanup: CleanupSettings(prompt: customCleanupPrompt)
             )
 
             let encoder = YAMLEncoder()
@@ -207,6 +227,16 @@ class SettingsManager: ObservableObject {
         logger.log("\(action.title) hotkey changed", level: .info)
         saveSettings()
     }
+
+    /// Saving the built-in text, or an empty prompt, goes back to the built-in prompt.
+    func updateCleanupPrompt(_ prompt: String) {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        customCleanupPrompt = trimmed.isEmpty || trimmed == CleanupPrompt.standard ? nil : trimmed
+        logger.log(customCleanupPrompt == nil ? "Cleanup prompt reset to default" : "Cleanup prompt changed", level: .info)
+        saveSettings()
+    }
+
+    var cleanupPrompt: String { customCleanupPrompt ?? CleanupPrompt.standard }
 
     func updateHistoryMaxEntries(_ count: Int) {
         historyMaxEntries = max(1, count)
@@ -270,6 +300,7 @@ class SettingsManager: ObservableObject {
         historyMaxEntries = max(1, config.history?.maxEntries ?? HistoryManager.defaultMaxEntries)
         readAloudHotkey = config.readAloudHotkey ?? .defaultReadAloud
         cleanupHotkey = config.cleanupHotkey ?? .defaultCleanSelection
+        customCleanupPrompt = config.cleanup?.prompt
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -285,6 +316,7 @@ class SettingsManager: ObservableObject {
         historyMaxEntries = HistoryManager.defaultMaxEntries
         readAloudHotkey = .defaultReadAloud
         cleanupHotkey = .defaultCleanSelection
+        customCleanupPrompt = nil
         logger.log("Default settings applied", level: .info)
     }
 
