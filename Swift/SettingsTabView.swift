@@ -24,6 +24,7 @@ struct SettingsTabView: View {
             }
         }
         .onAppear { permissions.refresh() }
+        .onDisappear { hotkeyRecorder.stopRecording() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
             guard complete else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
