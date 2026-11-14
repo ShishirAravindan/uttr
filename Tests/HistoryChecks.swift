@@ -17,7 +17,7 @@ struct HistoryChecks {
     static func checkDecoding() throws {
         let legacy = """
             [{"id":"\(UUID().uuidString)","text":"old","timestamp":700000000,"audioFileName":"recording_1.wav"},
-             {"id":"\(UUID().uuidString)","text":"newer","timestamp":700000001,"kind":"read_aloud"}]
+             {"id":"\(UUID().uuidString)","text":"newer","timestamp":700000001,"kind":"translation"}]
             """
         let decoded = try JSONDecoder().decode([TranscriptionEntry].self, from: Data(legacy.utf8))
         precondition(decoded.map(\.kind) == [.dictation, .dictation])
@@ -25,9 +25,13 @@ struct HistoryChecks {
         precondition(decoded[1].audioFileName == nil)
 
         let entry = TranscriptionEntry(text: "round trip", kind: .dictation, audioFileName: "recording_2.wav")
-        let data = try JSONEncoder().encode([entry])
+        let readAloud = TranscriptionEntry(text: "Read this.", kind: .readAloud)
+        let data = try JSONEncoder().encode([entry, readAloud])
         let json = try JSONSerialization.jsonObject(with: data) as! [[String: Any]]
         precondition(json[0]["kind"] as? String == "dictation")
+        precondition(json[1]["kind"] as? String == "read_aloud")
+        let kinds = try JSONDecoder().decode([TranscriptionEntry].self, from: data).map(\.kind)
+        precondition(kinds == [.dictation, .readAloud])
         let reloaded = try JSONDecoder().decode([TranscriptionEntry].self, from: data)[0]
         precondition(reloaded.id == entry.id && reloaded.text == entry.text)
         precondition(reloaded.kind == entry.kind && reloaded.audioFileName == entry.audioFileName)

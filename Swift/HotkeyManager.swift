@@ -30,10 +30,12 @@ enum HotkeyManagerError: Error, LocalizedError {
 /// A global shortcut's action. The raw value is its Carbon hotkey ID.
 enum HotkeyAction: UInt32, CaseIterable {
     case record = 1
+    case readAloud = 2
 
     var title: String {
         switch self {
         case .record: return "Recording"
+        case .readAloud: return "Read aloud"
         }
     }
 }

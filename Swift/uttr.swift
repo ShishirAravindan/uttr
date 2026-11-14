@@ -42,6 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindow: NSWindow?
     private var settingsWindowController: NSWindowController?
 
+    private var readAloud: ReadAloud?
+
     private var isRecording = false
     private var isProviderReady = false
 
@@ -100,8 +102,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         hotkeyManager?.onHotkeyPressed = { [weak self] action in
             switch action {
             case .record: self?.handleTranscribeHotkeyPress()
+            case .readAloud: self?.handleReadAloudHotkeyPress()
             }
         }
+        setupReadAloud()
 
         // Wire popover callbacks
         popoverViewModel.hotkeyDisplay = settingsManager.getHotkeyDisplayString()
@@ -254,8 +258,32 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         if isRecording { stopRecording() } else { startRecording() }
     }
 
+    // MARK: - Read aloud
+    private func setupReadAloud() {
+        MainActor.assumeIsolated {
+            let readAloud = ReadAloud()
+            readAloud.onSpeaking = { [weak self] in self?.menuBarIconManager?.setSpeakingState() }
+            readAloud.onIdle = { [weak self] in self?.menuBarIconManager?.setReadyState() }
+            readAloud.onFailed = { [weak self] message in
+                self?.notificationManager?.showTranscriptionError(message)
+                self?.menuBarIconManager?.showErrorState()
+            }
+            self.readAloud = readAloud
+        }
+    }
+
+    private func handleReadAloudHotkeyPress() {
+        // The microphone would record the speech.
+        guard !isRecording else {
+            logger?.log("Read-aloud ignored while recording", level: .info)
+            return
+        }
+        MainActor.assumeIsolated { readAloud?.toggle() }
+    }
+
     private func startRecording() {
         guard !isRecording else { return }
+        MainActor.assumeIsolated { readAloud?.stop() }
 
         // Don't start a recording the model can't yet transcribe — the audio would
         // be captured and then lost to a confusing "not prepared" error.
@@ -452,6 +480,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func cleanup() {
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
+        if let readAloud { Task { @MainActor in await readAloud.teardown() } }
         closePopover()
         historyWindow?.close()
         historyWindow = nil
