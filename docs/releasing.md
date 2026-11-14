@@ -1,59 +1,68 @@
 # Releasing Guide
 
-Releases are automated by [release.yml](../.github/workflows/release.yml).
+Releases are built by [release.yml](../.github/workflows/release.yml).
 The app lives in [ShishirAravindan/uttr](https://github.com/ShishirAravindan/uttr);
 the Homebrew cask lives in the separate
 [ShishirAravindan/homebrew-tap](https://github.com/ShishirAravindan/homebrew-tap).
 
-## What Starts a Release
+## Cutting a Release
 
-A push to `main` starts the release workflow when it changes any of these inputs:
+Releases are started by hand. Merging to `main` never publishes anything, so
+several PRs can land before the next release. Run the Release workflow from
+[Actions](https://github.com/ShishirAravindan/uttr/actions/workflows/release.yml)
+→ **Run workflow** on `main`, or from a terminal:
 
-- `Swift/**`
-- `Assets.xcassets/**`
-- `uttr.xcodeproj/**` (including resolved packages and the shared scheme)
-- `uttr-Info.plist` or `uttr.entitlements`
-- `build.sh`
+```bash
+gh workflow run release.yml --repo ShishirAravindan/uttr -f bump=minor
+```
 
-Documentation, diagram, agent-guidance, test-only, and workflow-only changes do
-not start a release. A mixed change containing an app/build input does. Keep the
-workflow's path list in sync when introducing a new build input. PR builds still
-run independently of this release filter and accept any PR base branch.
+| Input | Use |
+|---|---|
+| `bump` | `patch` (default), `minor`, or `major`, applied to the latest `vX.Y.Z` tag |
+| `version` | An exact `X.Y.Z` instead of the bump. It must be newer than the latest tag. |
+| `title` | Release title. Defaults to the latest merged PR's title without its conventional-commit prefix. |
+
+Use a patch for fixes, a minor version for new features, and a major version for
+breaking changes to settings or stored data. The workflow refuses to run from any
+other branch, and refuses a version whose tag already exists.
 
 ## Automated Pipeline
 
-1. **Build:** the macOS 14 runner selects Xcode 16.1 and builds the Release scheme
-   with signing disabled into a temporary derived-data directory.
-2. **Package:** zip `uttr.app` as `uttr.zip` and compute its SHA256.
-3. **Tag:** read the latest `vMAJOR.MINOR.PATCH` tag, increment its patch component,
-   and push the new tag. With no matching tags, the starting value is `v0.0.0`.
-   The workflow refuses an existing next tag. Runs share a release concurrency
-   group and are not cancelled when another push arrives.
-4. **Publish:** create a [GitHub Release](https://github.com/ShishirAravindan/uttr/releases)
-   containing the ZIP, installation instructions, and hash.
-5. **Update the tap:** check out `ShishirAravindan/homebrew-tap`, update
-   `Casks/uttr.rb` with the version/hash, and open a `bump/uttr-v…` PR there.
+1. **Version:** choose the next version from the inputs and name the release
+   `uttr vX.Y.Z: <title>`.
+2. **Build:** the macOS 26 runner selects Xcode 26.3 and builds the Release scheme
+   with signing disabled into a temporary derived-data directory. The version is
+   stamped into the app as `MARKETING_VERSION`, with the workflow run number as
+   `CURRENT_PROJECT_VERSION`, and checked in the built `Info.plist`.
+3. **Package:** zip `uttr.app` as `uttr.zip` and compute its SHA256.
+4. **Tag:** push the `vX.Y.Z` tag. This happens only after the build succeeds.
+5. **Publish:** create a [GitHub Release](https://github.com/ShishirAravindan/uttr/releases)
+   with the release name, the ZIP, installation instructions, and hash.
+6. **Update the tap:** check out `ShishirAravindan/homebrew-tap`, update
+   `Casks/uttr.rb` with the version/hash, and open a `bump/uttr-v…` PR there,
+   titled with the release name.
 
-The workflow creates the patch tag; do not pre-create that tag for a normal
-release. Xcode's marketing/build version is separate app metadata and is not
-rewritten by this workflow. Update it deliberately when needed. There is no
+Runs share a release concurrency group and are not cancelled by another run.
+Local and Debug builds keep the project's placeholder version. There is no
 required `CHANGELOG.md` in this repository.
 
 ## Maintainer Review
 
 Before merging an app change, review its PR build and the manual checks relevant
-to the changed behavior. After merging:
+to the changed behavior. Merge with **Rebase and merge** so each commit lands on
+`main` as written. After running a release:
 
 - Inspect the Release run in [Actions](https://github.com/ShishirAravindan/uttr/actions).
-- Verify the published ZIP, tag, and SHA256.
+- Verify the published ZIP, tag, SHA256, and the version in Settings → About.
 - Review and merge the generated cask PR in the tap. Publishing the app release
   does not itself make the Homebrew update available.
 
-The app repository's `GITHUB_TOKEN` has `contents: write` for tags and releases.
-The separate `HOMEBREW_TAP_TOKEN` secret is used to check out the tap and open its
-cask PR. A tap-step failure can occur after the app release is already published;
-check which steps completed before rerunning a failed workflow, since a rerun
-can compute another patch tag.
+The app repository's `GITHUB_TOKEN` has `contents: write` for tags and releases
+and `pull-requests: read` for the default title. The separate
+`HOMEBREW_TAP_TOKEN` secret is used to check out the tap and open its cask PR. A
+tap-step failure can occur after the app release is already published; check
+which steps completed before rerunning. Once the tag is pushed, a rerun picks
+the next version after it, so finish a partly completed release by hand instead.
 
 Users install or upgrade through:
 
