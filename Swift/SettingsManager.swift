@@ -170,13 +170,23 @@ class SettingsManager: ObservableObject {
         HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers)
     }
 
+    func hotkey(for action: HotkeyAction) -> HotkeyConfig {
+        switch action {
+        case .record: return recordingHotkey
+        }
+    }
+
     func getHotkeyDisplayString() -> String {
+        displayString(for: recordingHotkey)
+    }
+
+    func displayString(for hotkey: HotkeyConfig) -> String {
         var display = ""
-        if hotkeyModifiers.contains("command") { display += "⌘" }
-        if hotkeyModifiers.contains("shift")   { display += "⇧" }
-        if hotkeyModifiers.contains("option")  { display += "⌥" }
-        if hotkeyModifiers.contains("control") { display += "⌃" }
-        display += keyCodeToCharacter(hotkeyKeyCode)
+        if hotkey.modifiers.contains("command") { display += "⌘" }
+        if hotkey.modifiers.contains("shift")   { display += "⇧" }
+        if hotkey.modifiers.contains("option")  { display += "⌥" }
+        if hotkey.modifiers.contains("control") { display += "⌃" }
+        display += keyCodeToCharacter(hotkey.keyCode)
         return display
     }
 

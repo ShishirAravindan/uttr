@@ -97,8 +97,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         )
         logger?.log("TranscriptionProvider initialized: \(settingsManager.transcriptionProviderID)", level: .debug)
 
-        hotkeyManager?.onTranscribeHotkeyPressed = { [weak self] in
-            self?.handleTranscribeHotkeyPress()
+        hotkeyManager?.onHotkeyPressed = { [weak self] action in
+            switch action {
+            case .record: self?.handleTranscribeHotkeyPress()
+            }
         }
 
         // Wire popover callbacks
