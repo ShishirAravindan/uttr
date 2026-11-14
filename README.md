@@ -23,7 +23,8 @@ That's it. No Python, no `uv`, no setup.
 4. Speak, then press the hotkey again to stop
 5. Transcribed text is pasted at your cursor
 
-Select text anywhere and press `⌥R` to have it read aloud.
+Select text anywhere and press `⌥R` to have it read aloud, or `⌥C` to clean it
+up in place with Apple's on-device model.
 
 On first launch, uttr downloads the Parakeet model (~600 MB) in the background. The menu bar shows a loading indicator until it's ready.
 
