@@ -91,7 +91,7 @@ probes. `expected` is one acceptable edit, not the only one; `preserve` lists
 strings that must survive. Some cases also appear as prompt examples, so this is a
 development corpus, not a held-out benchmark.
 
-Results on an M2 with 16 GB, macOS 27.2, November 2026:
+Results on macOS 27.2, November 2026:
 
 | Corpus, profile | Reference matches | Raw text | Missing protected text | Median / max |
 |---|---|---|---|---|
