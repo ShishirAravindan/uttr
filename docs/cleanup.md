@@ -2,9 +2,18 @@
 
 `Swift/Cleanup/` turns rough text into clean written text with Apple's on-device
 model, and falls back to the original whenever it can't do that safely.
-Selection cleanup (⌥C, `SelectionCleanup`) calls it with the `.selection`
-profile and pastes the result over the selection; any other outcome leaves the
-selection alone and says why.
+Two callers use it:
+
+- **Selection cleanup** (⌥C, `SelectionCleanup`) uses the `.selection` profile and
+  pastes the result over the selection; any other outcome leaves the selection
+  alone and says why.
+- **Dictation cleanup** (Settings → Cleanup → Clean up dictation, off by default)
+  runs between Parakeet and the paste with the `.dictation` profile. Any outcome
+  other than `cleaned` pastes the transcript as it was, so dictation never fails
+  because of cleanup; it only waits up to 2 seconds longer.
+
+Both record one history entry holding the delivered text and, when cleanup
+changed it, the original (`originalText`), shown under a disclosure on the card.
 
 ![How a cleanup request becomes the delivered text](assets/diagrams/cleanup-engine.png)
 
@@ -47,7 +56,7 @@ requests made before it ends return `busy` rather than starting another, and
 
 `CleanupPrompt.standard` is the default prompt. Settings → Cleanup edits it;
 only an edited prompt is saved (`cleanup.prompt`), so anyone using the default
-gets later improvements to it. It asks for minimal edits: fix spelling,
+gets later improvements to it. Both callers share it. It asks for minimal edits: fix spelling,
 punctuation and capitalization, remove fillers and repeated starts, apply spoken
 self-corrections, and keep meaning, hedges, emphasis, names, numbers, negations,
 technical strings and language. Its examples come from the evaluation.

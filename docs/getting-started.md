@@ -99,6 +99,14 @@ times out after 10 seconds, or can't run, the selection is left as it was and a
 notification says why. History keeps the cleaned text. Cleanup needs Apple
 Intelligence on macOS 26 or later; Settings → Cleanup edits the prompt.
 
+### Clean Up Dictation
+
+Settings → Cleanup → **Clean up dictation** (off by default) cleans each
+dictation with the same prompt before pasting it. It adds up to 2 seconds; if
+cleanup can't finish or would lose content, the transcript is pasted as it was.
+The history card shows the cleaned text, with the original transcription under
+a disclosure.
+
 ### Settings
 
 Access via menu bar icon → Settings:
