@@ -91,6 +91,7 @@ entry keeps its recording on disk.
 ```yaml
 cleanup:
   prompt: "Fix spelling and punctuation only."   # omit to use the built-in prompt
+  clean_dictation: false                          # clean dictation before pasting
 ```
 
 Settings → Cleanup edits the prompt; Restore default removes the key. The output

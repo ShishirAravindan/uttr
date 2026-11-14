@@ -17,9 +17,12 @@ recording-to-paste flow:
 2. The registered hotkey or popover starts `AudioRecorder`. A second invocation
    stops capture and hands back a temporary WAV at the input's native format.
 3. An asynchronous task calls `FluidAudioProvider.transcribe(audioFileURL:)`.
-4. On the main actor, AppDelegate queues a history update and calls `PasteManager`.
-   Paste uses the clipboard and simulated `Cmd+V` events; success/error feedback
-   updates the menu-bar icon and notifications.
+4. On the main actor, if Clean up dictation is on, AppDelegate first runs
+   `TextCleanup` with the `.dictation` profile, which returns within 2 seconds
+   with either cleaned text or the transcript ([Cleanup](cleanup.md)).
+5. AppDelegate queues a history update and calls `PasteManager`. Paste uses the
+   clipboard and simulated `Cmd+V` events; success/error feedback updates the
+   menu-bar icon and notifications.
 
 The recording flag is cleared before transcription starts. The current app does
 not serialize the entire capture/transcription/paste flow or keep its asynchronous
@@ -80,13 +83,15 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Data | Current location and behavior |
 |------|-------------------------------|
 | Settings | `~/Library/Application Support/uttr/settings.yaml`; shared by Debug and Release |
-| History | User Documents directory + `History/transcription_history.json`; the configured number of entries (default 5); shared by both builds |
+| History | User Documents directory + `History/transcription_history.json`; the configured number of entries (default 5), each with its kind and, after cleanup, its original text; shared by both builds |
 | Release logs | `~/Library/Logs/uttr/transcriptions.log` |
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
 | Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
 | Kokoro voice models | FluidAudio's cache under `~/.cache/fluidaudio/Models/`, about 320 MB; downloaded the first time ⌥R is used, loaded on the first ⌥R of each launch |
 
-AppDelegate requests a history update before attempting paste. HistoryManager
+AppDelegate requests a history update before attempting paste. With dictation
+cleanup on, that happens after cleanup, so a quit during those 2 seconds loses
+the transcript. HistoryManager
 queues the list update and JSON write on the main queue; persistence is not a
 prerequisite for posting paste events. History can recover a failed insertion. Its current writes are not coordinated across simultaneous app
 instances. A recording is deleted when its entry is trimmed or history is cleared,
