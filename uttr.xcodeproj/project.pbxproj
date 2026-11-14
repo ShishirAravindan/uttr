@@ -35,6 +35,8 @@
 		AF1700022E9B000000000001 /* SelectionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700012E9B000000000001 /* SelectionReader.swift */; };
 		AF1700122E9B000000000001 /* SpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700112E9B000000000001 /* SpeechEngine.swift */; };
 		AF1700222E9B000000000001 /* ReadAloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700212E9B000000000001 /* ReadAloud.swift */; };
+		AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700312E9B000000000001 /* SpeechChunks.swift */; };
+		AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +69,8 @@
 		AF1700012E9B000000000001 /* SelectionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionReader.swift; path = Swift/Selection/SelectionReader.swift; sourceTree = "<group>"; };
 		AF1700112E9B000000000001 /* SpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechEngine.swift; path = Swift/Speech/SpeechEngine.swift; sourceTree = "<group>"; };
 		AF1700212E9B000000000001 /* ReadAloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloud.swift; path = Swift/Speech/ReadAloud.swift; sourceTree = "<group>"; };
+		AF1700312E9B000000000001 /* SpeechChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechChunks.swift; path = Swift/Speech/SpeechChunks.swift; sourceTree = "<group>"; };
+		AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KokoroSpeechEngine.swift; path = Swift/Speech/KokoroSpeechEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +105,8 @@
 				AE1600212E9B000000000001 /* CleanupOutputChecks.swift */,
 				AE1600112E9B000000000001 /* AppleCleanupBackend.swift */,
 				AE1600012E9B000000000001 /* TextCleanup.swift */,
+				AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */,
+				AF1700312E9B000000000001 /* SpeechChunks.swift */,
 				AF1700212E9B000000000001 /* ReadAloud.swift */,
 				AF1700112E9B000000000001 /* SpeechEngine.swift */,
 				AF1700012E9B000000000001 /* SelectionReader.swift */,
@@ -223,6 +229,8 @@
 				AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */,
 				AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AE1600022E9B000000000001 /* TextCleanup.swift in Sources */,
+				AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */,
+				AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */,
 				AF1700222E9B000000000001 /* ReadAloud.swift in Sources */,
 				AF1700122E9B000000000001 /* SpeechEngine.swift in Sources */,
 				AF1700022E9B000000000001 /* SelectionReader.swift in Sources */,
