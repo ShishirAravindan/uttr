@@ -63,8 +63,8 @@ class HotkeyRecorder: ObservableObject {
             return
         }
         
-        // Only record if we have a valid key combination
-        if !modifiers.isEmpty {
+        // Shift alone would take over typing capital letters everywhere.
+        if modifiers.contains(where: { $0 != "shift" }) {
             recordedKeyCode = keyCode
             recordedModifiers = modifiers
             displayString = generateDisplayString(from: event)
