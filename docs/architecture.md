@@ -44,6 +44,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
+| `Cleanup/TextCleanup.swift`, `Cleanup/CleanupOutputChecks.swift`, `Cleanup/AppleCleanupBackend.swift` | On-device text cleanup with deadlines and output checks; not wired to the UI yet. See [Cleanup](cleanup.md). |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection
