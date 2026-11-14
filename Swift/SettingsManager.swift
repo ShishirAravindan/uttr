@@ -166,6 +166,10 @@ class SettingsManager: ObservableObject {
 
     // MARK: - Utility
 
+    var recordingHotkey: HotkeyConfig {
+        HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers)
+    }
+
     func getHotkeyDisplayString() -> String {
         var display = ""
         if hotkeyModifiers.contains("command") { display += "⌘" }
