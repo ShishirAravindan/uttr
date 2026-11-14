@@ -65,6 +65,9 @@ code 15):
 read_aloud_hotkey:
   key_code: 15
   modifiers: ["option"]
+cleanup_hotkey:          # clean up the selection, default ⌥C (key code 8)
+  key_code: 8
+  modifiers: ["option"]
 ```
 
 Use Settings → Shortcuts to record a new hotkey — it sets these values automatically.
@@ -83,6 +86,16 @@ Raising the limit keeps more entries from then on. Lowering it removes the oldes
 entries, and their recordings, right away. Settings warns above 50 because each
 entry keeps its recording on disk.
 
+### Cleanup
+
+```yaml
+cleanup:
+  prompt: "Fix spelling and punctuation only."   # omit to use the built-in prompt
+```
+
+Settings → Cleanup edits the prompt; Restore default removes the key. The output
+checks in [Cleanup](cleanup.md#output-checks) apply whatever the prompt says.
+
 ## Full Example
 
 ```yaml
@@ -98,5 +111,8 @@ history:
   max_entries: 5
 read_aloud_hotkey:
   key_code: 15
+  modifiers: ["option"]
+cleanup_hotkey:
+  key_code: 8
   modifiers: ["option"]
 ```

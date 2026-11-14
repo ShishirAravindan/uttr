@@ -89,6 +89,16 @@ system voice reads instead, so that first read uses the system voice. A voice
 that becomes ready mid-sentence takes over after the current read-aloud. If you
 never use read-aloud, uttr never downloads or loads Kokoro.
 
+### Clean Up a Selection
+
+Select text in any app and press `⌥C`. uttr cleans it with Apple's on-device
+model and pastes the result over the selection: spelling, punctuation and
+capitalization are fixed and fillers like "um" removed, keeping your words and
+meaning. If the cleanup would lose content (a number, a negation, a question),
+times out after 10 seconds, or can't run, the selection is left as it was and a
+notification says why. History keeps the cleaned text. Cleanup needs Apple
+Intelligence on macOS 26 or later; Settings → Cleanup edits the prompt.
+
 ### Settings
 
 Access via menu bar icon → Settings:

@@ -1,9 +1,10 @@
 # Text Cleanup Engine
 
 `Swift/Cleanup/` turns rough text into clean written text with Apple's on-device
-model, and falls back to the original whenever it can't do that safely. Nothing
-calls it yet: selection cleanup (⌥C) and optional dictation cleanup will be its
-first callers.
+model, and falls back to the original whenever it can't do that safely.
+Selection cleanup (⌥C, `SelectionCleanup`) calls it with the `.selection`
+profile and pastes the result over the selection; any other outcome leaves the
+selection alone and says why.
 
 ![How a cleanup request becomes the delivered text](assets/diagrams/cleanup-engine.png)
 
@@ -44,8 +45,9 @@ requests made before it ends return `busy` rather than starting another, and
 
 ## Prompt
 
-`CleanupPrompt.standard` is the default prompt, editable in a later Settings
-change and shared by both profiles. It asks for minimal edits: fix spelling,
+`CleanupPrompt.standard` is the default prompt. Settings → Cleanup edits it;
+only an edited prompt is saved (`cleanup.prompt`), so anyone using the default
+gets later improvements to it. It asks for minimal edits: fix spelling,
 punctuation and capitalization, remove fillers and repeated starts, apply spoken
 self-corrections, and keep meaning, hedges, emphasis, names, numbers, negations,
 technical strings and language. Its examples come from the evaluation.
