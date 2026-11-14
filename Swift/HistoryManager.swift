@@ -1,17 +1,45 @@
 import Foundation
 import SwiftUI
 
+/// What produced a history entry.
+enum HistoryEntryKind: String, Codable {
+    case dictation
+
+    var title: String {
+        switch self {
+        case .dictation: return "Dictation"
+        }
+    }
+}
+
 struct TranscriptionEntry: Codable, Identifiable {
     let id: UUID
     let text: String
     let timestamp: Date
     let audioFileName: String?
+    let kind: HistoryEntryKind
     
-    init(text: String, audioFileName: String? = nil) {
+    init(text: String, kind: HistoryEntryKind = .dictation, audioFileName: String? = nil) {
         self.id = UUID()
         self.text = text
         self.timestamp = Date()
         self.audioFileName = audioFileName
+        self.kind = kind
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, text, timestamp, audioFileName, kind
+    }
+
+    /// Entries saved before `kind` existed were all dictation. An unknown kind, written
+    /// by a newer version, also loads as dictation rather than failing the whole file.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
+        kind = (try? container.decodeIfPresent(HistoryEntryKind.self, forKey: .kind)) ?? .dictation
     }
     
     var formattedTimestamp: String {
