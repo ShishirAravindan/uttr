@@ -5,11 +5,13 @@ import SwiftUI
 enum HistoryEntryKind: String, Codable {
     case dictation
     case readAloud = "read_aloud"
+    case cleanup
 
     var title: String {
         switch self {
         case .dictation: return "Dictation"
         case .readAloud: return "Read aloud"
+        case .cleanup: return "Cleanup"
         }
     }
 }
