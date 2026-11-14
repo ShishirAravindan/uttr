@@ -64,7 +64,7 @@ class HotkeyRecorder: ObservableObject {
         }
         
         // Only record if we have a valid key combination
-        if keyCode > 0 && !modifiers.isEmpty {
+        if !modifiers.isEmpty {
             recordedKeyCode = keyCode
             recordedModifiers = modifiers
             displayString = generateDisplayString(from: event)
