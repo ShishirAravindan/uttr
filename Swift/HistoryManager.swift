@@ -70,10 +70,12 @@ class HistoryManager: ObservableObject {
     /// Where AudioRecorder writes recordings. An entry's recording is deleted when
     /// the entry leaves history.
     private let recordingsDirectory: URL
-    private let logger = Logger()
+    private let logger: Logger
     
     // MARK: - Initialization
-    init(historyFileURL: URL? = nil, recordingsDirectory: URL = FileManager.default.temporaryDirectory) {
+    init(historyFileURL: URL? = nil, recordingsDirectory: URL = FileManager.default.temporaryDirectory,
+         logger: Logger = Logger()) {
+        self.logger = logger
         // Set up history file URL
         let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         self.historyFileURL = historyFileURL

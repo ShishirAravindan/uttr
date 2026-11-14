@@ -32,3 +32,8 @@ jobs:
         run: |
           swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o "$RUNNER_TEMP/uttr-logger-checks"
           "$RUNNER_TEMP/uttr-logger-checks"
+
+      - name: Check History
+        run: |
+          swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -o "$RUNNER_TEMP/uttr-history-checks"
+          "$RUNNER_TEMP/uttr-history-checks"
