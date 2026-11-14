@@ -43,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindowController: NSWindowController?
 
     private var readAloud: ReadAloud?
+    private var didPrepareKokoro = false
 
     private var isRecording = false
     private var isProviderReady = false
@@ -272,12 +273,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
     }
 
+    /// Starts on the first read-aloud, so someone who never uses it downloads and
+    /// loads nothing. The system voice reads until Kokoro is ready, and keeps reading
+    /// if it fails.
+    private func prepareKokoroVoice() {
+        guard !didPrepareKokoro else { return }
+        didPrepareKokoro = true
+        MainActor.assumeIsolated {
+            let kokoro = KokoroSpeechEngine()
+            Task { @MainActor [weak self] in
+                guard await kokoro.prepare() else { return }
+                self?.readAloud?.useEngine(kokoro)
+            }
+        }
+    }
+
     private func handleReadAloudHotkeyPress() {
         // The microphone would record the speech.
         guard !isRecording else {
             logger?.log("Read-aloud ignored while recording", level: .info)
             return
         }
+        prepareKokoroVoice()
         MainActor.assumeIsolated { readAloud?.toggle() }
     }
 
