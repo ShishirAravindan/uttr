@@ -66,7 +66,7 @@ struct HomeTabView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(historyManager.transcriptions.prefix(20)) { transcription in
+                        ForEach(historyManager.transcriptions) { transcription in
                             TranscriptionCard(transcription: transcription)
                         }
                     }
