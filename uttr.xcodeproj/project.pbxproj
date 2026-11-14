@@ -32,6 +32,7 @@
 		AE1600022E9B000000000001 /* TextCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600012E9B000000000001 /* TextCleanup.swift */; };
 		AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600112E9B000000000001 /* AppleCleanupBackend.swift */; };
 		AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600212E9B000000000001 /* CleanupOutputChecks.swift */; };
+		AF1700022E9B000000000001 /* SelectionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700012E9B000000000001 /* SelectionReader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +62,7 @@
 		AE1600012E9B000000000001 /* TextCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextCleanup.swift; path = Swift/Cleanup/TextCleanup.swift; sourceTree = "<group>"; };
 		AE1600112E9B000000000001 /* AppleCleanupBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppleCleanupBackend.swift; path = Swift/Cleanup/AppleCleanupBackend.swift; sourceTree = "<group>"; };
 		AE1600212E9B000000000001 /* CleanupOutputChecks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CleanupOutputChecks.swift; path = Swift/Cleanup/CleanupOutputChecks.swift; sourceTree = "<group>"; };
+		AF1700012E9B000000000001 /* SelectionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionReader.swift; path = Swift/Selection/SelectionReader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +97,7 @@
 				AE1600212E9B000000000001 /* CleanupOutputChecks.swift */,
 				AE1600112E9B000000000001 /* AppleCleanupBackend.swift */,
 				AE1600012E9B000000000001 /* TextCleanup.swift */,
+				AF1700012E9B000000000001 /* SelectionReader.swift */,
 				00EA516B2E24C16D00BE5FC7 /* uttr.swift */,
 				00869A142E56E33600D65D58 /* MenuBarIconManager.swift */,
 				000968732E24DD7C000173E2 /* HotkeyManager.swift */,
@@ -214,6 +217,7 @@
 				AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */,
 				AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AE1600022E9B000000000001 /* TextCleanup.swift in Sources */,
+				AF1700022E9B000000000001 /* SelectionReader.swift in Sources */,
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */,
 				AA1100022E9B000000000001 /* DesignTokens.swift in Sources */,
