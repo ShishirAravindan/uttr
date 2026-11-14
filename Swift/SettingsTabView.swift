@@ -145,11 +145,31 @@ struct SettingsTabView: View {
     private var cleanupSection: some View {
         SectionBlock(label: "Cleanup") {
             SettingsCard(scheme: scheme) {
+                Toggle(isOn: Binding(
+                    get: { settings.cleanDictation },
+                    set: { settings.updateCleanDictation($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Clean up dictation")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textPrimary(for: scheme))
+                        Text("After \(settings.getHotkeyDisplayString()) transcribes, clean the text with the prompt below before pasting. This adds up to 2 seconds; if cleanup can't finish, the transcript is pasted as it was. History keeps the original transcription.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.textTertiary(for: scheme))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                RowDivider(scheme: scheme)
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Cleanup prompt")
                         .font(.system(size: 13))
                         .foregroundColor(.textPrimary(for: scheme))
-                    Text("Used by \(settings.displayString(for: settings.cleanupHotkey)). Cleanup still rejects results that lose numbers, negations, questions, or technical text.")
+                    Text("Used by \(settings.displayString(for: settings.cleanupHotkey)) and by dictation cleanup. Cleanup still rejects results that lose numbers, negations, questions, or technical text.")
                         .font(.system(size: 11))
                         .foregroundColor(.textTertiary(for: scheme))
                         .fixedSize(horizontal: false, vertical: true)
