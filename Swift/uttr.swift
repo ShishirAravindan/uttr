@@ -43,6 +43,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindowController: NSWindowController?
 
     private var readAloud: ReadAloud?
+    private var textCleanup: TextCleanup?
+    private var selectionCleanup: SelectionCleanup?
     private var didPrepareKokoro = false
 
     private var isRecording = false
@@ -104,9 +106,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             switch action {
             case .record: self?.handleTranscribeHotkeyPress()
             case .readAloud: self?.handleReadAloudHotkeyPress()
+            case .cleanSelection: self?.handleCleanSelectionHotkeyPress()
             }
         }
         setupReadAloud()
+        setupCleanup()
 
         // Wire popover callbacks
         popoverViewModel.hotkeyDisplay = settingsManager.getHotkeyDisplayString()
@@ -257,6 +261,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func handleTranscribeHotkeyPress() {
         if isRecording { stopRecording() } else { startRecording() }
+    }
+
+    // MARK: - Cleanup
+    private func setupCleanup() {
+        MainActor.assumeIsolated {
+            guard let pasteManager else { return }
+            let cleanup = TextCleanup(backend: CleanupBackendFactory.make())
+            let selection = SelectionCleanup(cleanup: cleanup, paste: pasteManager) { CleanupPrompt.standard }
+            selection.onCleaning = { [weak self] in self?.menuBarIconManager?.setTransformingState() }
+            selection.onDelivered = { [weak self] in
+                self?.notificationManager?.showTranscriptionSuccess()
+                self?.menuBarIconManager?.showSuccessState()
+            }
+            selection.onFailed = { [weak self] message in
+                self?.notificationManager?.showTranscriptionError(message)
+                self?.menuBarIconManager?.showErrorState()
+            }
+            textCleanup = cleanup
+            selectionCleanup = selection
+        }
+    }
+
+    private func handleCleanSelectionHotkeyPress() {
+        MainActor.assumeIsolated { selectionCleanup?.clean() }
     }
 
     // MARK: - Read aloud
@@ -498,6 +526,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
         if let readAloud { Task { @MainActor in await readAloud.teardown() } }
+        if let textCleanup { Task { @MainActor in await textCleanup.shutDown() } }
         closePopover()
         historyWindow?.close()
         historyWindow = nil

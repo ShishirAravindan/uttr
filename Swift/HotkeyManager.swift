@@ -31,11 +31,13 @@ enum HotkeyManagerError: Error, LocalizedError {
 enum HotkeyAction: UInt32, CaseIterable {
     case record = 1
     case readAloud = 2
+    case cleanSelection = 3
 
     var title: String {
         switch self {
         case .record: return "Recording"
         case .readAloud: return "Read aloud"
+        case .cleanSelection: return "Clean up selection"
         }
     }
 }
