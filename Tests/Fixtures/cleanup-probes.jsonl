@@ -1,0 +1,6 @@
+{"id":"names","raw":"Send it to Ananya, not Anika.","expected":"Send it to Ananya, not Anika.","preserve":["Ananya","not Anika"]}
+{"id":"hedged-fix","raw":"I'm not saying it's fixed. I'm saying it might be.","expected":"I'm not saying it's fixed. I'm saying it might be.","preserve":["not","might"]}
+{"id":"reconsidered-plan","raw":"We could maybe wait until Friday. Actually, Monday is safer.","expected":"We could maybe wait until Friday. Actually, Monday is safer.","preserve":["could maybe","Monday"]}
+{"id":"technical-flags","raw":"Keep DEBUG_LOGS false and RETRY_COUNT at 3.","expected":"Keep DEBUG_LOGS false and RETRY_COUNT at 3.","preserve":["DEBUG_LOGS","false","RETRY_COUNT","3"]}
+{"id":"correction-variant","raw":"It failed twice no three times, but only on the built-in microphone.","expected":"It failed three times, but only on the built-in microphone.","preserve":["three times","only","built-in microphone"]}
+{"id":"hedged-restart","raw":"Um I was thinking maybe we should, we should ask for permission first.","expected":"I was thinking maybe we should ask for permission first.","preserve":["thinking maybe","permission first"]}
