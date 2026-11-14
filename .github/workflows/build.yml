@@ -48,3 +48,10 @@ jobs:
         run: |
           swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o "$RUNNER_TEMP/uttr-selection-checks"
           "$RUNNER_TEMP/uttr-selection-checks"
+
+      - name: Check Speech
+        run: |
+          swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Selection/SelectionReader.swift \
+            Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
+            Tests/SpeechChecks.swift -o "$RUNNER_TEMP/uttr-speech-checks"
+          "$RUNNER_TEMP/uttr-speech-checks"
