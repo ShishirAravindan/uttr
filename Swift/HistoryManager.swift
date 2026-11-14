@@ -66,17 +66,22 @@ class HistoryManager: ObservableObject {
     // MARK: - Properties
     private let maxEntries = 5
     private let historyFileURL: URL
+    /// Where AudioRecorder writes recordings. An entry's recording is deleted when
+    /// the entry leaves history.
+    private let recordingsDirectory: URL
     private let logger = Logger()
     
     // MARK: - Initialization
-    init() {
+    init(historyFileURL: URL? = nil, recordingsDirectory: URL = FileManager.default.temporaryDirectory) {
         // Set up history file URL
         let documentsDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let historyDir = documentsDir.appendingPathComponent("History")
-        historyFileURL = historyDir.appendingPathComponent("transcription_history.json")
+        self.historyFileURL = historyFileURL
+            ?? documentsDir.appendingPathComponent("History").appendingPathComponent("transcription_history.json")
+        self.recordingsDirectory = recordingsDirectory
         
         // Create directory if needed
-        try? FileManager.default.createDirectory(at: historyDir, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: self.historyFileURL.deletingLastPathComponent(),
+                                                 withIntermediateDirectories: true)
         
         loadHistory()
     }
@@ -91,6 +96,7 @@ class HistoryManager: ObservableObject {
             
             // Keep only the last N entries
             if self.transcriptions.count > self.maxEntries {
+                self.deleteRecordings(of: self.transcriptions[self.maxEntries...])
                 self.transcriptions = Array(self.transcriptions.prefix(self.maxEntries))
             }
             
@@ -110,6 +116,7 @@ class HistoryManager: ObservableObject {
     
     func clearHistory() {
         DispatchQueue.main.async {
+            self.deleteRecordings(of: self.transcriptions)
             self.transcriptions.removeAll()
             self.saveHistory()
         }
@@ -122,6 +129,21 @@ class HistoryManager: ObservableObject {
     }
     
     // MARK: - Private Methods
+    private func deleteRecordings<S: Sequence>(of entries: S) where S.Element == TranscriptionEntry {
+        for name in entries.compactMap(\.audioFileName) {
+            // Only a bare file name, so an edited history file can't point elsewhere.
+            guard !name.isEmpty, URL(fileURLWithPath: name).lastPathComponent == name else { continue }
+            let url = recordingsDirectory.appendingPathComponent(name)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            do {
+                try FileManager.default.removeItem(at: url)
+                logger.log("Deleted recording \(name)", level: .debug)
+            } catch {
+                logger.logError(error, context: "Failed to delete recording \(name)")
+            }
+        }
+    }
+
     private func loadHistory() {
         guard FileManager.default.fileExists(atPath: historyFileURL.path) else {
             logger.log("No history file found, starting with empty history", level: .debug)
