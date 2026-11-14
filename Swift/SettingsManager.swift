@@ -59,6 +59,8 @@ extension Notification.Name {
     static let inputDeviceChanged = Notification.Name("inputDeviceChanged")
     static let hotkeyChanged = Notification.Name("hotkeyChanged")
     static let hotkeySettingsChanged = Notification.Name("hotkeySettingsChanged")
+    static let hotkeyCaptureBegan = Notification.Name("hotkeyCaptureBegan")
+    static let hotkeyCaptureEnded = Notification.Name("hotkeyCaptureEnded")
 }
 
 // MARK: - Settings Manager

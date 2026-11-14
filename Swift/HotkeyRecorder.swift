@@ -11,6 +11,8 @@ class HotkeyRecorder: ObservableObject {
     private var recordedModifiers: [String] = []
     
     func startRecording() {
+        // Registered shortcuts would take the keypress before this monitor sees it.
+        NotificationCenter.default.post(name: .hotkeyCaptureBegan, object: self)
         isRecording = true
         isRecordingComplete = false
         displayString = "Press any key..."
@@ -25,10 +27,14 @@ class HotkeyRecorder: ObservableObject {
     }
     
     func stopRecording() {
+        let wasRecording = isRecording
         isRecording = false
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
+        }
+        if wasRecording {
+            NotificationCenter.default.post(name: .hotkeyCaptureEnded, object: self)
         }
     }
     
@@ -51,6 +57,11 @@ class HotkeyRecorder: ObservableObject {
     private func handleKeyDownEvent(_ event: NSEvent) {
         let keyCode = Int(event.keyCode)
         let modifiers = extractModifiers(from: event.modifierFlags)
+
+        if keyCode == kVK_Escape && modifiers.isEmpty {
+            stopRecording()
+            return
+        }
         
         // Only record if we have a valid key combination
         if keyCode > 0 && !modifiers.isEmpty {

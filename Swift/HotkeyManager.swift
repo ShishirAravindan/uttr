@@ -39,6 +39,7 @@ class HotkeyManager {
     private var hotkeyRefs: [HotkeyAction: EventHotKeyRef] = [:]
     private var eventHandler: EventHandlerRef?
     private var localMonitor: Any?
+    private var isCapturing = false
     
     private let logger = Logger()
     private let settingsManager: SettingsManager
@@ -58,6 +59,18 @@ class HotkeyManager {
             name: .hotkeySettingsChanged,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleHotkeyCaptureBegan),
+            name: .hotkeyCaptureBegan,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleHotkeyCaptureEnded),
+            name: .hotkeyCaptureEnded,
+            object: nil
+        )
     }
     
     deinit {
@@ -69,12 +82,27 @@ class HotkeyManager {
     func refreshHotkeyConfiguration() {
         logger.log("[HotkeyManager] Refreshing hotkey configuration", level: .info)
         cleanup()
+        guard !isCapturing else {
+            logger.log("[HotkeyManager] Shortcut capture in progress, hotkeys stay paused", level: .debug)
+            return
+        }
         setupHotkeys()
     }
     
     // MARK: - Settings Change Handling
     @objc private func handleHotkeySettingsChanged() {
         logger.log("[HotkeyManager] Hotkey settings changed, refreshing configuration", level: .info)
+        refreshHotkeyConfiguration()
+    }
+
+    @objc private func handleHotkeyCaptureBegan() {
+        logger.log("[HotkeyManager] Pausing hotkeys while a shortcut is captured", level: .debug)
+        isCapturing = true
+        cleanup()
+    }
+
+    @objc private func handleHotkeyCaptureEnded() {
+        isCapturing = false
         refreshHotkeyConfiguration()
     }
     
