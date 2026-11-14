@@ -5,6 +5,7 @@ struct SettingsTabView: View {
     @ObservedObject var permissions: PermissionManager
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var capturingAction: HotkeyAction?
+    @State private var shortcutConflict: (action: HotkeyAction, message: String)?
     @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
 
@@ -30,8 +31,13 @@ struct SettingsTabView: View {
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
             guard complete, let action = capturingAction else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
-            settings.updateHotkey(HotkeyConfig(keyCode: keyCode, modifiers: modifiers), for: action)
-            NotificationCenter.default.post(name: .hotkeySettingsChanged, object: nil)
+            let hotkey = HotkeyConfig(keyCode: keyCode, modifiers: modifiers)
+            if let other = settings.action(using: hotkey, otherThan: action) {
+                shortcutConflict = (action, "\(settings.displayString(for: hotkey)) is already the \(other.title.lowercased()) shortcut.")
+            } else {
+                settings.updateHotkey(hotkey, for: action)
+                NotificationCenter.default.post(name: .hotkeySettingsChanged, object: nil)
+            }
             hotkeyRecorder.stopRecording()
         }
     }
@@ -95,6 +101,20 @@ struct SettingsTabView: View {
     }
 
     private func shortcutRow(for action: HotkeyAction) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            shortcutControls(for: action)
+            if let conflict = shortcutConflict, conflict.action == action {
+                Text(conflict.message)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(nsColor: .systemOrange))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .padding(.top, -4)
+            }
+        }
+    }
+
+    private func shortcutControls(for action: HotkeyAction) -> some View {
         SettingRow(label: action.title, scheme: scheme) {
             if hotkeyRecorder.isRecording && capturingAction == action {
                 Text("Press your shortcut…")
@@ -109,6 +129,7 @@ struct SettingsTabView: View {
                         scheme: scheme
                     ) {
                         capturingAction = action
+                        shortcutConflict = nil
                         hotkeyRecorder.startRecording()
                     }
                 }
