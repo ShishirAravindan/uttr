@@ -90,10 +90,15 @@ struct TranscriptionCard: View {
         HStack(alignment: .top, spacing: 12) {
             // Main Content
             VStack(alignment: .leading, spacing: 8) {
-                // Timestamp
-                Text(transcription.timestamp, format: .dateTime.month(.abbreviated).day().year().hour().minute())
-                    .font(.system(size: 11))
-                    .foregroundColor(.textTertiary(for: scheme))
+                HStack(spacing: 6) {
+                    Text(transcription.kind.title)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.textSecondary(for: scheme))
+                    Text("·")
+                    Text(transcription.timestamp, format: .dateTime.month(.abbreviated).day().year().hour().minute())
+                }
+                .font(.system(size: 11))
+                .foregroundColor(.textTertiary(for: scheme))
                 
                 // Transcription Text
                 Text(transcription.text)
