@@ -38,7 +38,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `PasteManager.swift` | Clipboard write, simulated paste, delayed restoration of previous plain text |
 | `SettingsManager.swift` | YAML persistence, provider/device/hotkey changes |
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
-| `HistoryManager.swift` | Latest five transcriptions, JSON persistence, copy/clear APIs |
+| `HistoryManager.swift` | Recent entries labeled by kind, up to the configured limit; JSON persistence; deletes recordings of removed entries; copy/clear APIs |
 | `MenuBarPopoverView.swift` | Recording controls and callbacks through `PopoverViewModel` |
 | `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings, permissions, and history UI |
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
@@ -75,16 +75,18 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Data | Current location and behavior |
 |------|-------------------------------|
 | Settings | `~/Library/Application Support/uttr/settings.yaml`; shared by Debug and Release |
-| History | User Documents directory + `History/transcription_history.json`; latest five entries; shared by both builds |
+| History | User Documents directory + `History/transcription_history.json`; the configured number of entries (default 5); shared by both builds |
 | Release logs | `~/Library/Logs/uttr/transcriptions.log` |
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
-| Recordings | macOS temporary directory; filenames include a recording timestamp |
+| Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
 
 AppDelegate requests a history update before attempting paste. HistoryManager
 queues the list update and JSON write on the main queue; persistence is not a
 prerequisite for posting paste events. History can recover a failed insertion. Its current writes are not coordinated across simultaneous app
-instances. Completed WAV files are not explicitly deleted after transcription;
-discarded interrupted captures are removed by the recorder.
+instances. A recording is deleted when its entry is trimmed or history is cleared,
+and right away when transcription fails. Discarded interrupted captures are
+removed by the recorder. macOS may also purge old files from the temporary
+directory on its own.
 
 Debug and Release use separate bundle IDs and permission grants. Their shared
 settings/history and separate log directories are described in

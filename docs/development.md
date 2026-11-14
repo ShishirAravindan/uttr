@@ -24,7 +24,7 @@ uttr/
 │   ├── Transcription/              # Provider protocol + implementations
 │   └── ...
 ├── docs/                           # Documentation
-├── Tests/LoggerChecks.swift        # Standalone logger checks
+├── Tests/                          # Standalone logger and history checks
 ├── .github/workflows/              # PR build and release automation
 ├── uttr.xcodeproj/                 # Xcode project
 └── README.md
@@ -121,13 +121,15 @@ Logs appear in Xcode console. Filter by component:
 File logs are under `~/Library/Logs/uttr/` for Release and
 `~/Library/Logs/uttr Debug/` for Debug. See [Troubleshooting](troubleshooting.md).
 
-## Logger Checks
+## Standalone Checks
 
-These checks use a temporary file and do not launch the app:
+These checks use temporary files and do not launch the app or touch your history:
 
 ```bash
 swiftc Swift/Logger.swift Tests/LoggerChecks.swift -o /tmp/uttr-logger-checks
 /tmp/uttr-logger-checks
+swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -o /tmp/uttr-history-checks
+/tmp/uttr-history-checks
 ```
 
 ## Code Style
