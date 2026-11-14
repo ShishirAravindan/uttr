@@ -417,7 +417,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private func handleTranscribedText(_ text: String, audioFileName: String? = nil) {
         logger?.log("Handling transcribed text: \(text)", level: .info)
-        HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
+        guard settingsManager.cleanDictation, let textCleanup else {
+            HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
+            pasteDictation(text)
+            return
+        }
+        // Bounded by the dictation profile's deadline. Anything but a clean result,
+        // including cancellation, pastes the transcript as it was.
+        menuBarIconManager?.setTransformingState()
+        let prompt = settingsManager.cleanupPrompt
+        MainActor.assumeIsolated {
+            Task { @MainActor [weak self] in
+                let result = (try? await textCleanup.clean(text, instructions: prompt, profile: .dictation))
+                    ?? .original(text, .failed)
+                self?.logger?.log("Dictation cleanup: \(result.outcome.rawValue)", level: .info)
+                HistoryManager.shared.add(result.text, kind: .dictation, audioFileName: audioFileName,
+                                          originalText: result.original)
+                self?.pasteDictation(result.text)
+            }
+        }
+    }
+
+    private func pasteDictation(_ text: String) {
         pasteManager?.pasteText(text) { [weak self] success in
             DispatchQueue.main.async {
                 if success {

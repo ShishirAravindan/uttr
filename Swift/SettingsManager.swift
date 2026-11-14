@@ -43,15 +43,24 @@ struct HistorySettings: Codable {
 struct CleanupSettings: Codable {
     /// `nil` uses the built-in prompt, so improvements to it reach anyone who hasn't edited it.
     var prompt: String?
+    /// Clean each dictation before pasting it. Off by default.
+    var cleanDictation = false
 
-    init(prompt: String? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case prompt
+        case cleanDictation = "clean_dictation"
+    }
+
+    init(prompt: String? = nil, cleanDictation: Bool = false) {
         self.prompt = prompt
+        self.cleanDictation = cleanDictation
     }
 
     /// Missing keys keep their defaults, so a partial block doesn't reset every setting.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         prompt = try container.decodeIfPresent(String.self, forKey: .prompt)
+        cleanDictation = try container.decodeIfPresent(Bool.self, forKey: .cleanDictation) ?? false
     }
 }
 
@@ -129,6 +138,7 @@ class SettingsManager: ObservableObject {
     @Published var cleanupHotkey: HotkeyConfig = .defaultCleanSelection
     /// An edited cleanup prompt; `nil` means the built-in one.
     @Published var customCleanupPrompt: String?
+    @Published var cleanDictation = false
 
     // MARK: - Properties
 
@@ -180,7 +190,7 @@ class SettingsManager: ObservableObject {
                 history: HistorySettings(maxEntries: historyMaxEntries),
                 readAloudHotkey: readAloudHotkey,
                 cleanupHotkey: cleanupHotkey,
-                cleanup: CleanupSettings(prompt: customCleanupPrompt)
+                cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation)
             )
 
             let encoder = YAMLEncoder()
@@ -237,6 +247,12 @@ class SettingsManager: ObservableObject {
     }
 
     var cleanupPrompt: String { customCleanupPrompt ?? CleanupPrompt.standard }
+
+    func updateCleanDictation(_ enabled: Bool) {
+        cleanDictation = enabled
+        logger.log("Dictation cleanup \(enabled ? "enabled" : "disabled")", level: .info)
+        saveSettings()
+    }
 
     func updateHistoryMaxEntries(_ count: Int) {
         historyMaxEntries = max(1, count)
@@ -301,6 +317,7 @@ class SettingsManager: ObservableObject {
         readAloudHotkey = config.readAloudHotkey ?? .defaultReadAloud
         cleanupHotkey = config.cleanupHotkey ?? .defaultCleanSelection
         customCleanupPrompt = config.cleanup?.prompt
+        cleanDictation = config.cleanup?.cleanDictation ?? false
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -317,6 +334,7 @@ class SettingsManager: ObservableObject {
         readAloudHotkey = .defaultReadAloud
         cleanupHotkey = .defaultCleanSelection
         customCleanupPrompt = nil
+        cleanDictation = false
         logger.log("Default settings applied", level: .info)
     }
 
