@@ -26,19 +26,24 @@ enum HotkeyManagerError: Error, LocalizedError {
     }
 }
 
+// MARK: - Actions
+/// A global shortcut's action. The raw value is its Carbon hotkey ID.
+enum HotkeyAction: UInt32, CaseIterable {
+    case record = 1
+}
+
 // MARK: - HotkeyManager Class
 class HotkeyManager {
     
     // MARK: - Properties
-    private var transcribeHotkeyRef: EventHotKeyRef?
+    private var hotkeyRefs: [HotkeyAction: EventHotKeyRef] = [:]
     private var eventHandler: EventHandlerRef?
     private var localMonitor: Any?
     
     private let logger = Logger()
     private let settingsManager: SettingsManager
     
-    // Callbacks for hotkey presses
-    var onTranscribeHotkeyPressed: (() -> Void)?
+    var onHotkeyPressed: ((HotkeyAction) -> Void)?
     
     // MARK: - Initialization
     init(settingsManager: SettingsManager) {
@@ -69,7 +74,7 @@ class HotkeyManager {
     
     // MARK: - Settings Change Handling
     @objc private func handleHotkeySettingsChanged() {
-        logger.log("[HotkeyManager] Transcribe hotkey settings changed, refreshing configuration", level: .info)
+        logger.log("[HotkeyManager] Hotkey settings changed, refreshing configuration", level: .info)
         refreshHotkeyConfiguration()
     }
     
@@ -99,20 +104,24 @@ class HotkeyManager {
             throw HotkeyManagerError.permissionDenied
         }
         
-        // Register transcribe hotkey
-        let transcribeDisplay = settingsManager.getHotkeyDisplayString()
-        logger.log("[HotkeyManager] Attempting to register transcribe hotkey: \(transcribeDisplay)", level: .debug)
-        
-        let hotkey = settingsManager.recordingHotkey
-        let transcribeHotkeyID = try getUniqueHotkeyID(id: 1)
-        
-        let transcribeStatus = RegisterEventHotKey(UInt32(hotkey.keyCode), hotkey.carbonModifiers, transcribeHotkeyID, GetApplicationEventTarget(), 0, &transcribeHotkeyRef)
-        guard transcribeStatus == noErr else {
-            throw HotkeyManagerError.hotkeyRegistrationFailed(status: transcribeStatus)
-        }
-        logger.log("[HotkeyManager] Transcribe hotkey registered successfully: \(transcribeDisplay)", level: .info)
-
         try installGlobalHotkeyEventHandler()
+
+        // A shortcut another app already holds fails alone; the others still register.
+        for action in HotkeyAction.allCases {
+            let hotkey = settingsManager.hotkey(for: action)
+            let display = settingsManager.displayString(for: hotkey)
+            var ref: EventHotKeyRef?
+            let status = RegisterEventHotKey(UInt32(hotkey.keyCode), hotkey.carbonModifiers,
+                                             try getUniqueHotkeyID(id: action.rawValue),
+                                             GetApplicationEventTarget(), 0, &ref)
+            if status == noErr, let ref {
+                hotkeyRefs[action] = ref
+                logger.log("[HotkeyManager] \(action) hotkey registered: \(display)", level: .info)
+            } else {
+                logger.logError(HotkeyManagerError.hotkeyRegistrationFailed(status: status),
+                                context: "Failed to register \(action) hotkey \(display)")
+            }
+        }
     }
     
     private func installGlobalHotkeyEventHandler() throws {
@@ -151,36 +160,29 @@ class HotkeyManager {
             return
         }
         
+        guard let action = HotkeyAction(rawValue: hotkeyID.id) else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
-            if hotkeyID.id == 1 {
-                // Transcribe hotkey
-                let display = self.settingsManager.getHotkeyDisplayString()
-                self.logger.log("[HotkeyManager] Transcribe hotkey pressed: \(display)", level: .info)
-                self.onTranscribeHotkeyPressed?()
-            }
+            let display = self.settingsManager.displayString(for: self.settingsManager.hotkey(for: action))
+            self.logger.log("[HotkeyManager] \(action) hotkey pressed: \(display)", level: .info)
+            self.onHotkeyPressed?(action)
         }
     }
     
     // MARK: - Local Hotkey (Cocoa)
     private func setupLocalHotkey() {
-        let transcribeDisplay = settingsManager.getHotkeyDisplayString()
-        logger.log("[HotkeyManager] Setting up local hotkey: \(transcribeDisplay)", level: .debug)
-
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
             guard let self = self else { return event }
 
             let actualModifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-
-            // Check transcribe hotkey
-            let hotkey = self.settingsManager.recordingHotkey
-            if actualModifiers == hotkey.cocoaModifiers && Int(event.keyCode) == hotkey.keyCode {
-                self.logger.log("[HotkeyManager] Local transcribe hotkey pressed: \(transcribeDisplay)", level: .info)
-                self.onTranscribeHotkeyPressed?()
-                return nil // Swallow the event
+            for action in HotkeyAction.allCases {
+                let hotkey = self.settingsManager.hotkey(for: action)
+                if actualModifiers == hotkey.cocoaModifiers && Int(event.keyCode) == hotkey.keyCode {
+                    self.logger.log("[HotkeyManager] Local \(action) hotkey pressed: \(self.settingsManager.displayString(for: hotkey))", level: .info)
+                    self.onHotkeyPressed?(action)
+                    return nil // Swallow the event
+                }
             }
-
             return event
         }
         logger.log("[HotkeyManager] Local hotkey monitor installed", level: .debug)
@@ -217,11 +219,11 @@ class HotkeyManager {
         logger.log("[HotkeyManager] Cleaning up hotkey resources", level: .debug)
 
         // Clean up global hotkeys
-        if let hotkeyRef = transcribeHotkeyRef {
-            UnregisterEventHotKey(hotkeyRef)
-            self.transcribeHotkeyRef = nil
-            logger.log("[HotkeyManager] Transcribe hotkey unregistered", level: .debug)
+        for (action, ref) in hotkeyRefs {
+            UnregisterEventHotKey(ref)
+            logger.log("[HotkeyManager] \(action) hotkey unregistered", level: .debug)
         }
+        hotkeyRefs.removeAll()
         if let eventHandler = eventHandler {
             RemoveEventHandler(eventHandler)
             self.eventHandler = nil
