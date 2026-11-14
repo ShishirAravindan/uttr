@@ -4,7 +4,7 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 16.1 or later** — CI currently builds with 16.1
+- **Xcode 26 or later** — CI builds with 26.3
 - **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
 
