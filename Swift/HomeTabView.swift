@@ -84,6 +84,7 @@ struct TranscriptionCard: View {
     let transcription: TranscriptionEntry
     @State private var isCopied = false
     @State private var isHovered = false
+    @State private var showsOriginal = false
     @Environment(\.colorScheme) var scheme
     
     var body: some View {
@@ -107,6 +108,27 @@ struct TranscriptionCard: View {
                     .lineLimit(nil)
                     .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
+
+                if let original = transcription.originalText {
+                    DisclosureGroup(isExpanded: $showsOriginal) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(original)
+                                .font(.system(size: 12))
+                                .foregroundColor(.textSecondary(for: scheme))
+                                .lineLimit(nil)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .textSelection(.enabled)
+                            Button("Copy original") { copy(original) }
+                                .buttonStyle(.link)
+                                .font(.system(size: 11))
+                        }
+                        .padding(.top, 4)
+                    } label: {
+                        Text(transcription.kind == .dictation ? "Original transcription" : "Original text")
+                            .font(.system(size: 11))
+                            .foregroundColor(.textTertiary(for: scheme))
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -138,10 +160,14 @@ struct TranscriptionCard: View {
         )
     }
     
-    private func copyToClipboard() {
+    private func copy(_ text: String) {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(transcription.text, forType: .string)
+        pasteboard.setString(text, forType: .string)
+    }
+
+    private func copyToClipboard() {
+        copy(transcription.text)
         
         withAnimation(.easeInOut(duration: 0.2)) {
             isCopied = true
