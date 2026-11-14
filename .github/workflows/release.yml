@@ -77,15 +77,31 @@ jobs:
           xcode-version: '16.1'
 
       - name: Build App
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
           xcodebuild -project uttr.xcodeproj \
             -scheme uttr \
             -configuration Release \
             -derivedDataPath $RUNNER_TEMP/DerivedData \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Check stamped version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          PLIST="$RUNNER_TEMP/DerivedData/Build/Products/Release/uttr.app/Contents/Info.plist"
+          STAMPED=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
+          if [ "$STAMPED" != "$VERSION" ]; then
+            echo "::error::App reports version $STAMPED, expected $VERSION"
+            exit 1
+          fi
 
       - name: Create ZIP
         run: |
