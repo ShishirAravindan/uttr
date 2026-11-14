@@ -81,6 +81,14 @@ uttr reads the selection by copying it and then restores your clipboard, so it
 needs the same Accessibility permission as pasting. Read-aloud is ignored while
 recording, and starting a recording stops it.
 
+The first `⌥R` after each launch also starts preparing the Kokoro voice in the
+background. The very first time, that downloads about 320 MB of Kokoro models
+through FluidAudio and compiles them for the Neural Engine; later launches load
+them from the cache. Until Kokoro is ready, or if it fails to load, the macOS
+system voice reads instead, so that first read uses the system voice. A voice
+that becomes ready mid-sentence takes over after the current read-aloud. If you
+never use read-aloud, uttr never downloads or loads Kokoro.
+
 ### Settings
 
 Access via menu bar icon → Settings:

@@ -46,7 +46,8 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
 | `Cleanup/TextCleanup.swift`, `Cleanup/CleanupOutputChecks.swift`, `Cleanup/AppleCleanupBackend.swift` | On-device text cleanup with deadlines and output checks; not wired to the UI yet. See [Cleanup](cleanup.md). |
 | `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, restoring the clipboard |
-| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the ⌥R toggle that records a history entry |
+| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the ⌥R toggle that records a history entry and switches voices between reads |
+| `Speech/KokoroSpeechEngine.swift`, `Speech/SpeechChunks.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU; synthesizes sentence by sentence while earlier sentences play |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection
@@ -82,6 +83,7 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Release logs | `~/Library/Logs/uttr/transcriptions.log` |
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
 | Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
+| Kokoro voice models | FluidAudio's cache under `~/.cache/fluidaudio/Models/`, about 320 MB; downloaded the first time ⌥R is used, loaded on the first ⌥R of each launch |
 
 AppDelegate requests a history update before attempting paste. HistoryManager
 queues the list update and JSON write on the main queue; persistence is not a

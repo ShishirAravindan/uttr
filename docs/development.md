@@ -135,9 +135,17 @@ swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -
 swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
   Tests/CleanupEngineChecks.swift -o /tmp/uttr-cleanup-checks
 /tmp/uttr-cleanup-checks
+swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
+/tmp/uttr-selection-checks
+swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Selection/SelectionReader.swift \
+  Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
+  Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
+/tmp/uttr-speech-checks
 ```
 
-The evaluation with the real model is described in [Cleanup](cleanup.md#evaluation).
+The selection and speech checks use fake voices: they never post Cmd+C, read the
+clipboard, or play audio. The evaluation with the real model is described in
+[Cleanup](cleanup.md#evaluation).
 
 ## Code Style
 
