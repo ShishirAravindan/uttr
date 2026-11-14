@@ -22,17 +22,20 @@ struct TranscriptionEntry: Codable, Identifiable {
     let timestamp: Date
     let audioFileName: String?
     let kind: HistoryEntryKind
+    /// What the text was before cleanup changed it; `nil` when it wasn't changed.
+    let originalText: String?
     
-    init(text: String, kind: HistoryEntryKind = .dictation, audioFileName: String? = nil) {
+    init(text: String, kind: HistoryEntryKind = .dictation, audioFileName: String? = nil, originalText: String? = nil) {
         self.id = UUID()
         self.text = text
         self.timestamp = Date()
         self.audioFileName = audioFileName
         self.kind = kind
+        self.originalText = originalText == text ? nil : originalText
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, text, timestamp, audioFileName, kind
+        case id, text, timestamp, audioFileName, kind, originalText
     }
 
     /// Entries saved before `kind` existed were all dictation. An unknown kind, written
@@ -44,6 +47,7 @@ struct TranscriptionEntry: Codable, Identifiable {
         timestamp = try container.decode(Date.self, forKey: .timestamp)
         audioFileName = try container.decodeIfPresent(String.self, forKey: .audioFileName)
         kind = (try? container.decodeIfPresent(HistoryEntryKind.self, forKey: .kind)) ?? .dictation
+        originalText = try container.decodeIfPresent(String.self, forKey: .originalText)
     }
     
     var formattedTimestamp: String {
@@ -98,8 +102,8 @@ class HistoryManager: ObservableObject {
         add(text, kind: .dictation, audioFileName: audioFileName)
     }
 
-    func add(_ text: String, kind: HistoryEntryKind, audioFileName: String? = nil) {
-        let entry = TranscriptionEntry(text: text, kind: kind, audioFileName: audioFileName)
+    func add(_ text: String, kind: HistoryEntryKind, audioFileName: String? = nil, originalText: String? = nil) {
+        let entry = TranscriptionEntry(text: text, kind: kind, audioFileName: audioFileName, originalText: originalText)
         
         DispatchQueue.main.async {
             // Add to beginning of array

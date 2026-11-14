@@ -51,7 +51,7 @@ final class SelectionCleanup {
             logger.log("Selection cleanup: \(result.outcome.rawValue)", level: .info)
             switch result.outcome {
             case .cleaned:
-                HistoryManager.shared.add(result.text, kind: .cleanup)
+                HistoryManager.shared.add(result.text, kind: .cleanup, originalText: result.original)
                 paste.pasteText(result.text) { [weak self] success in
                     if success { self?.onDelivered?() } else { self?.onFailed?("Failed to paste the cleaned text") }
                 }
