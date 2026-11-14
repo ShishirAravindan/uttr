@@ -85,9 +85,11 @@ Access via menu bar icon → Settings:
 
 ### History
 
-Open History from the menu-bar popover to review the latest five transcriptions
-and copy one again. Use it to recover text if automatic insertion fails. Debug and
-Release share this history and the settings file.
+Open History from the menu-bar popover to review recent entries and copy one
+again. Use it to recover text if automatic insertion fails. Each card shows what
+produced it. Settings → History sets how many entries are kept (default 5);
+lowering it removes the oldest entries and their recordings. Debug and Release
+share this history and the settings file.
 
 ## Next Steps
 

@@ -62,6 +62,17 @@ Use Settings → Shortcuts to record a new hotkey — it sets these values autom
 A shortcut needs at least one of command, option or control. If another app already
 holds a shortcut, uttr logs the failure and registers the rest.
 
+### History
+
+```yaml
+history:
+  max_entries: 5   # entries kept in history, 1 or more
+```
+
+Raising the limit keeps more entries from then on. Lowering it removes the oldest
+entries, and their recordings, right away. Settings warns above 50 because each
+entry keeps its recording on disk.
+
 ## Full Example
 
 ```yaml
@@ -73,4 +84,6 @@ hotkey:
   modifiers: ["option"]
 audio:
   input_device_uid: null
+history:
+  max_entries: 5
 ```
