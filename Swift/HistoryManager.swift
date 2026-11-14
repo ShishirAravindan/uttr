@@ -4,10 +4,12 @@ import SwiftUI
 /// What produced a history entry.
 enum HistoryEntryKind: String, Codable {
     case dictation
+    case readAloud = "read_aloud"
 
     var title: String {
         switch self {
         case .dictation: return "Dictation"
+        case .readAloud: return "Read aloud"
         }
     }
 }
@@ -91,7 +93,11 @@ class HistoryManager: ObservableObject {
     
     // MARK: - Public Methods
     func addTranscription(_ text: String, audioFileName: String? = nil) {
-        let entry = TranscriptionEntry(text: text, audioFileName: audioFileName)
+        add(text, kind: .dictation, audioFileName: audioFileName)
+    }
+
+    func add(_ text: String, kind: HistoryEntryKind, audioFileName: String? = nil) {
+        let entry = TranscriptionEntry(text: text, kind: kind, audioFileName: audioFileName)
         
         DispatchQueue.main.async {
             // Add to beginning of array
@@ -101,7 +107,7 @@ class HistoryManager: ObservableObject {
             self.saveHistory()
         }
         
-        logger.log("Added transcription to history: \(text.prefix(30))...", level: .info)
+        logger.log("Added \(kind.rawValue) to history: \(text.prefix(30))...", level: .info)
     }
     
     func copyToClipboard(_ entry: TranscriptionEntry) {

@@ -8,6 +8,7 @@ enum MenuBarIconState {
     case recording
     case processing
     case transforming
+    case speaking
     case success
     case error
     case hidden
@@ -112,6 +113,13 @@ class MenuBarIconManager: ObservableObject {
         currentState = .transforming
     }
     
+    /// Show that selected text is being read aloud
+    func setSpeakingState() {
+        logger.log("[MenuBarIconManager] Setting speaking state", level: .debug)
+        transitionToIcon("speaker.wave.2.fill", withAnimation: true)
+        currentState = .speaking
+    }
+
     /// Show success state briefly
     func showSuccessState() {
         logger.log("[MenuBarIconManager] Showing success state", level: .debug)

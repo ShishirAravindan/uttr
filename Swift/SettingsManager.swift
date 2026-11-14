@@ -51,6 +51,7 @@ private struct SerializedAppConfig: Codable {
     var audio: AudioSettings?
     // Optional for the same reason as `audio`.
     var history: HistorySettings?
+    var readAloudHotkey: HotkeyConfig?
 
     enum CodingKeys: String, CodingKey {
         case provider
@@ -58,14 +59,17 @@ private struct SerializedAppConfig: Codable {
         case hotkey
         case audio
         case history
+        case readAloudHotkey = "read_aloud_hotkey"
     }
 }
 
 // MARK: - Hotkey config (shared schema)
 
-struct HotkeyConfig: Codable {
+struct HotkeyConfig: Codable, Equatable {
     var keyCode: Int
     var modifiers: [String]
+
+    static let defaultReadAloud = HotkeyConfig(keyCode: 15, modifiers: ["option"])  // ⌥R
 
     enum CodingKeys: String, CodingKey {
         case keyCode = "key_code"
@@ -101,6 +105,7 @@ class SettingsManager: ObservableObject {
     @Published var hotkeyModifiers: [String] = ["option"]
     @Published var providerStatus: String = "Loading…"
     @Published var historyMaxEntries: Int = HistoryManager.defaultMaxEntries
+    @Published var readAloudHotkey: HotkeyConfig = .defaultReadAloud
 
     // MARK: - Properties
 
@@ -149,7 +154,8 @@ class SettingsManager: ObservableObject {
                 fluidAudio: fluidAudio,
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
                 audio: AudioSettings(inputDeviceUID: inputDeviceUID),
-                history: HistorySettings(maxEntries: historyMaxEntries)
+                history: HistorySettings(maxEntries: historyMaxEntries),
+                readAloudHotkey: readAloudHotkey
             )
 
             let encoder = YAMLEncoder()
@@ -187,6 +193,8 @@ class SettingsManager: ObservableObject {
         case .record:
             hotkeyKeyCode = hotkey.keyCode
             hotkeyModifiers = hotkey.modifiers
+        case .readAloud:
+            readAloudHotkey = hotkey
         }
         NotificationCenter.default.post(name: .hotkeyChanged, object: self)
         logger.log("\(action.title) hotkey changed", level: .info)
@@ -209,6 +217,7 @@ class SettingsManager: ObservableObject {
     func hotkey(for action: HotkeyAction) -> HotkeyConfig {
         switch action {
         case .record: return recordingHotkey
+        case .readAloud: return readAloudHotkey
         }
     }
 
@@ -241,6 +250,7 @@ class SettingsManager: ObservableObject {
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
         historyMaxEntries = max(1, config.history?.maxEntries ?? HistoryManager.defaultMaxEntries)
+        readAloudHotkey = config.readAloudHotkey ?? .defaultReadAloud
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -254,6 +264,7 @@ class SettingsManager: ObservableObject {
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil
         historyMaxEntries = HistoryManager.defaultMaxEntries
+        readAloudHotkey = .defaultReadAloud
         logger.log("Default settings applied", level: .info)
     }
 
