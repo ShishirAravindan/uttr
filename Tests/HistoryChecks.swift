@@ -32,6 +32,19 @@ struct HistoryChecks {
         precondition(json[1]["kind"] as? String == "read_aloud")
         let kinds = try JSONDecoder().decode([TranscriptionEntry].self, from: data).map(\.kind)
         precondition(kinds == [.dictation, .readAloud])
+
+        // Cleaned entries keep their original; unchanged text stores none.
+        precondition(decoded.allSatisfy { $0.originalText == nil }, "legacy entries have no original")
+        let cleaned = TranscriptionEntry(text: "I think we should ship.", kind: .dictation,
+                                         audioFileName: "recording_3.wav", originalText: "Um I think we should ship.")
+        let selection = TranscriptionEntry(text: "Fixed.", kind: .cleanup, originalText: "fixd")
+        let same = TranscriptionEntry(text: "Already clean.", kind: .cleanup, originalText: "Already clean.")
+        precondition(same.originalText == nil)
+        let reloadedCleaned = try JSONDecoder().decode([TranscriptionEntry].self,
+                                                      from: JSONEncoder().encode([cleaned, selection, same]))
+        precondition(reloadedCleaned.map(\.originalText) == ["Um I think we should ship.", "fixd", nil])
+        precondition(reloadedCleaned.map(\.kind) == [.dictation, .cleanup, .cleanup])
+        precondition(reloadedCleaned[0].audioFileName == "recording_3.wav")
         let reloaded = try JSONDecoder().decode([TranscriptionEntry].self, from: data)[0]
         precondition(reloaded.id == entry.id && reloaded.text == entry.text)
         precondition(reloaded.kind == entry.kind && reloaded.audioFileName == entry.audioFileName)
@@ -79,6 +92,11 @@ struct HistoryChecks {
         drain()
         precondition(reloaded.transcriptions.map(\.text) == ["entry 6"])
         precondition(recordingNames(in: recordings) == ["recording_6.wav"])
+
+        reloaded.add("Cleaned.", kind: .cleanup, originalText: "cleand")
+        drain()
+        let savedOriginals = try JSONDecoder().decode([TranscriptionEntry].self, from: Data(contentsOf: historyFile))
+        precondition(savedOriginals.map(\.originalText) == ["cleand"])
 
         // A name that points outside the recordings folder is never deleted.
         let outside = directory.appendingPathComponent("outside.wav")
