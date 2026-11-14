@@ -4,6 +4,7 @@ struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
+    @State private var capturingAction: HotkeyAction?
     @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
 
@@ -15,7 +16,7 @@ struct SettingsTabView: View {
                     permissionsSection
                     audioSection
                     transcriptionSection
-                    hotkeySection
+                    shortcutsSection
                     aboutSection
                 }
                 .padding(.top, 24)
@@ -26,9 +27,9 @@ struct SettingsTabView: View {
         .onAppear { permissions.refresh() }
         .onDisappear { hotkeyRecorder.stopRecording() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
-            guard complete else { return }
+            guard complete, let action = capturingAction else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
-            settings.updateHotkey(keyCode: keyCode, modifiers: modifiers)
+            settings.updateHotkey(HotkeyConfig(keyCode: keyCode, modifiers: modifiers), for: action)
             NotificationCenter.default.post(name: .hotkeySettingsChanged, object: nil)
             hotkeyRecorder.stopRecording()
         }
@@ -81,25 +82,33 @@ struct SettingsTabView: View {
         }
     }
 
-    private var hotkeySection: some View {
-        SectionBlock(label: "Hotkey") {
+    private var shortcutsSection: some View {
+        SectionBlock(label: "Shortcuts") {
             SettingsCard(scheme: scheme) {
-                SettingRow(label: "Recording shortcut", scheme: scheme) {
-                    if hotkeyRecorder.isRecording {
-                        Text("Press your shortcut…")
-                            .font(.system(size: 13))
-                            .foregroundColor(.textTertiary(for: scheme))
-                    } else {
-                        HStack(spacing: 6) {
-                            KeycapsView(hotkey: settings.getHotkeyDisplayString(), scheme: scheme)
-                            SettingsActionButton(
-                                icon: "pencil",
-                                label: "Change recording shortcut",
-                                scheme: scheme
-                            ) {
-                                hotkeyRecorder.startRecording()
-                            }
-                        }
+                ForEach(Array(HotkeyAction.allCases.enumerated()), id: \.element) { index, action in
+                    if index > 0 { RowDivider(scheme: scheme) }
+                    shortcutRow(for: action)
+                }
+            }
+        }
+    }
+
+    private func shortcutRow(for action: HotkeyAction) -> some View {
+        SettingRow(label: action.title, scheme: scheme) {
+            if hotkeyRecorder.isRecording && capturingAction == action {
+                Text("Press your shortcut…")
+                    .font(.system(size: 13))
+                    .foregroundColor(.textTertiary(for: scheme))
+            } else {
+                HStack(spacing: 6) {
+                    KeycapsView(hotkey: settings.displayString(for: settings.hotkey(for: action)), scheme: scheme)
+                    SettingsActionButton(
+                        icon: "pencil",
+                        label: "Change \(action.title.lowercased()) shortcut",
+                        scheme: scheme
+                    ) {
+                        capturingAction = action
+                        hotkeyRecorder.startRecording()
                     }
                 }
             }
