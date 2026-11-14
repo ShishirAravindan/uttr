@@ -17,6 +17,7 @@ struct SettingsTabView: View {
                     audioSection
                     transcriptionSection
                     shortcutsSection
+                    historySection
                     aboutSection
                 }
                 .padding(.top, 24)
@@ -110,6 +111,16 @@ struct SettingsTabView: View {
                         capturingAction = action
                         hotkeyRecorder.startRecording()
                     }
+                }
+            }
+        }
+    }
+
+    private var historySection: some View {
+        SectionBlock(label: "History") {
+            SettingsCard(scheme: scheme) {
+                HistoryLimitRow(current: settings.historyMaxEntries, scheme: scheme) {
+                    settings.updateHistoryMaxEntries($0)
                 }
             }
         }
@@ -244,6 +255,71 @@ private struct RowDivider: View {
         Rectangle()
             .fill(Color.rowSeparator(for: scheme))
             .frame(height: 0.5)
+    }
+}
+
+// MARK: - History limit row
+
+/// Applies on Return or when the field loses focus, so typing "20" never trims to 2 on the way.
+private struct HistoryLimitRow: View {
+    let current: Int
+    let scheme: ColorScheme
+    let onCommit: (Int) -> Void
+
+    @State private var draft = ""
+    @FocusState private var isFocused: Bool
+
+    private static let largeHistory = 50
+
+    private var parsed: Int? {
+        guard let value = Int(draft.trimmingCharacters(in: .whitespaces)), value >= 1 else { return nil }
+        return value
+    }
+
+    private var note: (text: String, isWarning: Bool)? {
+        guard let value = parsed else { return ("Enter a whole number of 1 or more.", true) }
+        if value < current {
+            return ("The oldest entries beyond \(value), and their recordings, will be removed.", true)
+        }
+        if value > Self.largeHistory {
+            return ("More than \(Self.largeHistory) entries keeps more recordings on disk.", true)
+        }
+        return nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SettingRow(label: "Entries to keep", scheme: scheme) {
+                TextField("", text: $draft)
+                    .textFieldStyle(.roundedBorder)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 64)
+                    .focused($isFocused)
+                    .onSubmit(commit)
+                    .accessibilityLabel("History entries to keep")
+            }
+            if let note {
+                Text(note.text)
+                    .font(.system(size: 11))
+                    .foregroundColor(note.isWarning ? Color(nsColor: .systemOrange) : .textSecondary(for: scheme))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 10)
+                    .padding(.top, -4)
+            }
+        }
+        .onAppear { draft = String(current) }
+        .onChange(of: current) { _, value in draft = String(value) }
+        .onChange(of: isFocused) { _, focused in
+            if !focused { commit() }
+        }
+    }
+
+    private func commit() {
+        guard let value = parsed else {
+            draft = String(current)
+            return
+        }
+        if value != current { onCommit(value) }
     }
 }
 
