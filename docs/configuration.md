@@ -58,7 +58,9 @@ hotkey:
 
 Common key codes: `37` = L, `0` = A, `49` = Space, `36` = Return.
 
-Use the Settings UI to record a new hotkey — it sets these values automatically.
+Use Settings → Shortcuts to record a new hotkey — it sets these values automatically.
+A shortcut needs at least one of command, option or control. If another app already
+holds a shortcut, uttr logs the failure and registers the rest.
 
 ## Full Example
 

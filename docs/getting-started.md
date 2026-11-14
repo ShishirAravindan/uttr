@@ -80,7 +80,7 @@ Access via menu bar icon → Settings:
 | Setting | Description |
 |---------|-------------|
 | **Provider** | Parakeet v3 (multilingual) or v2 (English only) |
-| **Hotkey** | Click "Change" to record a new shortcut |
+| **Shortcuts** | Click the pencil next to a shortcut, then press the new one. It needs ⌘, ⌥ or ⌃; Esc cancels. Shortcuts pause while you choose. |
 | **Input device** | Use the system default microphone or pin a specific device |
 
 ### History
