@@ -49,7 +49,8 @@ Use conventional commits: `type(optional-scope): imperative description`. One
 commit does one thing. Tests get their own commits within the same PR. Changes to
 agent instructions need a body explaining why the guidance is useful. Do not add
 agent attribution trailers. PRs should describe the concrete behavior and relevant
-validation, with any remaining manual checks.
+validation, with any remaining manual checks. PRs merge by rebase, so every commit
+must build on its own. Merging never releases; see [Releasing](docs/releasing.md).
 
 `backlog.md` is ignored local planning material; keep it out of commits and PRs.
 Keep shared conventions here and focused reusable workflows under `.agents/skills`.
