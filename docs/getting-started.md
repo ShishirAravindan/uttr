@@ -73,6 +73,14 @@ on the recording and hardware.
 4. Press the hotkey again to **stop recording**
 5. Transcribed text is automatically pasted at your cursor
 
+### Read Aloud
+
+Select text in any app and press `⌥R` to hear it. Press `⌥R` again to stop. The
+menu-bar icon shows a speaker while it reads, and History keeps what was read.
+uttr reads the selection by copying it and then restores your clipboard, so it
+needs the same Accessibility permission as pasting. Read-aloud is ignored while
+recording, and starting a recording stops it.
+
 ### Settings
 
 Access via menu bar icon → Settings:
