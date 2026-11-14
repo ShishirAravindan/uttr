@@ -1,15 +1,17 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'Swift/**'
-      - 'Assets.xcassets/**'
-      - 'uttr.xcodeproj/**'
-      - 'uttr-Info.plist'
-      - 'uttr.entitlements'
-      - 'build.sh'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to increase
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      version:
+        description: Exact version (X.Y.Z), used instead of the bump
+        type: string
+        required: false
 
 permissions:
   contents: write
@@ -21,6 +23,7 @@ concurrency:
 jobs:
   build-and-release:
     name: Build and Release
+    if: github.ref == 'refs/heads/main'
     runs-on: macos-14
 
     steps:
@@ -28,6 +31,45 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Choose version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+          REQUESTED: ${{ inputs.version }}
+        run: |
+          LATEST=$(git tag -l 'v[0-9]*' --sort=-v:refname | head -n1)
+          LATEST=${LATEST:-v0.0.0}
+          IFS=. read -r MAJOR MINOR PATCH <<< "${LATEST#v}"
+          REQUESTED="${REQUESTED#v}"
+
+          if [ -n "$REQUESTED" ]; then
+            if ! [[ "$REQUESTED" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::Version must look like 1.2.3, got '$REQUESTED'"
+              exit 1
+            fi
+            IFS=. read -r NEW_MAJOR NEW_MINOR NEW_PATCH <<< "$REQUESTED"
+            if (( NEW_MAJOR < MAJOR || (NEW_MAJOR == MAJOR && (NEW_MINOR < MINOR || (NEW_MINOR == MINOR && NEW_PATCH <= PATCH))) )); then
+              echo "::error::$REQUESTED is not newer than $LATEST"
+              exit 1
+            fi
+            VERSION="$REQUESTED"
+          else
+            case "$BUMP" in
+              major) VERSION="$((MAJOR + 1)).0.0" ;;
+              minor) VERSION="${MAJOR}.$((MINOR + 1)).0" ;;
+              *)     VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
+            esac
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$VERSION" >/dev/null; then
+            echo "::error::v$VERSION already exists"
+            exit 1
+          fi
+
+          echo "Releasing v$VERSION (previous: $LATEST)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -56,27 +98,16 @@ jobs:
           SHA=$(shasum -a 256 $RUNNER_TEMP/uttr.zip | awk '{print $1}')
           echo "sha256=$SHA" >> $GITHUB_OUTPUT
 
-      - name: Bump version tag
+      - name: Tag release
         id: tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          LATEST=$(git tag -l 'v[0-9]*' --sort=-v:refname | head -n1)
-          LATEST=${LATEST:-v0.0.0}
-          MAJOR=$(echo "${LATEST#v}" | cut -d. -f1)
-          MINOR=$(echo "${LATEST#v}" | cut -d. -f2)
-          PATCH=$(echo "${LATEST#v}" | cut -d. -f3)
-          NEW_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
-
-          if git rev-parse -q --verify "refs/tags/$NEW_TAG" >/dev/null; then
-            echo "::error::$NEW_TAG already exists — refusing to retag $LATEST"
-            exit 1
-          fi
-
-          echo "Releasing $NEW_TAG (previous: $LATEST)"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NEW_TAG"
-          git push origin "$NEW_TAG"
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
