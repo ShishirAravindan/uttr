@@ -77,7 +77,8 @@ on the recording and hardware.
 
 Select text in any app and press `⌥R` to hear it. Press `⌥R` again to stop. The
 menu-bar icon shows a speaker while it reads, and History keeps what was read.
-uttr reads the selection by copying it and then restores your clipboard, so it
+uttr reads the selection by copying it and then restores your clipboard (every
+item and format, unless you copied something new meanwhile), so it
 needs the same Accessibility permission as pasting. Read-aloud is ignored while
 recording, and starting a recording stops it.
 
