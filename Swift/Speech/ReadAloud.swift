@@ -49,14 +49,22 @@ final class ReadAloud {
         isReadingSelection = true
         Task {
             defer { isReadingSelection = false }
-            guard let selection = await reader.readSelection() else {
+            guard let text = await readSelection() else {
                 onFailed?("No text selected")
                 return
             }
-            HistoryManager.shared.add(selection.text, kind: .readAloud)
-            onSpeaking?()
-            engine.speak(selection.text)
+            speak(text)
         }
+    }
+
+    func readSelection() async -> String? {
+        await reader.readSelection()?.text
+    }
+
+    func speak(_ text: String) {
+        HistoryManager.shared.add(text, kind: .readAloud)
+        onSpeaking?()
+        engine.speak(text)
     }
 
     /// Stops speech without reporting it as finished, for example when recording starts.
