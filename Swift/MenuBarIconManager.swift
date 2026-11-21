@@ -9,6 +9,8 @@ enum MenuBarIconState {
     case processing
     case transforming
     case speaking
+    case voicePreparing
+    case paused
     case success
     case error
     case hidden
@@ -113,11 +115,33 @@ class MenuBarIconManager: ObservableObject {
         currentState = .transforming
     }
     
-    /// Show that selected text is being read aloud
+    /// Show that selected text is being read aloud: the speaker's waves rise and
+    /// fall while audio plays.
     func setSpeakingState() {
+        guard currentState != .speaking else { return }
         logger.log("[MenuBarIconManager] Setting speaking state", level: .debug)
-        transitionToIcon("speaker.wave.2.fill", withAnimation: true)
+        transitionToIcon("speaker.wave.2.fill", withAnimation: currentState != .voicePreparing && currentState != .paused)
         currentState = .speaking
+        startSpeakingWaves()
+    }
+
+    /// Read-aloud is waiting for its voice: copying the selection, starting the
+    /// mlx-audio worker, loading a model, or synthesizing the next sentence.
+    func setVoicePreparingState() {
+        guard currentState != .voicePreparing else { return }
+        logger.log("[MenuBarIconManager] Setting voice preparing state", level: .debug)
+        transitionToIcon("waveform", withAnimation: false)
+        currentState = .voicePreparing
+        startRecordingPulse()
+    }
+
+    /// Read-aloud is paused from the popover.
+    func setPausedState() {
+        guard currentState != .paused else { return }
+        logger.log("[MenuBarIconManager] Setting paused state", level: .debug)
+        transitionToIcon("speaker.fill", withAnimation: false)
+        statusItem?.button?.alphaValue = 0.6
+        currentState = .paused
     }
 
     /// Show success state briefly
@@ -184,11 +208,45 @@ class MenuBarIconManager: ObservableObject {
         statusItem?.button?.layer?.removeAnimation(forKey: recordingPulseKey)
     }
 
+    private var speakingTimer: Timer?
+    private var speakingFrame = 1
+    private var speakingImages: [NSImage?] = []
+    private static let speakingFrames = ["speaker.wave.1.fill", "speaker.wave.2.fill", "speaker.wave.3.fill", "speaker.wave.2.fill"]
+
+    /// Steps through the speaker's wave symbols, a quiet sign that audio is playing.
+    private func startSpeakingWaves() {
+        speakingTimer?.invalidate()
+        if speakingImages.isEmpty {
+            let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
+            let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
+            speakingImages = Self.speakingFrames.map {
+                NSImage(systemSymbolName: $0, accessibilityDescription: appName)?.withSymbolConfiguration(config)
+            }
+        }
+        speakingFrame = 1
+        speakingTimer = Timer.scheduledTimer(withTimeInterval: 0.32, repeats: true) { [weak self] _ in
+            DispatchQueue.main.async { self?.advanceSpeakingWave() }
+        }
+    }
+
+    private func advanceSpeakingWave() {
+        guard currentState == .speaking, let button = statusItem?.button, !speakingImages.isEmpty else { return }
+        speakingFrame = (speakingFrame + 1) % speakingImages.count
+        button.image = speakingImages[speakingFrame]
+    }
+
+    private func stopSpeakingWaves() {
+        speakingTimer?.invalidate()
+        speakingTimer = nil
+    }
+
     private func transitionToIcon(_ iconName: String, withAnimation: Bool = true, tintColor: NSColor? = nil) {
         guard let button = statusItem?.button else { return }
 
-        // Any state change ends the recording breathe.
+        // Any state change ends the recording breathe and the speaking waves.
         stopRecordingPulse()
+        stopSpeakingWaves()
+        if currentState == .paused { button.alphaValue = 1.0 }
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"

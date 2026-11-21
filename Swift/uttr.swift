@@ -1,6 +1,7 @@
 import SwiftUI
 import Cocoa
 import AVFoundation
+import Combine
 
 @main
 struct uttr: App {
@@ -48,6 +49,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     lazy var readAloudVoices: ReadAloudVoices = MainActor.assumeIsolated {
         ReadAloudVoices(settings: self.settingsManager)
     }
+    private var readAloudObservers = Set<AnyCancellable>()
     private var textCleanup: TextCleanup?
     private var selectionCleanup: SelectionCleanup?
 
@@ -122,6 +124,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         popoverViewModel.onStopRecording  = { [weak self] in self?.stopRecording() }
         popoverViewModel.onOpenSettings   = { [weak self] in self?.openSettingsWindow() }
         popoverViewModel.onOpenHistory    = { [weak self] in self?.openHistoryWindow() }
+        popoverViewModel.readAloudHotkeyDisplay = settingsManager.displayString(for: settingsManager.readAloudHotkey)
+        popoverViewModel.onReadAloud = { [weak self] in
+            // The selection is copied from the frontmost app, so let the popover close
+            // and focus return there first.
+            self?.closePopover()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { self?.handleReadAloudHotkeyPress() }
+        }
+        popoverViewModel.onTogglePause = { [weak self] in MainActor.assumeIsolated { self?.readAloud?.togglePause() } }
+        popoverViewModel.onSkip = { [weak self] in MainActor.assumeIsolated { self?.readAloud?.skip() } }
+        popoverViewModel.onStopReading = { [weak self] in MainActor.assumeIsolated { self?.readAloud?.stop() } }
 
         NotificationCenter.default.addObserver(
             forName: .transcriptionProviderChanged,
@@ -157,6 +169,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         ) { [weak self] _ in
             self?.hotkeyManager?.refreshHotkeyConfiguration()
             self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
+            if let settings = self?.settingsManager {
+                self?.popoverViewModel.readAloudHotkeyDisplay = settings.displayString(for: settings.readAloudHotkey)
+            }
         }
 
         // Show dock icon whenever a titled window is active
@@ -232,10 +247,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         let popoverView = MenuBarPopoverView(viewModel: popoverViewModel)
 
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 220, height: 46)
         popover?.behavior = .transient
         popover?.animates = true
-        popover?.contentViewController = NSHostingController(rootView: popoverView)
+        // The popover grows to show what read-aloud is doing, so it follows the view's size.
+        let hostingController = NSHostingController(rootView: popoverView)
+        hostingController.sizingOptions = [.preferredContentSize]
+        popover?.contentViewController = hostingController
         popover?.delegate = self
 
         logger?.log("MenuBarPopoverView setup complete", level: .debug)
@@ -298,14 +315,66 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func setupReadAloud() {
         MainActor.assumeIsolated {
             let readAloud = ReadAloud()
-            readAloud.onSpeaking = { [weak self] in self?.menuBarIconManager?.setSpeakingState() }
             readAloud.onIdle = { [weak self] in self?.menuBarIconManager?.setReadyState() }
             readAloud.onFailed = { [weak self] message in
+                self?.popoverViewModel.voiceStatus = message
                 self?.notificationManager?.showTranscriptionError(message)
                 self?.menuBarIconManager?.showErrorState()
             }
+            readAloud.onStateChange = { [weak self] state in self?.readAloudStateChanged(state) }
             self.readAloud = readAloud
-            readAloudVoices.attach(to: readAloud)
+
+            let voices = readAloudVoices
+            voices.attach(to: readAloud)
+            voices.$activeVoice.combineLatest(voices.$workerState, voices.$notice)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] _ in self?.updateVoiceStatus() }
+                .store(in: &readAloudObservers)
+        }
+    }
+
+    private func readAloudStateChanged(_ state: ReadAloudState) {
+        popoverViewModel.readAloudState = state
+        switch state {
+        case .idle:
+            break  // onIdle restores the ready icon.
+        case .readingSelection:
+            menuBarIconManager?.setVoicePreparingState()
+        case .speaking(let progress, let isPaused):
+            if isPaused {
+                menuBarIconManager?.setPausedState()
+            } else if progress?.isBuffering ?? true {
+                menuBarIconManager?.setVoicePreparingState()
+            } else {
+                menuBarIconManager?.setSpeakingState()
+            }
+        }
+        updateVoiceStatus()
+    }
+
+    /// The popover's voice name and the one-line status beneath it.
+    private func updateVoiceStatus() {
+        MainActor.assumeIsolated {
+            let voices = readAloudVoices
+            popoverViewModel.voiceName = voices.activeVoice.displayName
+            let isReading = popoverViewModel.readAloudState.isActive
+            guard case .mlx(let model) = voices.activeVoice else {
+                popoverViewModel.voiceStatus = isReading ? nil : voices.notice
+                return
+            }
+            switch voices.workerState {
+            case .starting:
+                popoverViewModel.voiceStatus = "Starting mlx-audio on the GPU…"
+            case .loading:
+                popoverViewModel.voiceStatus = "Loading \(model.name) into memory…"
+            case .ready:
+                let minutes = settingsManager.readAloud.idleUnloadMinutes
+                popoverViewModel.voiceStatus = isReading ? "Synthesizing…" : "\(model.name) is warm · unloads after \(minutes) min idle"
+            case .stopped:
+                popoverViewModel.voiceStatus = isReading ? "Synthesizing…" : voices.notice
+            case .failed(let message):
+                popoverViewModel.voiceStatus = message
+            }
         }
     }
 
