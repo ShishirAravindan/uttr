@@ -7,8 +7,8 @@ struct Selection {
 }
 
 /// Reads the frontmost app's selected text by simulating Cmd+C. Selecting text
-/// does not copy it, so the copy is briefly placed on the clipboard and every
-/// pasteboard item is restored afterward, as PasteManager does around Cmd+V.
+/// does not copy it, so the copy is briefly placed on the clipboard and the
+/// original items are restored afterward unless a newer copy has landed.
 /// Posting the key event needs the Accessibility grant uttr already uses for paste.
 @MainActor
 final class SelectionReader {
@@ -17,6 +17,8 @@ final class SelectionReader {
 
     /// How long to wait for the target app to answer the simulated copy.
     private let copyTimeout: TimeInterval = 0.35
+    /// Extra wait for slow apps, so a late copy is still read and restored.
+    private let copyGrace: TimeInterval = 0.4
 
     func readSelection() async -> Selection? {
         let started = Date()
@@ -25,20 +27,18 @@ final class SelectionReader {
             return nil
         }
 
-        let saved = snapshotPasteboard()
+        let clipboard = ClipboardTransaction(pasteboard: pasteboard)
         let before = pasteboard.changeCount
         postCopy()
 
         // The target app copies asynchronously; poll until the change count moves.
-        let deadline = Date().addingTimeInterval(copyTimeout)
-        while pasteboard.changeCount == before, Date() < deadline {
-            try? await Task.sleep(nanoseconds: 10_000_000)
-        }
+        await waitForChange(from: before, timeout: copyTimeout + copyGrace)
         // An unchanged count means nothing was selected (or the app ignored Cmd+C),
         // and the clipboard was never touched, so there is nothing to restore.
-        let copied = pasteboard.changeCount != before
+        let after = pasteboard.changeCount
+        let copied = after != before
         let text = copied ? pasteboard.string(forType: .string) : nil
-        if copied { restorePasteboard(saved) }
+        if copied { clipboard.restore(ifChangeCountIs: after) }
 
         let elapsed = Int(Date().timeIntervalSince(started) * 1000)
         guard let text, Self.isSelectedText(text) else {
@@ -59,24 +59,11 @@ final class SelectionReader {
         return !isLineCopy
     }
 
-    private func snapshotPasteboard() -> [[NSPasteboard.PasteboardType: Data]] {
-        (pasteboard.pasteboardItems ?? []).map { item in
-            var copy: [NSPasteboard.PasteboardType: Data] = [:]
-            for type in item.types {
-                if let data = item.data(forType: type) { copy[type] = data }
-            }
-            return copy
+    private func waitForChange(from count: Int, timeout: TimeInterval) async {
+        let deadline = Date().addingTimeInterval(timeout)
+        while pasteboard.changeCount == count, Date() < deadline {
+            try? await Task.sleep(nanoseconds: 10_000_000)
         }
-    }
-
-    private func restorePasteboard(_ items: [[NSPasteboard.PasteboardType: Data]]) {
-        pasteboard.clearContents()
-        let restored = items.map { entries -> NSPasteboardItem in
-            let item = NSPasteboardItem()
-            for (type, data) in entries { item.setData(data, forType: type) }
-            return item
-        }
-        if !restored.isEmpty { pasteboard.writeObjects(restored) }
     }
 
     private func postCopy() {

@@ -137,9 +137,9 @@ swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOu
 /tmp/uttr-cleanup-checks
 swiftc Swift/ClipboardTransaction.swift Tests/ClipboardChecks.swift -o /tmp/uttr-clipboard-checks
 /tmp/uttr-clipboard-checks
-swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
+swiftc Swift/Logger.swift Swift/ClipboardTransaction.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
 /tmp/uttr-selection-checks
-swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Selection/SelectionReader.swift \
+swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/ClipboardTransaction.swift Swift/Selection/SelectionReader.swift \
   Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
   Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
