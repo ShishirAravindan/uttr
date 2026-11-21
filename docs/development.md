@@ -138,13 +138,25 @@ swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOu
 swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
 /tmp/uttr-selection-checks
 swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Selection/SelectionReader.swift \
-  Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
-  Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
+  Swift/Speech/SpeechEngine.swift Swift/Speech/SystemSpeechEngine.swift Swift/Speech/ReadAloud.swift \
+  Swift/Speech/SpeechChunks.swift Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
+swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
+  Tests/SpeechPipelineChecks.swift -o /tmp/uttr-pipeline-checks
+/tmp/uttr-pipeline-checks
+swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
+  Swift/Speech/SpeechChunks.swift Swift/Speech/SpeechModels.swift Swift/Speech/WAVDecoder.swift \
+  Swift/Speech/MLXAudioRuntime.swift Swift/Speech/MLXAudioInstaller.swift Swift/Speech/MLXSpeechEngine.swift \
+  Tests/MLXAudioChecks.swift -o /tmp/uttr-mlx-checks
+/tmp/uttr-mlx-checks
+python3 Tests/mlx_audio_worker_checks.py   # needs numpy
 ```
 
 The selection and speech checks use fake voices: they never post Cmd+C, read the
-clipboard, or play audio. The evaluation with the real model is described in
+clipboard, or play audio. The pipeline and mlx-audio checks use a fake player,
+worker process, and HTTP client; the worker check runs the bundled Python worker
+against fake `mlx_audio` and `huggingface_hub` packages. None of them start
+mlx-audio or download a model ([Read Aloud](read-aloud.md#validation)). The evaluation with the real model is described in
 [Cleanup](cleanup.md#evaluation).
 
 ## Code Style
@@ -207,4 +219,5 @@ installed as repository scripts or CI jobs.
 
 - [Architecture](architecture.md) — How it works internally
 - [Configuration](configuration.md) — Settings reference
+- [Read Aloud](read-aloud.md) — Voices, the mlx-audio worker, and its checks
 - [Troubleshooting](troubleshooting.md) — Common issues

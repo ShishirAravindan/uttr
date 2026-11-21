@@ -97,6 +97,30 @@ cleanup:
 Settings → Cleanup edits the prompt; Restore default removes the key. The output
 checks in [Cleanup](cleanup.md#output-checks) apply whatever the prompt says.
 
+### Read Aloud
+
+```yaml
+read_aloud:
+  voice: "kokoro"            # system, kokoro, or an expressive preset (below)
+  speed: 1.0                 # 0.75–1.5, every voice, pitch preserved
+  idle_unload_minutes: 5     # unload the expressive model after this long idle
+  models:                    # per-preset choices; omitted keys use the preset's defaults
+    mlx.qwen3-voicedesign:
+      style: "A gravelly old sea captain telling a story by the fire."
+      temperature: 0.9
+    mlx.chatterbox:
+      exaggeration: 0.8
+      cfg_weight: 0.3
+  python_path: null          # an existing Python with mlx-audio, instead of uttr's own
+```
+
+Expressive presets: `mlx.chatterbox-turbo`, `mlx.chatterbox`,
+`mlx.qwen3-voicedesign`, `mlx.qwen3-customvoice`, `mlx.orpheus`, `mlx.csm`,
+`mlx.miso`. Per-preset keys are `voice` (a preset speaker), `style`, `exaggeration`,
+`cfg_weight`, and `temperature`; a key a preset doesn't use is ignored. An unknown
+voice falls back to Kokoro. Choosing a preset in Settings downloads it; see
+[Read Aloud](read-aloud.md).
+
 ## Full Example
 
 ```yaml
@@ -116,4 +140,8 @@ read_aloud_hotkey:
 cleanup_hotkey:
   key_code: 8
   modifiers: ["option"]
+read_aloud:
+  voice: "kokoro"
+  speed: 1.0
+  idle_unload_minutes: 5
 ```

@@ -13,7 +13,8 @@ brew tap ShishirAravindan/tap
 brew install --cask uttr
 ```
 
-That's it. No Python, no `uv`, no setup.
+That's it. No Python, no `uv`, no setup. (The optional expressive read-aloud voices
+install their own Python runtime when you choose one.)
 
 ## Quick Start
 
@@ -24,7 +25,9 @@ That's it. No Python, no `uv`, no setup.
 5. Transcribed text is pasted at your cursor
 
 Select text anywhere and press `⌥R` to have it read aloud, or `⌥C` to clean it
-up in place with Apple's on-device model.
+up in place with Apple's on-device model. For expressive reading, Settings → Read
+Aloud offers local speech-LLM voices (Chatterbox, Qwen3-TTS, Orpheus, Sesame CSM,
+MisoTTS) on the Apple Silicon GPU through mlx-audio; see [Read Aloud](docs/read-aloud.md).
 
 On first launch, uttr downloads the Parakeet model (~600 MB) in the background. The menu bar shows a loading indicator until it's ready.
 
@@ -40,6 +43,7 @@ See [Configuration Guide](docs/configuration.md) for all options.
 
 - [Getting Started](docs/getting-started.md) — Detailed setup and first-run guide
 - [Configuration](docs/configuration.md) — All settings explained
+- [Read Aloud](docs/read-aloud.md) — Voices, expressive speech-LLMs, and model management
 - [Architecture](docs/architecture.md) — How it works (for contributors)
 - [Development](docs/development.md) — Building from source
 - [Troubleshooting](docs/troubleshooting.md) — Common issues and fixes

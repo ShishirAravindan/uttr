@@ -42,7 +42,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `SettingsManager.swift` | YAML persistence, provider/device/hotkey changes |
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
 | `HistoryManager.swift` | Recent entries labeled by kind, up to the configured limit; JSON persistence; deletes recordings of removed entries; copy/clear APIs |
-| `MenuBarPopoverView.swift` | Recording controls and callbacks through `PopoverViewModel` |
+| `MenuBarPopoverView.swift` | Recording and read-aloud controls, with the sentence being read, through `PopoverViewModel` |
 | `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings, permissions, and history UI |
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
@@ -50,8 +50,11 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `Cleanup/TextCleanup.swift`, `Cleanup/CleanupOutputChecks.swift`, `Cleanup/AppleCleanupBackend.swift` | On-device text cleanup with deadlines and output checks. See [Cleanup](cleanup.md). |
 | `Cleanup/SelectionCleanup.swift` | ⌥C: cleans the frontmost selection and pastes over it, or reports why it didn't |
 | `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, restoring the clipboard |
-| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the ⌥R toggle that records a history entry and switches voices between reads |
-| `Speech/KokoroSpeechEngine.swift`, `Speech/SpeechChunks.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU; synthesizes sentence by sentence while earlier sentences play |
+| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift`, `Speech/SystemSpeechEngine.swift` | Read-aloud: the `SpeechEngine` protocol, the ⌥R toggle that records a history entry, read-aloud state with pause/skip, voice switches between reads, and the system voice |
+| `Speech/SpeechPipeline.swift`, `Speech/SpeechAudioPlayer.swift`, `Speech/SpeechChunks.swift` | Chunked synthesis that stays two chunks ahead of playback, gapless playback with pitch-preserving speed, sentence splitting and grouping |
+| `Speech/KokoroSpeechEngine.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU |
+| `Speech/MLXSpeechEngine.swift`, `Speech/MLXAudioRuntime.swift`, `Speech/MLXAudioInstaller.swift`, `Speech/SpeechModels.swift`, `Speech/WAVDecoder.swift`, `Resources/mlx_audio_worker.py` | Expressive speech-LLM voices on the GPU through a local mlx-audio worker that starts on demand and unloads when idle. See [Read Aloud](read-aloud.md). |
+| `Speech/ReadAloudVoices.swift`, `ReadAloudSettingsView.swift` | Voice selection, runtime install, model downloads and management |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection
@@ -88,6 +91,8 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
 | Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
 | Kokoro voice models | FluidAudio's cache under `~/.cache/fluidaudio/Models/`, about 320 MB; downloaded the first time ⌥R is used, loaded on the first ⌥R of each launch |
+| mlx-audio runtime and worker log | `~/Library/Application Support/uttr/mlx-audio/` (`venv/`, `worker.log`); installed when an expressive voice is first selected |
+| Expressive voice models | Hugging Face cache, `~/.cache/huggingface/hub/models--…`; downloaded when selected in Settings, deletable from Finder |
 
 AppDelegate requests a history update before attempting paste. With dictation
 cleanup on, that happens after cleanup, so a quit during those 2 seconds loses

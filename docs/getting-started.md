@@ -75,8 +75,10 @@ on the recording and hardware.
 
 ### Read Aloud
 
-Select text in any app and press `⌥R` to hear it. Press `⌥R` again to stop. The
-menu-bar icon shows a speaker while it reads, and History keeps what was read.
+Select text in any app and press `⌥R` to hear it, or use the speaker button in
+the menu-bar popover. Press `⌥R` again to stop. While it reads, the menu-bar
+speaker's waves move, and the popover shows the sentence being read with pause,
+skip, and stop. History keeps what was read.
 uttr reads the selection by copying it and then restores your clipboard, so it
 needs the same Accessibility permission as pasting. Read-aloud is ignored while
 recording, and starting a recording stops it.
@@ -88,6 +90,11 @@ them from the cache. Until Kokoro is ready, or if it fails to load, the macOS
 system voice reads instead, so that first read uses the system voice. A voice
 that becomes ready mid-sentence takes over after the current read-aloud. If you
 never use read-aloud, uttr never downloads or loads Kokoro.
+
+For reading with expression, choose an expressive voice in Settings → Read Aloud:
+speech-LLMs such as Chatterbox, Qwen3-TTS, Orpheus, Sesame CSM, and MisoTTS run
+on the GPU through mlx-audio and take their tone from the text. Choosing one
+installs mlx-audio and downloads the model (0.9–9 GB). See [Read Aloud](read-aloud.md).
 
 ### Clean Up a Selection
 
@@ -128,4 +135,5 @@ share this history and the settings file.
 ## Next Steps
 
 - [Configuration Guide](configuration.md) — All settings explained
+- [Read Aloud](read-aloud.md) — Voices, expressive models, and how read-aloud works
 - [Troubleshooting](troubleshooting.md) — Common issues and fixes
