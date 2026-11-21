@@ -129,6 +129,15 @@ class MenuBarIconManager: ObservableObject {
         scheduleRestore(after: 0.8, restore)
     }
     
+    /// Show that the text was left on the clipboard instead of pasted
+    func showClipboardState(then restore: (() -> Void)? = nil) {
+        logger.log("[MenuBarIconManager] Showing clipboard state", level: .debug)
+        transitionToIcon("doc.on.clipboard.fill", withAnimation: true)
+        currentState = .success
+
+        scheduleRestore(after: 1.2, restore)
+    }
+
     /// Show error state briefly
     func showErrorState(then restore: (() -> Void)? = nil) {
         logger.log("[MenuBarIconManager] Showing error state", level: .debug)

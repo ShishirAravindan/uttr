@@ -51,6 +51,9 @@ final class MenuBarFeedback: ActionFeedback {
         case .success:
             notifications.showTranscriptionSuccess()
             if flash { icon.showSuccessState(then: restore) }
+        case .leftOnClipboard:
+            notifications.showTranscriptionSuccess()
+            if flash { icon.showClipboardState(then: restore) }
         case .failure(let message):
             notifications.showTranscriptionError(message)
             if flash { icon.showErrorState(then: restore) }

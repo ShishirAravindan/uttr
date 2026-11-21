@@ -8,11 +8,13 @@ enum HistoryRecord {
 
 enum ActionOutcome: Equatable {
     case success
+    /// The frontmost app changed, so the text waits on the clipboard instead.
+    case leftOnClipboard
     case failure(String)
 }
 
 enum Delivery: Equatable {
-    case pasted, failed
+    case pasted, failed, leftOnClipboard
 }
 
 /// Status feedback, driven from coordinator transitions only.
@@ -46,6 +48,7 @@ struct ActionServices {
     var stopSpeech: @MainActor () -> Void
     var frontmostPID: @MainActor () -> pid_t?
     var paste: @MainActor (String, @escaping @MainActor (Bool) -> Void) -> Void
+    var copyToClipboard: @MainActor (String) -> Void
     var record: @MainActor (HistoryRecord) -> Void
     var prepareVoice: @MainActor () async -> Void
 }
@@ -240,11 +243,19 @@ final class ActionCoordinator {
     private func concludeDelivery(_ run: Int, _ delivery: Delivery, failure: String) {
         switch delivery {
         case .pasted: conclude(run, .success)
+        case .leftOnClipboard: conclude(run, .leftOnClipboard)
         case .failed: conclude(run, .failure(failure))
         }
     }
 
+    /// Pastes only into the app the action started in; if focus moved, the text waits on the clipboard.
     private func deliver(_ text: String, target: pid_t?, done: @escaping @MainActor (Delivery) -> Void) {
+        if let target, let front = services.frontmostPID(), front != target {
+            logger.log("Frontmost app changed; leaving the text on the clipboard", level: .info)
+            services.copyToClipboard(text)
+            done(.leftOnClipboard)
+            return
+        }
         services.paste(text) { done($0 ? .pasted : .failed) }
     }
 
