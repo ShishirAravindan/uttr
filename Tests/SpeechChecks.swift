@@ -9,6 +9,7 @@ struct SpeechChecks {
         checkChunks()
         checkGroups()
         await checkVoiceSwitching()
+        await checkStates()
         print("Speech checks passed")
     }
 
@@ -113,6 +114,50 @@ struct SpeechChecks {
     }
 
     @MainActor
+    static func checkStates() async {
+        let voice = FakeVoice()
+        let readAloud = ReadAloud(engine: voice, logger: logger)
+        var states: [ReadAloudState] = []
+        var failures: [String] = []
+        readAloud.onStateChange = { states.append($0) }
+        readAloud.onFailed = { failures.append($0) }
+
+        readAloud.speak("Hello there. Bye.")
+        precondition(readAloud.state == .speaking(nil, isPaused: false))
+        let progress = SpeechProgress(index: 0, count: 2, text: "Hello there.", isBuffering: false)
+        voice.onProgress?(progress)
+        precondition(readAloud.state == .speaking(progress, isPaused: false), "progress reaches the popover")
+
+        readAloud.togglePause()
+        precondition(voice.paused && readAloud.state == .speaking(progress, isPaused: true))
+        readAloud.togglePause()
+        precondition(!voice.paused && readAloud.state == .speaking(progress, isPaused: false))
+        readAloud.skip()
+        precondition(voice.skips == 1)
+
+        voice.speaking = false
+        voice.onFailed?("voice crashed")
+        precondition(readAloud.state == .idle && failures == ["voice crashed"], "a failing voice ends the read and says why")
+        precondition(states.last == .idle)
+
+        // Callbacks from a voice that has been replaced change nothing.
+        readAloud.useEngine(FakeVoice())
+        await settle()
+        voice.onProgress?(progress)
+        voice.onFinished?()
+        precondition(readAloud.state == .idle && voice.teardowns == 1)
+
+        // A voice that can't start leaves read-aloud idle rather than stuck speaking.
+        let silent = FakeVoice()
+        silent.startsSpeaking = false
+        let quiet = ReadAloud(engine: silent, logger: logger)
+        var idle = 0
+        quiet.onIdle = { idle += 1 }
+        quiet.speak("   ")
+        precondition(quiet.state == .idle && idle == 1)
+    }
+
+    @MainActor
     static func settle() async {
         for _ in 0..<20 { await Task.yield() }
     }
@@ -121,11 +166,20 @@ struct SpeechChecks {
 @MainActor
 final class FakeVoice: SpeechEngine {
     var speaking = false
+    var startsSpeaking = true
+    var paused = false
     var stops = 0
+    var skips = 0
     var teardowns = 0
     var onFinished: (() -> Void)?
+    var onFailed: ((String) -> Void)?
+    var onProgress: ((SpeechProgress) -> Void)?
     var isSpeaking: Bool { speaking }
-    func speak(_ text: String) { speaking = true }
-    func stop() { speaking = false; stops += 1 }
+    var isPaused: Bool { paused }
+    func speak(_ text: String) { speaking = startsSpeaking }
+    func pause() { paused = true }
+    func resume() { paused = false }
+    func skip() { skips += 1 }
+    func stop() { speaking = false; paused = false; stops += 1 }
     func teardown() async { teardowns += 1 }
 }

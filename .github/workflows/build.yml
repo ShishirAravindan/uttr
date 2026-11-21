@@ -55,3 +55,9 @@ jobs:
             Swift/Speech/SpeechEngine.swift Swift/Speech/SystemSpeechEngine.swift Swift/Speech/ReadAloud.swift \
             Swift/Speech/SpeechChunks.swift Tests/SpeechChecks.swift -o "$RUNNER_TEMP/uttr-speech-checks"
           "$RUNNER_TEMP/uttr-speech-checks"
+
+      - name: Check Speech Pipeline
+        run: |
+          swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
+            Tests/SpeechPipelineChecks.swift -o "$RUNNER_TEMP/uttr-pipeline-checks"
+          "$RUNNER_TEMP/uttr-pipeline-checks"
