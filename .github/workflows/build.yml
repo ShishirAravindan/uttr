@@ -60,3 +60,8 @@ jobs:
             Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
             Tests/SpeechChecks.swift -o "$RUNNER_TEMP/uttr-speech-checks"
           "$RUNNER_TEMP/uttr-speech-checks"
+
+      - name: Check Coordination
+        run: |
+          swiftc -parse-as-library Swift/Coordination/ActionPolicy.swift Tests/CoordinationChecks.swift -o "$RUNNER_TEMP/uttr-coordination-checks"
+          "$RUNNER_TEMP/uttr-coordination-checks"
