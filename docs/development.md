@@ -135,6 +135,8 @@ swiftc Swift/Logger.swift Swift/HistoryManager.swift Tests/HistoryChecks.swift -
 swiftc -parse-as-library Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
   Tests/CleanupEngineChecks.swift -o /tmp/uttr-cleanup-checks
 /tmp/uttr-cleanup-checks
+swiftc Swift/ClipboardTransaction.swift Tests/ClipboardChecks.swift -o /tmp/uttr-clipboard-checks
+/tmp/uttr-clipboard-checks
 swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
 /tmp/uttr-selection-checks
 swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Selection/SelectionReader.swift \
@@ -143,7 +145,8 @@ swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Sel
 /tmp/uttr-speech-checks
 ```
 
-The selection and speech checks use fake voices: they never post Cmd+C, read the
+The clipboard check uses a private named pasteboard, never the general one. The
+selection and speech checks use fake voices: they never post Cmd+C, read the
 clipboard, or play audio. The evaluation with the real model is described in
 [Cleanup](cleanup.md#evaluation).
 
