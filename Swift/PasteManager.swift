@@ -21,9 +21,7 @@ enum PasteManagerError: Error, LocalizedError {
 class PasteManager {
     
     // MARK: - Properties
-    private let pasteboard = NSPasteboard.general
     private let logger = Logger(componentName: "PasteManager")
-    private var originalClipboardContent: String?
     
     // MARK: - Public Methods
     func pasteText(_ text: String, completion: @escaping (Bool) -> Void) {
@@ -34,12 +32,10 @@ class PasteManager {
             return
         }
         
-        // Save original clipboard content
-        saveOriginalClipboard()
-        
-        // Copy text to clipboard
-        guard copyToClipboard(text) else {
+        var clipboard = ClipboardTransaction()
+        guard clipboard.write(text) else {
             logger.log("Failed to copy text to clipboard", level: .error)
+            clipboard.restore()
             completion(false)
             return
         }
@@ -49,7 +45,7 @@ class PasteManager {
         
         // Restore original clipboard after a brief delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.restoreOriginalClipboard()
+            clipboard.restore()
         }
         
         if success {
@@ -62,34 +58,6 @@ class PasteManager {
     }
     
     // MARK: - Private Methods
-    private func saveOriginalClipboard() {
-        originalClipboardContent = pasteboard.string(forType: .string)
-        logger.log("Saved original clipboard content", level: .debug)
-    }
-    
-    private func restoreOriginalClipboard() {
-        if let originalContent = originalClipboardContent {
-            pasteboard.clearContents()
-            pasteboard.setString(originalContent, forType: .string)
-            logger.log("Restored original clipboard content", level: .debug)
-        }
-        originalClipboardContent = nil
-    }
-    
-    private func copyToClipboard(_ text: String) -> Bool {
-        // Clear existing content
-        pasteboard.clearContents()
-        
-        // Set new text content
-        guard pasteboard.setString(text, forType: .string) else {
-            logger.log("Failed to set text in clipboard", level: .error)
-            return false
-        }
-        
-        logger.log("Text copied to clipboard successfully", level: .info)
-        return true
-    }
-    
     private func simulatePasteKeyEvent() -> Bool {
         // Create Cmd+V key event
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
