@@ -75,7 +75,7 @@ struct CleanupProfile {
 @MainActor
 final class TextCleanup {
     /// The system model's context is small; longer text is left alone.
-    static let maxCharacters = 4000
+    nonisolated static let maxCharacters = 4000
 
     private let backend: CleanupGenerating
     private let waitForDeadline: (UInt64) async throws -> Void
@@ -186,5 +186,21 @@ private final class PendingCleanup {
         deadline = nil
         continuation?.resume(with: result)
         continuation = nil
+    }
+}
+
+extension CleanupOutcome {
+    /// What to tell someone whose selection was left as it was.
+    var selectionMessage: String {
+        switch self {
+        case .cleaned, .unchanged: return "Selection cleaned up"
+        case .unavailable: return "Cleanup needs Apple Intelligence on macOS 26 or later"
+        case .tooLong: return "Selection is too long to clean up (over \(TextCleanup.maxCharacters) characters)"
+        case .unsupportedLanguage: return "Cleanup doesn't support this language"
+        case .busy: return "Cleanup is still finishing the last request"
+        case .timedOut: return "Cleanup took too long"
+        case .failed: return "Cleanup failed"
+        case .rejected: return "Cleanup would have lost content, so the selection was left as is"
+        }
     }
 }
