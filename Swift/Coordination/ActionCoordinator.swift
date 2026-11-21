@@ -123,10 +123,19 @@ final class ActionCoordinator {
         sync()
     }
 
+    /// Cancels every run. A transcript still being cleaned is kept in history as it was.
     func shutDown() {
         guard !isShutDown else { return }
         isShutDown = true
         if state == .capturing { _ = services.stopCapture() }
+        for run in runs.values {
+            if let text = run.transcript {
+                services.record(.dictation(text: text, audioFileName: run.audioFileName, original: nil))
+            }
+            run.task?.cancel()
+        }
+        runs = [:]
+        voiceTask?.cancel()
         state = .idle
     }
 
