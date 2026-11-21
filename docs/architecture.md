@@ -14,7 +14,7 @@ recording-to-paste flow:
 
 1. Launch or a provider change calls `prepare()` to download/load the selected
    model. Recording is blocked until `isProviderReady` is true.
-2. The registered hotkey or popover starts `AudioRecorder`. A second invocation
+2. The registered hotkey starts `AudioRecorder`. A second invocation
    stops capture and hands back a temporary WAV at the input's native format.
 3. An asynchronous task calls `FluidAudioProvider.transcribe(audioFileURL:)`.
 4. On the main actor, if Clean up dictation is on, AppDelegate first runs
@@ -43,7 +43,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `SettingsManager.swift` | YAML persistence, provider/device/hotkey changes |
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
 | `HistoryManager.swift` | Recent entries labeled by kind, up to the configured limit; JSON persistence; deletes recordings of removed entries; copy/clear APIs |
-| `MenuBarPopoverView.swift` | Recording controls and callbacks through `PopoverViewModel` |
+| `MenuBarPopoverView.swift` | Menu-bar popover with History, Settings, and Quit buttons, wired through `PopoverViewModel` |
 | `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings, permissions, and history UI |
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
