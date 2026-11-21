@@ -113,9 +113,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         setupCleanup()
 
         // Wire popover callbacks
-        popoverViewModel.hotkeyDisplay = settingsManager.getHotkeyDisplayString()
-        popoverViewModel.onStartRecording = { [weak self] in self?.startRecording() }
-        popoverViewModel.onStopRecording  = { [weak self] in self?.stopRecording() }
         popoverViewModel.onOpenSettings   = { [weak self] in self?.openSettingsWindow() }
         popoverViewModel.onOpenHistory    = { [weak self] in self?.openHistoryWindow() }
 
@@ -152,7 +149,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             queue: .main
         ) { [weak self] _ in
             self?.hotkeyManager?.refreshHotkeyConfiguration()
-            self?.popoverViewModel.hotkeyDisplay = self?.settingsManager.getHotkeyDisplayString() ?? ""
         }
 
         // Show dock icon whenever a titled window is active
@@ -228,7 +224,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         let popoverView = MenuBarPopoverView(viewModel: popoverViewModel)
 
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 220, height: 46)
+        popover?.contentSize = NSSize(width: 140, height: 46)
         popover?.behavior = .transient
         popover?.animates = true
         popover?.contentViewController = NSHostingController(rootView: popoverView)
@@ -344,7 +340,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         do {
             try audioRecorder?.startRecording()
             isRecording = true
-            popoverViewModel.isRecording = true
             menuBarIconManager?.setRecordingState()
             notificationManager?.showRecordingStarted()
             logger?.log("Recording started")
@@ -364,7 +359,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         // on isRecording, so every later press re-entered this method, hit the
         // same nil, and returned again.
         isRecording = false
-        popoverViewModel.isRecording = false
 
         guard let audioFileURL = audioRecorder?.stopRecording() else {
             logger?.log("Failed to get audio file", level: .error)
@@ -387,7 +381,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         guard isRecording else { return }
 
         isRecording = false
-        popoverViewModel.isRecording = false
         logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
         notificationManager?.showTranscriptionError("Microphone disconnected")
         menuBarIconManager?.showErrorState()

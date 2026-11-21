@@ -3,17 +3,8 @@ import SwiftUI
 // MARK: - View model (owned by AppDelegate, observed by the view)
 
 class PopoverViewModel: ObservableObject {
-    @Published var isRecording = false
-    @Published var hotkeyDisplay: String = "⌥L"
-
-    var onStartRecording: (() -> Void)?
-    var onStopRecording: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onOpenHistory: (() -> Void)?
-
-    func toggleRecording() {
-        if isRecording { onStopRecording?() } else { onStartRecording?() }
-    }
 }
 
 // MARK: - View
@@ -24,16 +15,6 @@ struct MenuBarPopoverView: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            ToolButton(
-                icon: viewModel.isRecording ? "stop.fill" : "mic",
-                tint: viewModel.isRecording ? recordingTint : Color.textPrimary(for: scheme),
-                tooltip: viewModel.isRecording
-                    ? "Stop recording  \(viewModel.hotkeyDisplay)"
-                    : "Start recording  \(viewModel.hotkeyDisplay)",
-                scheme: scheme,
-                action: viewModel.toggleRecording
-            )
-            divider
             ToolButton(
                 icon: "list.bullet.rectangle",
                 tint: Color.textPrimary(for: scheme),
@@ -59,7 +40,7 @@ struct MenuBarPopoverView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .frame(width: 220)
+        .frame(width: 140)
     }
 
     private var divider: some View {
@@ -67,10 +48,6 @@ struct MenuBarPopoverView: View {
             .fill(Color.rowSeparator(for: scheme))
             .frame(width: 1, height: 18)
             .padding(.horizontal, 4)
-    }
-
-    private var recordingTint: Color {
-        scheme == .dark ? Color(hex: 0xE07060) : Color(hex: 0xB94A3D)
     }
 }
 
