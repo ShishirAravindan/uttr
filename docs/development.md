@@ -143,6 +143,8 @@ swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Cli
   Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
   Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
+swiftc -parse-as-library Swift/Coordination/ActionPolicy.swift Tests/CoordinationChecks.swift -o /tmp/uttr-coordination-checks
+/tmp/uttr-coordination-checks
 ```
 
 The clipboard check uses a private named pasteboard, never the general one. The
