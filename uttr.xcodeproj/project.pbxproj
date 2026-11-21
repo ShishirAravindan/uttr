@@ -39,6 +39,7 @@
 		AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700312E9B000000000001 /* SpeechChunks.swift */; };
 		AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */; };
 		B01800022E9B000000000001 /* SelectionCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01800012E9B000000000001 /* SelectionCleanup.swift */; };
+		AC190122E9B000000000001 /* ActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190112E9B000000000001 /* ActionPolicy.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -75,6 +76,7 @@
 		AF1700312E9B000000000001 /* SpeechChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechChunks.swift; path = Swift/Speech/SpeechChunks.swift; sourceTree = "<group>"; };
 		AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KokoroSpeechEngine.swift; path = Swift/Speech/KokoroSpeechEngine.swift; sourceTree = "<group>"; };
 		B01800012E9B000000000001 /* SelectionCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionCleanup.swift; path = Swift/Cleanup/SelectionCleanup.swift; sourceTree = "<group>"; };
+		AC190112E9B000000000001 /* ActionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionPolicy.swift; path = Swift/Coordination/ActionPolicy.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +110,7 @@
 				00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */,
 				AB1300012E9B000000000001 /* AudioDeviceManager.swift */,
 				B01800012E9B000000000001 /* SelectionCleanup.swift */,
+				AC190112E9B000000000001 /* ActionPolicy.swift */,
 				AE1600212E9B000000000001 /* CleanupOutputChecks.swift */,
 				AE1600112E9B000000000001 /* AppleCleanupBackend.swift */,
 				AE1600012E9B000000000001 /* TextCleanup.swift */,
@@ -234,6 +237,7 @@
 				00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */,
 				AB1300022E9B000000000001 /* AudioDeviceManager.swift in Sources */,
 				B01800022E9B000000000001 /* SelectionCleanup.swift in Sources */,
+				AC190122E9B000000000001 /* ActionPolicy.swift in Sources */,
 				AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */,
 				AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AE1600022E9B000000000001 /* TextCleanup.swift in Sources */,
