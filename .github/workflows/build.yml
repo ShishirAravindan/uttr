@@ -61,3 +61,17 @@ jobs:
           swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
             Tests/SpeechPipelineChecks.swift -o "$RUNNER_TEMP/uttr-pipeline-checks"
           "$RUNNER_TEMP/uttr-pipeline-checks"
+
+      - name: Check mlx-audio Runtime
+        run: |
+          swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
+            Swift/Speech/SpeechChunks.swift Swift/Speech/SpeechModels.swift Swift/Speech/WAVDecoder.swift \
+            Swift/Speech/MLXAudioRuntime.swift Swift/Speech/MLXAudioInstaller.swift Swift/Speech/MLXSpeechEngine.swift \
+            Tests/MLXAudioChecks.swift -o "$RUNNER_TEMP/uttr-mlx-checks"
+          "$RUNNER_TEMP/uttr-mlx-checks"
+
+      - name: Check mlx-audio Worker
+        run: |
+          python3 -m venv "$RUNNER_TEMP/worker-venv"
+          "$RUNNER_TEMP/worker-venv/bin/pip" install --quiet numpy
+          "$RUNNER_TEMP/worker-venv/bin/python" Tests/mlx_audio_worker_checks.py
