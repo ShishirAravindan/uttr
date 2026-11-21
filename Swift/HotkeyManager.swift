@@ -42,6 +42,11 @@ enum HotkeyAction: UInt32, CaseIterable {
     }
 }
 
+/// Only presses are registered today; releases are reserved for hold-to-talk.
+enum HotkeyPhase {
+    case pressed, released
+}
+
 // MARK: - HotkeyManager Class
 class HotkeyManager {
     
@@ -54,7 +59,7 @@ class HotkeyManager {
     private let logger = Logger()
     private let settingsManager: SettingsManager
     
-    var onHotkeyPressed: ((HotkeyAction) -> Void)?
+    var onHotkeyEvent: ((HotkeyAction, HotkeyPhase) -> Void)?
     
     // MARK: - Initialization
     init(settingsManager: SettingsManager) {
@@ -203,7 +208,7 @@ class HotkeyManager {
             guard let self = self else { return }
             let display = self.settingsManager.displayString(for: self.settingsManager.hotkey(for: action))
             self.logger.log("[HotkeyManager] \(action) hotkey pressed: \(display)", level: .info)
-            self.onHotkeyPressed?(action)
+            self.onHotkeyEvent?(action, .pressed)
         }
     }
     
@@ -217,7 +222,7 @@ class HotkeyManager {
                 let hotkey = self.settingsManager.hotkey(for: action)
                 if actualModifiers == hotkey.cocoaModifiers && Int(event.keyCode) == hotkey.keyCode {
                     self.logger.log("[HotkeyManager] Local \(action) hotkey pressed: \(self.settingsManager.displayString(for: hotkey))", level: .info)
-                    self.onHotkeyPressed?(action)
+                    self.onHotkeyEvent?(action, .pressed)
                     return nil // Swallow the event
                 }
             }

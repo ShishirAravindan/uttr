@@ -102,7 +102,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         )
         logger?.log("TranscriptionProvider initialized: \(settingsManager.transcriptionProviderID)", level: .debug)
 
-        hotkeyManager?.onHotkeyPressed = { [weak self] action in
+        hotkeyManager?.onHotkeyEvent = { [weak self] action, phase in
+            guard phase == .pressed else { return }
             switch action {
             case .record: self?.handleTranscribeHotkeyPress()
             case .readAloud: self?.handleReadAloudHotkeyPress()
