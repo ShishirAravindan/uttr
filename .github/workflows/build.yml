@@ -44,6 +44,11 @@ jobs:
             Tests/CleanupEngineChecks.swift -o "$RUNNER_TEMP/uttr-cleanup-checks"
           "$RUNNER_TEMP/uttr-cleanup-checks"
 
+      - name: Check Clipboard
+        run: |
+          swiftc Swift/ClipboardTransaction.swift Tests/ClipboardChecks.swift -o "$RUNNER_TEMP/uttr-clipboard-checks"
+          "$RUNNER_TEMP/uttr-clipboard-checks"
+
       - name: Check Selection
         run: |
           swiftc Swift/Logger.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o "$RUNNER_TEMP/uttr-selection-checks"
