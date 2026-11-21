@@ -294,6 +294,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                         DispatchQueue.main.async { MainActor.assumeIsolated { done(success) } }
                     }
                 },
+                copyToClipboard: { text in
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                },
                 record: { record in
                     switch record {
                     case .dictation(let text, let audio, let original):
