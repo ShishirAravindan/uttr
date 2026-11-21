@@ -1,55 +1,41 @@
-import AVFoundation
+import Foundation
+
+/// Where read-aloud is within the text it was given.
+struct SpeechProgress: Equatable {
+    /// The chunk playing, or about to play once it is synthesized.
+    var index: Int
+    var count: Int
+    var text: String
+    /// True while the chunk at `index` is still being synthesized.
+    var isBuffering: Bool
+}
 
 /// Reads text aloud. Read-aloud only talks to this protocol, so the voice can change
 /// without touching selection, history, or status feedback.
 @MainActor
 protocol SpeechEngine: AnyObject {
     var isSpeaking: Bool { get }
+    var isPaused: Bool { get }
     /// Called when speech ends on its own; not after `stop()`.
     var onFinished: (() -> Void)? { get set }
+    /// Called when speech can't continue. Speech has stopped; `onFinished` is not called.
+    var onFailed: ((String) -> Void)? { get set }
+    var onProgress: ((SpeechProgress) -> Void)? { get set }
     func speak(_ text: String)
+    func pause()
+    func resume()
+    /// Moves on to the next chunk; at the last chunk, speech finishes.
+    func skip()
     func stop()
     func teardown() async
 }
 
-/// The macOS system voice: always available, nothing to download.
-@MainActor
-final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDelegate {
-    private let synthesizer = AVSpeechSynthesizer()
-    private let logger = Logger(componentName: "SystemSpeech")
-    private var current: AVSpeechUtterance?
-
-    var onFinished: (() -> Void)?
-    var isSpeaking: Bool { current != nil }
-
-    override init() {
-        super.init()
-        synthesizer.delegate = self
-    }
-
-    func speak(_ text: String) {
-        stop()
-        let utterance = AVSpeechUtterance(string: text)
-        current = utterance
-        synthesizer.speak(utterance)
-        logger.log("Speaking \(text.count) characters with the system voice", level: .info)
-    }
-
-    func stop() {
-        current = nil
-        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
-    }
-
-    func teardown() async {
-        stop()
-    }
-
-    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        let id = ObjectIdentifier(utterance)
-        Task { @MainActor [weak self] in
-            guard let self, let current = self.current, ObjectIdentifier(current) == id else { return }
-            self.current = nil
-            self.onFinished?()
-        }
-    }
+/// Defaults for voices that can't pause, skip, report progress, or fail mid-speech.
+extension SpeechEngine {
+    var isPaused: Bool { false }
+    var onFailed: ((String) -> Void)? { get { nil } set {} }
+    var onProgress: ((SpeechProgress) -> Void)? { get { nil } set {} }
+    func pause() {}
+    func resume() {}
+    func skip() {}
 }

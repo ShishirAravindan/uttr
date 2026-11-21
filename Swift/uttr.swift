@@ -309,7 +309,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         guard !didPrepareKokoro else { return }
         didPrepareKokoro = true
         MainActor.assumeIsolated {
-            let kokoro = KokoroSpeechEngine()
+            let player = SpeechAudioPlayer()
+            player.onInterrupted = { [weak self] in self?.readAloud?.stop() }
+            let kokoro = KokoroSpeechEngine(player: player)
             Task { @MainActor [weak self] in
                 guard await kokoro.prepare() else { return }
                 self?.readAloud?.useEngine(kokoro)
