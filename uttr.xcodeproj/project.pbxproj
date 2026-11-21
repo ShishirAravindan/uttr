@@ -18,6 +18,7 @@
 		00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516B2E24C16D00BE5FC7 /* uttr.swift */; };
 		00EA516D2E24C16D00BE5FC7 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */; };
 		00EA51702E24D05200BE5FC7 /* Logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA516F2E24D05200BE5FC7 /* Logger.swift */; };
+		AC1800022E9B000000000001 /* ClipboardTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1800012E9B000000000001 /* ClipboardTransaction.swift */; };
 		00EA51722E24D1F100BE5FC7 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00EA51712E24D1F100BE5FC7 /* PasteManager.swift */; };
 		6A8FDBE42E8E057900D3C68F /* SettingsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FDBE22E8E057900D3C68F /* SettingsTabView.swift */; };
 		6A8FDBE52E8E057900D3C68F /* MenuBarPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A8FDBE12E8E057900D3C68F /* MenuBarPopoverView.swift */; };
@@ -54,6 +55,7 @@
 		00EA516B2E24C16D00BE5FC7 /* uttr.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = uttr.swift; path = Swift/uttr.swift; sourceTree = "<group>"; };
 		00EA516E2E24C49D00BE5FC7 /* uttr.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = uttr.entitlements; sourceTree = "<group>"; };
 		00EA516F2E24D05200BE5FC7 /* Logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Logger.swift; path = Swift/Logger.swift; sourceTree = "<group>"; };
+		AC1800012E9B000000000001 /* ClipboardTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClipboardTransaction.swift; path = Swift/ClipboardTransaction.swift; sourceTree = "<group>"; };
 		00EA51712E24D1F100BE5FC7 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PasteManager.swift; path = Swift/PasteManager.swift; sourceTree = "<group>"; };
 		6A8FDBE02E8E057900D3C68F /* HomeTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HomeTabView.swift; path = Swift/HomeTabView.swift; sourceTree = "<group>"; };
 		6A8FDBE12E8E057900D3C68F /* MenuBarPopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MenuBarPopoverView.swift; path = Swift/MenuBarPopoverView.swift; sourceTree = "<group>"; };
@@ -101,6 +103,7 @@
 				00AE3B742E42D5EB00CD52A8 /* SettingsManager.swift */,
 				0022F3142E53036500C45DA7 /* PermissionManager.swift */,
 				00EA51712E24D1F100BE5FC7 /* PasteManager.swift */,
+				AC1800012E9B000000000001 /* ClipboardTransaction.swift */,
 				00EA516E2E24C49D00BE5FC7 /* uttr.entitlements */,
 				00EA516A2E24C16D00BE5FC7 /* AudioRecorder.swift */,
 				AB1300012E9B000000000001 /* AudioDeviceManager.swift */,
@@ -217,6 +220,7 @@
 				00869A152E56E33600D65D58 /* MenuBarIconManager.swift in Sources */,
 				00E612AA2E593E66002E23F2 /* HotkeyRecorder.swift in Sources */,
 				00EA51722E24D1F100BE5FC7 /* PasteManager.swift in Sources */,
+				AC1800022E9B000000000001 /* ClipboardTransaction.swift in Sources */,
 				000968742E24DD7C000173E2 /* HotkeyManager.swift in Sources */,
 				00AE3B762E42D5EB00CD52A8 /* NotificationManager.swift in Sources */,
 				0022F3152E53036500C45DA7 /* PermissionManager.swift in Sources */,
