@@ -338,8 +338,8 @@ final class ActionCoordinator {
 
     private func finishDictation(_ run: Int, _ result: CleanupResult, audio: String?, original: String?, target: pid_t?) {
         services.record(.dictation(text: result.text, audioFileName: audio, original: original))
+        // No sync: the paste settles within a run-loop turn, and the icon keeps its last phase.
         setStage(run, .inserting(run: run, target: target))
-        sync()
         deliver(result.text, target: target) { [weak self] delivery in
             self?.concludeDelivery(run, delivery, failure: "Failed to paste text at cursor")
         }
@@ -374,7 +374,6 @@ final class ActionCoordinator {
         case .cleaned:
             services.record(.cleanup(text: result.text, original: result.original))
             setStage(run, .instructing(run: run, stage: .inserting, target: target))
-            sync()
             deliver(result.text, target: target) { [weak self] delivery in
                 self?.concludeDelivery(run, delivery, failure: "Failed to paste the cleaned text")
             }

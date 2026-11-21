@@ -63,5 +63,7 @@ jobs:
 
       - name: Check Coordination
         run: |
-          swiftc -parse-as-library Swift/Coordination/ActionPolicy.swift Tests/CoordinationChecks.swift -o "$RUNNER_TEMP/uttr-coordination-checks"
+          swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
+            Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
+            Tests/CoordinationChecks.swift -o "$RUNNER_TEMP/uttr-coordination-checks"
           "$RUNNER_TEMP/uttr-coordination-checks"

@@ -143,14 +143,17 @@ swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Cli
   Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
   Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
-swiftc -parse-as-library Swift/Coordination/ActionPolicy.swift Tests/CoordinationChecks.swift -o /tmp/uttr-coordination-checks
+swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
+  Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
+  Tests/CoordinationChecks.swift -o /tmp/uttr-coordination-checks
 /tmp/uttr-coordination-checks
 ```
 
 The clipboard check uses a private named pasteboard, never the general one. The
 selection and speech checks use fake voices: they never post Cmd+C, read the
-clipboard, or play audio. The evaluation with the real model is described in
-[Cleanup](cleanup.md#evaluation).
+clipboard, or play audio. The coordination check drives the action coordinator with
+fake capture, models, selection, speech, paste, and focus. The evaluation with the
+real model is described in [Cleanup](cleanup.md#evaluation).
 
 ## Code Style
 
