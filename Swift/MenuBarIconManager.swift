@@ -161,9 +161,23 @@ class MenuBarIconManager: ObservableObject {
         }
     }
     
+    /// One soft dip in the icon's opacity, a single breath of the recording pulse,
+    /// for a hotkey that was ignored. The state and icon stay as they are.
+    func nudge() {
+        guard let button = statusItem?.button else { return }
+        button.wantsLayer = true
+        let dip = CAKeyframeAnimation(keyPath: "opacity")
+        dip.values = [1.0, 0.4, 1.0]
+        dip.keyTimes = [0, 0.5, 1]
+        dip.timingFunctions = [CAMediaTimingFunction(name: .easeInEaseOut), CAMediaTimingFunction(name: .easeInEaseOut)]
+        dip.duration = 0.4
+        button.layer?.add(dip, forKey: nudgeKey)
+    }
+
     // MARK: - Private Methods
 
     private let recordingPulseKey = "recordingPulse"
+    private let nudgeKey = "nudge"
 
     private func startRecordingPulse() {
         guard let button = statusItem?.button else { return }
