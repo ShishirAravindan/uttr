@@ -23,6 +23,31 @@ final class SelectionCleanup {
         self.instructions = instructions
     }
 
+    var isAvailable: Bool { cleanup.isAvailable }
+
+    func readSelection() async -> String? {
+        await reader.readSelection()?.text
+    }
+
+    func clean(_ text: String) async throws -> CleanupResult {
+        try await cleanup.clean(text, instructions: instructions(), profile: .selection)
+    }
+
+    func deliver(_ result: CleanupResult) {
+        logger.log("Selection cleanup: \(result.outcome.rawValue)", level: .info)
+        switch result.outcome {
+        case .cleaned:
+            HistoryManager.shared.add(result.text, kind: .cleanup, originalText: result.original)
+            paste.pasteText(result.text) { [weak self] success in
+                if success { self?.onDelivered?() } else { self?.onFailed?("Failed to paste the cleaned text") }
+            }
+        case .unchanged:
+            onDelivered?()
+        default:
+            onFailed?(result.outcome.selectionMessage)
+        }
+    }
+
     func clean() {
         guard !isCleaning else { return }
         guard AXIsProcessTrusted() else {
@@ -30,36 +55,25 @@ final class SelectionCleanup {
             return
         }
         // Checked before copying, so an unsupported Mac never touches the clipboard.
-        guard cleanup.isAvailable else {
+        guard isAvailable else {
             onFailed?(CleanupOutcome.unavailable.selectionMessage)
             return
         }
         isCleaning = true
         Task {
             defer { isCleaning = false }
-            guard let selection = await reader.readSelection() else {
+            guard let text = await readSelection() else {
                 onFailed?("No text selected")
                 return
             }
             onCleaning?()
             let result: CleanupResult
             do {
-                result = try await cleanup.clean(selection.text, instructions: instructions(), profile: .selection)
+                result = try await clean(text)
             } catch {
                 return
             }
-            logger.log("Selection cleanup: \(result.outcome.rawValue)", level: .info)
-            switch result.outcome {
-            case .cleaned:
-                HistoryManager.shared.add(result.text, kind: .cleanup, originalText: result.original)
-                paste.pasteText(result.text) { [weak self] success in
-                    if success { self?.onDelivered?() } else { self?.onFailed?("Failed to paste the cleaned text") }
-                }
-            case .unchanged:
-                onDelivered?()
-            default:
-                onFailed?(result.outcome.selectionMessage)
-            }
+            deliver(result)
         }
     }
 }
