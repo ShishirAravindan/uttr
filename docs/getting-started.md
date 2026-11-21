@@ -79,8 +79,9 @@ Select text in any app and press `⌥R` to hear it. Press `⌥R` again to stop. 
 menu-bar icon shows a speaker while it reads, and History keeps what was read.
 uttr reads the selection by copying it and then restores your clipboard (every
 item and format, unless you copied something new meanwhile), so it
-needs the same Accessibility permission as pasting. Read-aloud is ignored while
-recording, and starting a recording stops it.
+needs the same Accessibility permission as pasting. Dictation comes first, then
+`⌥C`, then read-aloud: starting a recording or `⌥C` stops speech, and a shortcut
+that can't run right now is ignored with a brief dip of the menu-bar icon.
 
 The first `⌥R` after each launch also starts preparing the Kokoro voice in the
 background. The very first time, that downloads about 320 MB of Kokoro models
@@ -97,7 +98,9 @@ model and pastes the result over the selection: spelling, punctuation and
 capitalization are fixed and fillers like "um" removed, keeping your words and
 meaning. If the cleanup would lose content (a number, a negation, a question),
 times out after 10 seconds, or can't run, the selection is left as it was and a
-notification says why. History keeps the cleaned text. Cleanup needs Apple
+notification says why. If you switch to another app before the cleaned text is
+ready, it is not pasted; it is left on the clipboard instead. History keeps the
+cleaned text. Cleanup needs Apple
 Intelligence on macOS 26 or later; Settings → Cleanup edits the prompt.
 
 ### Clean Up Dictation

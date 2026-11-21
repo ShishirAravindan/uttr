@@ -3,38 +3,70 @@
 uttr is a Swift macOS menu-bar app. FluidAudio runs Parakeet in-process on Apple
 Silicon. Model preparation can download files; transcription itself runs locally.
 
-![uttr components: AppDelegate coordinates capture, local Parakeet inference, history, paste, and status feedback](assets/diagrams/architecture.png)
+![uttr components: hotkeys send requests to ActionCoordinator, which drives capture and Parakeet, cleanup, selection reading, and read-aloud, delivers through PasteManager, and drives menu-bar feedback from its state](assets/diagrams/architecture.png)
 
 ## Recording and Delivery
 
-![Recording flow: provider preparation, capture, transcription, queued history, paste attempt, and status feedback](assets/diagrams/recording-flow.png)
+![Recording flow run by ActionCoordinator: provider preparation, capture, transcription, optional cleanup, history, delivery to the same app or the clipboard, and status feedback](assets/diagrams/recording-flow.png)
 
-`AppDelegate` in `Swift/uttr.swift` creates the components and coordinates the
-recording-to-paste flow:
+`AppDelegate` in `Swift/uttr.swift` creates the components and the
+`ActionCoordinator` (`Swift/Coordination/`), which runs the recording-to-paste flow:
 
 1. Launch or a provider change calls `prepare()` to download/load the selected
    model. Recording is blocked until `isProviderReady` is true.
-2. The registered hotkey starts `AudioRecorder`. A second invocation
-   stops capture and hands back a temporary WAV at the input's native format.
-3. An asynchronous task calls `FluidAudioProvider.transcribe(audioFileURL:)`.
-4. On the main actor, if Clean up dictation is on, AppDelegate first runs
-   `TextCleanup` with the `.dictation` profile, which returns within 2 seconds
-   with either cleaned text or the transcript ([Cleanup](cleanup.md)).
-5. AppDelegate queues a history update and calls `PasteManager`. Paste uses the
-   clipboard and simulated `Cmd+V` events; success/error feedback updates the
-   menu-bar icon and notifications.
+2. The registered hotkey starts `AudioRecorder`. A second invocation stops capture
+   and hands back a temporary WAV at the input's native format.
+3. A coordinator-owned task calls `FluidAudioProvider.transcribe(audioFileURL:)`.
+4. If Clean up dictation is on, the coordinator runs `TextCleanup` with the
+   `.dictation` profile, which returns within 2 seconds with either cleaned text
+   or the transcript ([Cleanup](cleanup.md)).
+5. The coordinator queues a history update and delivers the text. Delivery checks
+   that the app in front is still the one the action started in; if not, nothing is
+   pasted, the text is left on the clipboard, and the menu-bar icon flashes a clipboard symbol instead of the checkmark. Otherwise `PasteManager` uses the
+   clipboard and simulated `Cmd+V` events. The menu-bar icon and sounds report the
+   outcome.
 
-The recording flag is cleared before transcription starts. The current app does
-not serialize the entire capture/transcription/paste flow or keep its asynchronous
-tasks in a separate session owner. Provider switches tear down and replace the
-provider in an asynchronous task. Changes to these lifetimes need explicit review
-of busy input, provider switching, delayed callbacks, and quit behavior.
+## Action Coordination
+
+Dictation, read-aloud (⌥R), and selection cleanup (⌥C, the "instruct" action) all
+go through `ActionCoordinator`, a `@MainActor` object that owns one foreground
+`ActionState` (idle, capturing, transcribing, cleaning, inserting, reading a
+selection, speaking, instructing) and one task per run. `ActionPolicy` decides what
+a new request does to the state. It derives the answer from a fixed priority:
+dictation (STT) over instructions over read-aloud (TTS). A higher-priority request
+replaces the current action, a lower one is ignored, and equal priorities follow
+their own rule.
+
+| Current state | Record | ⌥C (instruct) | ⌥R (read aloud) |
+|---------------|--------|---------------|-----------------|
+| Idle | Start | Start | Start |
+| Capturing | Stop | Ignored | Ignored |
+| Transcribing, inserting | Start a new recording; the earlier run still pastes | Ignored | Ignored |
+| Cleaning dictation | Deliver the transcript now, then record | Ignored | Ignored |
+| Reading a selection | Cancel the read, then record | Cancel the read, then clean | Cancel |
+| Speaking | Stop speech, then record | Stop speech, then clean | Stop |
+| Instructing (reading, cleaning) | Cancel it, then record | Ignored | Ignored |
+| Instructing (inserting) | Start; the paste finishes | Ignored | Ignored |
+
+Ignored hotkeys give a brief dip of the menu-bar icon and no sound. A selection read
+that was cancelled finishes its clipboard round trip before the next read starts, so
+reads never overlap. The icon is derived from the state: it shows recording,
+processing, transforming, or speaking, and a finished run flashes its result only
+when nothing else is using the icon. A background dictation still cleaning up makes
+⌥C ignored. A model that is still loading refuses a recording before anything else
+is stopped. On quit the coordinator cancels every run; a transcript that was being
+cleaned is saved to history as it was. The hotkey channel carries press and release
+events, but only presses are registered today.
+
+Provider switches still tear down and replace the provider in an asynchronous
+task owned by `AppDelegate`.
 
 ## Components
 
 | File under `Swift/` | Responsibility |
 |--------------------|----------------|
-| `uttr.swift` | App lifecycle, component wiring, recording/transcription orchestration, windows |
+| `uttr.swift` | App lifecycle, component wiring, windows |
+| `Coordination/ActionPolicy.swift`, `Coordination/ActionCoordinator.swift`, `Coordination/MenuBarFeedback.swift` | Action state, the priority-based policy, run ownership and delivery checks, and the menu-bar/sound feedback driven from state |
 | `AudioRecorder.swift` | AVAudioEngine capture to a native-format temporary WAV; interruption reporting |
 | `AudioDeviceManager.swift` | Core Audio input enumeration and UID → runtime device ID lookup |
 | `HotkeyManager.swift` | Global shortcuts registered per action (recording, read aloud, clean up selection) via Carbon |
@@ -49,9 +81,9 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
 | `Cleanup/TextCleanup.swift`, `Cleanup/CleanupOutputChecks.swift`, `Cleanup/AppleCleanupBackend.swift` | On-device text cleanup with deadlines and output checks. See [Cleanup](cleanup.md). |
-| `Cleanup/SelectionCleanup.swift` | ⌥C: cleans the frontmost selection and pastes over it, or reports why it didn't |
-| `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, waiting up to about 0.75 s for slow apps and restoring the clipboard unless it changed |
-| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the ⌥R toggle that records a history entry and switches voices between reads |
+| `Cleanup/SelectionCleanup.swift` | The cleanup step of ⌥C; the coordinator reads the selection and delivers the result |
+| `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, waiting up to about 0.75 s for slow apps and restoring the clipboard unless it changed; used by the coordinator for ⌥R and ⌥C |
+| `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the voice owner that switches voices between reads |
 | `Speech/KokoroSpeechEngine.swift`, `Speech/SpeechChunks.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU; synthesizes sentence by sentence while earlier sentences play |
 | `Logger.swift` | Shared locked writer for component logs |
 
@@ -90,9 +122,9 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
 | Kokoro voice models | FluidAudio's cache under `~/.cache/fluidaudio/Models/`, about 320 MB; downloaded the first time ⌥R is used, loaded on the first ⌥R of each launch |
 
-AppDelegate requests a history update before attempting paste. With dictation
-cleanup on, that happens after cleanup, so a quit during those 2 seconds loses
-the transcript. HistoryManager
+The coordinator requests a history update before attempting paste. With dictation
+cleanup on, that happens after cleanup; a quit during those 2 seconds saves the
+transcript as it was. HistoryManager
 queues the list update and JSON write on the main queue; persistence is not a
 prerequisite for posting paste events. History can recover a failed insertion. Its current writes are not coordinated across simultaneous app
 instances. A recording is deleted when its entry is trimmed or history is cleared,
