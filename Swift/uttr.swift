@@ -10,7 +10,8 @@ struct uttr: App {
         Settings {
             SettingsWindowView(
                 settings: appDelegate.settingsManager,
-                permissions: appDelegate.permissionManager
+                permissions: appDelegate.permissionManager,
+                voices: appDelegate.readAloudVoices
             )
         }
         .defaultSize(width: 520, height: 580)
@@ -460,7 +461,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         if settingsWindow == nil {
             let hostingController = NSHostingController(
-                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager)
+                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager,
+                                             voices: readAloudVoices)
             )
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"

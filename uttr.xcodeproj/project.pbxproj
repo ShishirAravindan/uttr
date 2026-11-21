@@ -47,6 +47,7 @@
 		AF1700B22E9B000000000001 /* MLXAudioInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700B12E9B000000000001 /* MLXAudioInstaller.swift */; };
 		AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */; };
 		AF1700D22E9B000000000001 /* ReadAloudVoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700D12E9B000000000001 /* ReadAloudVoices.swift */; };
+		AF1700E22E9B000000000001 /* ReadAloudSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700E12E9B000000000001 /* ReadAloudSettingsView.swift */; };
 		AF1700F22E9B000000000001 /* mlx_audio_worker.py in Resources */ = {isa = PBXBuildFile; fileRef = AF1700F12E9B000000000001 /* mlx_audio_worker.py */; };
 /* End PBXBuildFile section */
 
@@ -92,6 +93,7 @@
 		AF1700B12E9B000000000001 /* MLXAudioInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXAudioInstaller.swift; path = Swift/Speech/MLXAudioInstaller.swift; sourceTree = "<group>"; };
 		AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXSpeechEngine.swift; path = Swift/Speech/MLXSpeechEngine.swift; sourceTree = "<group>"; };
 		AF1700D12E9B000000000001 /* ReadAloudVoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudVoices.swift; path = Swift/Speech/ReadAloudVoices.swift; sourceTree = "<group>"; };
+		AF1700E12E9B000000000001 /* ReadAloudSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudSettingsView.swift; path = Swift/ReadAloudSettingsView.swift; sourceTree = "<group>"; };
 		AF1700F12E9B000000000001 /* mlx_audio_worker.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; name = mlx_audio_worker.py; path = Resources/mlx_audio_worker.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -137,6 +139,7 @@
 				AF1700B12E9B000000000001 /* MLXAudioInstaller.swift */,
 				AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */,
 				AF1700D12E9B000000000001 /* ReadAloudVoices.swift */,
+				AF1700E12E9B000000000001 /* ReadAloudSettingsView.swift */,
 				AF1700F12E9B000000000001 /* mlx_audio_worker.py */,
 				AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */,
 				AF1700312E9B000000000001 /* SpeechChunks.swift */,
@@ -273,6 +276,7 @@
 				AF1700B22E9B000000000001 /* MLXAudioInstaller.swift in Sources */,
 				AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */,
 				AF1700D22E9B000000000001 /* ReadAloudVoices.swift in Sources */,
+				AF1700E22E9B000000000001 /* ReadAloudSettingsView.swift in Sources */,
 				AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */,
 				AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */,
 				AF1700222E9B000000000001 /* ReadAloud.swift in Sources */,

@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
+    @ObservedObject var voices: ReadAloudVoices
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var capturingAction: HotkeyAction?
     @State private var shortcutConflict: (action: HotkeyAction, message: String)?
@@ -18,6 +19,7 @@ struct SettingsTabView: View {
                     permissionsSection
                     audioSection
                     transcriptionSection
+                    ReadAloudSettingsSection(settings: settings, voices: voices)
                     shortcutsSection
                     historySection
                     cleanupSection
@@ -30,6 +32,7 @@ struct SettingsTabView: View {
         }
         .onAppear {
             permissions.refresh()
+            voices.refresh()
             promptDraft = settings.cleanupPrompt
         }
         .onDisappear { hotkeyRecorder.stopRecording() }
@@ -271,7 +274,7 @@ struct SettingsTabView: View {
 
 // MARK: - Section scaffold
 
-private struct SectionBlock<Content: View>: View {
+struct SectionBlock<Content: View>: View {
     let label: String
     let content: Content
 
@@ -296,7 +299,7 @@ private struct SectionBlock<Content: View>: View {
 
 // MARK: - Card
 
-private struct SettingsCard<Content: View>: View {
+struct SettingsCard<Content: View>: View {
     let scheme: ColorScheme
     let content: Content
 
@@ -320,7 +323,7 @@ private struct SettingsCard<Content: View>: View {
 
 // MARK: - Row
 
-private struct SettingRow<Content: View>: View {
+struct SettingRow<Content: View>: View {
     let label: String
     var indent: CGFloat = 0
     let scheme: ColorScheme
@@ -347,7 +350,7 @@ private struct SettingRow<Content: View>: View {
     }
 }
 
-private struct RowDivider: View {
+struct RowDivider: View {
     let scheme: ColorScheme
     var body: some View {
         Rectangle()
@@ -486,13 +489,20 @@ private struct PermissionRow: View {
 
 // MARK: - Icon action
 
-private struct SettingsActionButton: View {
+struct SettingsActionButton: View {
     let icon: String
     let label: String
     let scheme: ColorScheme
     let action: () -> Void
 
     @State private var isHovered = false
+
+    init(icon: String, label: String, scheme: ColorScheme, action: @escaping () -> Void) {
+        self.icon = icon
+        self.label = label
+        self.scheme = scheme
+        self.action = action
+    }
 
     var body: some View {
         Button(action: action) {
@@ -577,7 +587,7 @@ private struct InputDeviceMenu: View {
 
 // MARK: - Picker chrome
 
-private struct PickerLabel: View {
+struct PickerLabel: View {
     let text: String
     let scheme: ColorScheme
     var minWidth: CGFloat = 220
@@ -670,6 +680,7 @@ private struct KeycapView: View {
 }
 
 #Preview {
-    SettingsTabView(settings: SettingsManager(), permissions: PermissionManager())
+    let settings = SettingsManager()
+    return SettingsTabView(settings: settings, permissions: PermissionManager(), voices: ReadAloudVoices(settings: settings))
         .frame(width: 520, height: 580)
 }
