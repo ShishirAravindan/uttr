@@ -316,6 +316,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                     // The system voice reads until Kokoro is ready, and keeps reading if it fails.
                     let kokoro = KokoroSpeechEngine()
                     guard await kokoro.prepare() else { return }
+                    // Quit while preparing: release the voice instead of adopting it.
+                    guard !Task.isCancelled else { return await kokoro.teardown() }
                     speech.useEngine(kokoro)
                 }
             )
@@ -427,6 +429,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     // MARK: - Cleanup
     private func cleanup() {
         MainActor.assumeIsolated { coordinator?.shutDown() }
+        // History writes are queued on the main queue; let them land before exit.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
         Task { await transcriptionProvider?.teardown() }
         if let readAloud { Task { @MainActor in await readAloud.teardown() } }
         if let textCleanup { Task { @MainActor in await textCleanup.shutDown() } }
