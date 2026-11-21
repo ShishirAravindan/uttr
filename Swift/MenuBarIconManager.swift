@@ -121,27 +121,21 @@ class MenuBarIconManager: ObservableObject {
     }
 
     /// Show success state briefly
-    func showSuccessState() {
+    func showSuccessState(then restore: (() -> Void)? = nil) {
         logger.log("[MenuBarIconManager] Showing success state", level: .debug)
         transitionToIcon("checkmark.circle.fill", withAnimation: true)
         currentState = .success
         
-        // Return to ready state after brief flash
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            self.setReadyState()
-        }
+        scheduleRestore(after: 0.8, restore)
     }
     
     /// Show error state briefly
-    func showErrorState() {
+    func showErrorState(then restore: (() -> Void)? = nil) {
         logger.log("[MenuBarIconManager] Showing error state", level: .debug)
         transitionToIcon("exclamationmark.triangle.fill", withAnimation: true)
         currentState = .error
         
-        // Return to ready state after brief flash
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            self.setReadyState()
-        }
+        scheduleRestore(after: 0.6, restore)
     }
     
     /// Hide the icon completely
@@ -179,6 +173,17 @@ class MenuBarIconManager: ObservableObject {
     private let recordingPulseKey = "recordingPulse"
     private let nudgeKey = "nudge"
 
+    /// Bumped by every icon change, so a flash's delayed restore never overrides a newer state.
+    private var iconGeneration = 0
+
+    private func scheduleRestore(after delay: TimeInterval, _ restore: (() -> Void)?) {
+        let generation = iconGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, generation == self.iconGeneration else { return }
+            (restore ?? self.setReadyState)()
+        }
+    }
+
     private func startRecordingPulse() {
         guard let button = statusItem?.button else { return }
         button.wantsLayer = true
@@ -203,6 +208,7 @@ class MenuBarIconManager: ObservableObject {
 
         // Any state change ends the recording breathe.
         stopRecordingPulse()
+        iconGeneration += 1
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
