@@ -64,6 +64,42 @@ struct CleanupSettings: Codable {
     }
 }
 
+struct ReadAloudSettings: Codable, Equatable {
+    /// `system`, `kokoro`, or an mlx-audio preset ID such as `mlx.qwen3-voicedesign`.
+    var voice = ReadAloudVoice.defaultID
+    /// Playback rate for every voice, 0.75–1.5, applied without changing pitch.
+    var speed = 1.0
+    /// Minutes the mlx-audio worker stays loaded after the last read.
+    var idleUnloadMinutes = ReadAloudSettings.defaultIdleUnloadMinutes
+    /// Choices per mlx-audio preset, keyed by preset ID.
+    var models: [String: MLXModelOptions] = [:]
+    /// An existing Python with mlx-audio installed, used instead of uttr's managed environment.
+    var pythonPath: String?
+
+    static let defaultIdleUnloadMinutes = 5
+    static let speedRange = 0.75...1.5
+
+    enum CodingKeys: String, CodingKey {
+        case voice, speed
+        case idleUnloadMinutes = "idle_unload_minutes"
+        case models
+        case pythonPath = "python_path"
+    }
+
+    init() {}
+
+    /// Missing keys keep their defaults, so a partial block doesn't reset every setting.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        voice = try container.decodeIfPresent(String.self, forKey: .voice) ?? voice
+        speed = min(max(try container.decodeIfPresent(Double.self, forKey: .speed) ?? speed,
+                        Self.speedRange.lowerBound), Self.speedRange.upperBound)
+        idleUnloadMinutes = max(1, try container.decodeIfPresent(Int.self, forKey: .idleUnloadMinutes) ?? idleUnloadMinutes)
+        models = try container.decodeIfPresent([String: MLXModelOptions].self, forKey: .models) ?? [:]
+        pythonPath = try container.decodeIfPresent(String.self, forKey: .pythonPath)
+    }
+}
+
 // MARK: - Serialization schema (written to disk)
 
 private struct SerializedAppConfig: Codable {
@@ -78,6 +114,7 @@ private struct SerializedAppConfig: Codable {
     var readAloudHotkey: HotkeyConfig?
     var cleanupHotkey: HotkeyConfig?
     var cleanup: CleanupSettings?
+    var readAloud: ReadAloudSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
@@ -88,6 +125,7 @@ private struct SerializedAppConfig: Codable {
         case readAloudHotkey = "read_aloud_hotkey"
         case cleanupHotkey = "cleanup_hotkey"
         case cleanup
+        case readAloud = "read_aloud"
     }
 }
 
@@ -116,6 +154,8 @@ extension Notification.Name {
     static let hotkeyCaptureBegan = Notification.Name("hotkeyCaptureBegan")
     static let hotkeyCaptureEnded = Notification.Name("hotkeyCaptureEnded")
     static let historyMaxEntriesChanged = Notification.Name("historyMaxEntriesChanged")
+    static let readAloudVoiceChanged = Notification.Name("readAloudVoiceChanged")
+    static let readAloudPlaybackChanged = Notification.Name("readAloudPlaybackChanged")
 }
 
 // MARK: - Settings Manager
@@ -139,6 +179,7 @@ class SettingsManager: ObservableObject {
     /// An edited cleanup prompt; `nil` means the built-in one.
     @Published var customCleanupPrompt: String?
     @Published var cleanDictation = false
+    @Published var readAloud = ReadAloudSettings()
 
     // MARK: - Properties
 
@@ -190,7 +231,8 @@ class SettingsManager: ObservableObject {
                 history: HistorySettings(maxEntries: historyMaxEntries),
                 readAloudHotkey: readAloudHotkey,
                 cleanupHotkey: cleanupHotkey,
-                cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation)
+                cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation),
+                readAloud: readAloud
             )
 
             let encoder = YAMLEncoder()
@@ -251,6 +293,42 @@ class SettingsManager: ObservableObject {
     func updateCleanDictation(_ enabled: Bool) {
         cleanDictation = enabled
         logger.log("Dictation cleanup \(enabled ? "enabled" : "disabled")", level: .info)
+        saveSettings()
+    }
+
+    var readAloudVoice: ReadAloudVoice { ReadAloudVoice(id: readAloud.voice) }
+
+    func updateReadAloudVoice(_ voice: ReadAloudVoice) {
+        guard voice.id != readAloud.voice else { return }
+        readAloud.voice = voice.id
+        NotificationCenter.default.post(name: .readAloudVoiceChanged, object: self)
+        logger.log("Read-aloud voice changed to \(voice.id)", level: .info)
+        saveSettings()
+    }
+
+    func updateReadAloudSpeed(_ speed: Double) {
+        let clamped = min(max(speed, ReadAloudSettings.speedRange.lowerBound), ReadAloudSettings.speedRange.upperBound)
+        guard clamped != readAloud.speed else { return }
+        readAloud.speed = clamped
+        NotificationCenter.default.post(name: .readAloudPlaybackChanged, object: self)
+        saveSettings()
+    }
+
+    func updateReadAloudIdleUnload(minutes: Int) {
+        readAloud.idleUnloadMinutes = max(1, minutes)
+        NotificationCenter.default.post(name: .readAloudPlaybackChanged, object: self)
+        saveSettings()
+    }
+
+    func modelOptions(for model: MLXSpeechModel) -> MLXModelOptions {
+        readAloud.models[model.id] ?? MLXModelOptions()
+    }
+
+    /// Applies from the next chunk read; speech in progress keeps going.
+    func updateModelOptions(_ options: MLXModelOptions, for model: MLXSpeechModel) {
+        guard options != modelOptions(for: model) else { return }
+        readAloud.models[model.id] = options == MLXModelOptions() ? nil : options
+        logger.log("Read-aloud options changed for \(model.id)", level: .info)
         saveSettings()
     }
 
@@ -318,6 +396,7 @@ class SettingsManager: ObservableObject {
         cleanupHotkey = config.cleanupHotkey ?? .defaultCleanSelection
         customCleanupPrompt = config.cleanup?.prompt
         cleanDictation = config.cleanup?.cleanDictation ?? false
+        readAloud = config.readAloud ?? ReadAloudSettings()
         if transcriptionProviderID == "python.whisper" {
             transcriptionProviderID = "fluidaudio.parakeet.v3"
             saveSettings()
@@ -335,6 +414,7 @@ class SettingsManager: ObservableObject {
         cleanupHotkey = .defaultCleanSelection
         customCleanupPrompt = nil
         cleanDictation = false
+        readAloud = ReadAloudSettings()
         logger.log("Default settings applied", level: .info)
     }
 

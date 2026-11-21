@@ -43,9 +43,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindowController: NSWindowController?
 
     private var readAloud: ReadAloud?
+    /// Created on first use, which may be the SwiftUI Settings scene.
+    lazy var readAloudVoices: ReadAloudVoices = MainActor.assumeIsolated {
+        ReadAloudVoices(settings: self.settingsManager)
+    }
     private var textCleanup: TextCleanup?
     private var selectionCleanup: SelectionCleanup?
-    private var didPrepareKokoro = false
 
     private var isRecording = false
     private var isProviderReady = false
@@ -289,6 +292,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     // MARK: - Read aloud
+    /// Voices load lazily: Kokoro on the first read, an mlx-audio model's worker on
+    /// its first sentence. The system voice reads until the selected voice is ready.
     private func setupReadAloud() {
         MainActor.assumeIsolated {
             let readAloud = ReadAloud()
@@ -299,23 +304,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 self?.menuBarIconManager?.showErrorState()
             }
             self.readAloud = readAloud
-        }
-    }
-
-    /// Starts on the first read-aloud, so someone who never uses it downloads and
-    /// loads nothing. The system voice reads until Kokoro is ready, and keeps reading
-    /// if it fails.
-    private func prepareKokoroVoice() {
-        guard !didPrepareKokoro else { return }
-        didPrepareKokoro = true
-        MainActor.assumeIsolated {
-            let player = SpeechAudioPlayer()
-            player.onInterrupted = { [weak self] in self?.readAloud?.stop() }
-            let kokoro = KokoroSpeechEngine(player: player)
-            Task { @MainActor [weak self] in
-                guard await kokoro.prepare() else { return }
-                self?.readAloud?.useEngine(kokoro)
-            }
+            readAloudVoices.attach(to: readAloud)
         }
     }
 
@@ -325,8 +314,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             logger?.log("Read-aloud ignored while recording", level: .info)
             return
         }
-        prepareKokoroVoice()
-        MainActor.assumeIsolated { readAloud?.toggle() }
+        MainActor.assumeIsolated {
+            readAloudVoices.prepareForRead()
+            readAloud?.toggle()
+        }
     }
 
     private func startRecording() {
@@ -549,6 +540,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func cleanup() {
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
+        // Signals the mlx-audio worker and any download synchronously; tasks started
+        // here may not run before the process exits.
+        MainActor.assumeIsolated {
+            readAloud?.stop()
+            readAloudVoices.shutdown()
+        }
         if let readAloud { Task { @MainActor in await readAloud.teardown() } }
         if let textCleanup { Task { @MainActor in await textCleanup.shutDown() } }
         closePopover()
