@@ -44,10 +44,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     private var readAloud: ReadAloud?
     private var textCleanup: TextCleanup?
-    private var selectionCleanup: SelectionCleanup?
-    private var didPrepareKokoro = false
+    private var coordinator: ActionCoordinator?
 
-    private var isRecording = false
     private var isProviderReady = false
 
     // MARK: - App Lifecycle
@@ -55,6 +53,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         NSApp.setActivationPolicy(.accessory)
         setupComponents()
         setupMenuBar()
+        setupCoordinator()
         startTranscriptionProvider()
         requestPermissions()
         logger?.log("=== App Setup Complete ===", level: .info)
@@ -92,7 +91,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         audioRecorder = AudioRecorder()
         audioRecorder?.preferredInputDeviceUID = settingsManager.inputDeviceUID
         audioRecorder?.onInterrupted = { [weak self] in
-            self?.handleRecordingInterrupted()
+            MainActor.assumeIsolated { self?.coordinator?.captureInterrupted() }
         }
 
         hotkeyManager = HotkeyManager(settingsManager: settingsManager)
@@ -104,14 +103,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         hotkeyManager?.onHotkeyEvent = { [weak self] action, phase in
             guard phase == .pressed else { return }
+            let request: ActionRequest
             switch action {
-            case .record: self?.handleTranscribeHotkeyPress()
-            case .readAloud: self?.handleReadAloudHotkeyPress()
-            case .cleanSelection: self?.handleCleanSelectionHotkeyPress()
+            case .record: request = .toggleRecord
+            case .readAloud: request = .readAloud
+            case .cleanSelection: request = .instruct
             }
+            MainActor.assumeIsolated { self?.coordinator?.request(request) }
         }
-        setupReadAloud()
-        setupCleanup()
 
         // Wire popover callbacks
         popoverViewModel.onOpenSettings   = { [weak self] in self?.openSettingsWindow() }
@@ -256,195 +255,79 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         }
     }
 
-    private func handleTranscribeHotkeyPress() {
-        if isRecording { stopRecording() } else { startRecording() }
-    }
-
-    // MARK: - Cleanup
-    private func setupCleanup() {
+    // MARK: - Actions
+    private func setupCoordinator() {
         MainActor.assumeIsolated {
-            guard let pasteManager else { return }
-            let cleanup = TextCleanup(backend: CleanupBackendFactory.make())
+            guard let pasteManager, let recorder = audioRecorder,
+                  let icon = menuBarIconManager, let notifications = notificationManager else { return }
             let settings = settingsManager
-            let selection = SelectionCleanup(cleanup: cleanup, paste: pasteManager) { settings.cleanupPrompt }
-            selection.onCleaning = { [weak self] in self?.menuBarIconManager?.setTransformingState() }
-            selection.onDelivered = { [weak self] in
-                self?.notificationManager?.showTranscriptionSuccess()
-                self?.menuBarIconManager?.showSuccessState()
-            }
-            selection.onFailed = { [weak self] message in
-                self?.notificationManager?.showTranscriptionError(message)
-                self?.menuBarIconManager?.showErrorState()
-            }
+            let cleanup = TextCleanup(backend: CleanupBackendFactory.make())
+            let instruct = SelectionCleanup(cleanup: cleanup) { settings.cleanupPrompt }
+            let speech = ReadAloud()
+            let reader = SelectionReader()
             textCleanup = cleanup
-            selectionCleanup = selection
-        }
-    }
+            readAloud = speech
 
-    private func handleCleanSelectionHotkeyPress() {
-        MainActor.assumeIsolated { selectionCleanup?.clean() }
-    }
-
-    // MARK: - Read aloud
-    private func setupReadAloud() {
-        MainActor.assumeIsolated {
-            let readAloud = ReadAloud()
-            readAloud.onSpeaking = { [weak self] in self?.menuBarIconManager?.setSpeakingState() }
-            readAloud.onIdle = { [weak self] in self?.menuBarIconManager?.setReadyState() }
-            readAloud.onFailed = { [weak self] message in
-                self?.notificationManager?.showTranscriptionError(message)
-                self?.menuBarIconManager?.showErrorState()
-            }
-            self.readAloud = readAloud
-        }
-    }
-
-    /// Starts on the first read-aloud, so someone who never uses it downloads and
-    /// loads nothing. The system voice reads until Kokoro is ready, and keeps reading
-    /// if it fails.
-    private func prepareKokoroVoice() {
-        guard !didPrepareKokoro else { return }
-        didPrepareKokoro = true
-        MainActor.assumeIsolated {
-            let kokoro = KokoroSpeechEngine()
-            Task { @MainActor [weak self] in
-                guard await kokoro.prepare() else { return }
-                self?.readAloud?.useEngine(kokoro)
-            }
-        }
-    }
-
-    private func handleReadAloudHotkeyPress() {
-        // The microphone would record the speech.
-        guard !isRecording else {
-            logger?.log("Read-aloud ignored while recording", level: .info)
-            return
-        }
-        prepareKokoroVoice()
-        MainActor.assumeIsolated { readAloud?.toggle() }
-    }
-
-    private func startRecording() {
-        guard !isRecording else { return }
-        MainActor.assumeIsolated { readAloud?.stop() }
-
-        // Don't start a recording the model can't yet transcribe — the audio would
-        // be captured and then lost to a confusing "not prepared" error.
-        guard isProviderReady else {
-            logger?.log("Recording blocked — transcription model still loading", level: .warning)
-            settingsManager.providerStatus = "Loading… (try again in a moment)"
-            notificationManager?.showTranscriptionError("Model still loading")
-            menuBarIconManager?.setLoadingState()
-            return
-        }
-
-        do {
-            try audioRecorder?.startRecording()
-            isRecording = true
-            menuBarIconManager?.setRecordingState()
-            notificationManager?.showRecordingStarted()
-            logger?.log("Recording started")
-        } catch {
-            logger?.logError(error, context: "Failed to start recording")
-            notificationManager?.showTranscriptionError("Failed to start recording")
-            menuBarIconManager?.showErrorState()
-        }
-    }
-
-    private func stopRecording() {
-        guard isRecording else { return }
-
-        // Clear the flag as soon as we commit to stopping — we are no longer
-        // recording whatever the recorder hands back. Clearing it only on the
-        // success path left the app stuck: handleTranscribeHotkeyPress routes
-        // on isRecording, so every later press re-entered this method, hit the
-        // same nil, and returned again.
-        isRecording = false
-
-        guard let audioFileURL = audioRecorder?.stopRecording() else {
-            logger?.log("Failed to get audio file", level: .error)
-            notificationManager?.showTranscriptionError("Failed to save audio file")
-            menuBarIconManager?.showErrorState()
-            return
-        }
-
-        notificationManager?.showRecordingStopped()
-        logger?.log("Audio file successfully saved to: \(audioFileURL.path)", level: .debug)
-        menuBarIconManager?.setProcessingState()
-        processAudioFile(audioFileURL)
-    }
-
-    /// Some devices only hold a pinned capture format for a couple of seconds
-    /// before CoreAudio forces the engine to stop (see `AudioRecorderInterruption`).
-    /// The recording is already discarded by the time this fires — surface it
-    /// rather than silently returning to the idle state.
-    private func handleRecordingInterrupted() {
-        guard isRecording else { return }
-
-        isRecording = false
-        logger?.log("Recording interrupted — device stopped unexpectedly", level: .error)
-        notificationManager?.showTranscriptionError("Microphone disconnected")
-        menuBarIconManager?.showErrorState()
-    }
-
-    private func processAudioFile(_ audioFileURL: URL) {
-        logger?.log("Starting audio file processing for: \(audioFileURL.path)", level: .info)
-        Task { [weak self] in
-            guard let self, let provider = self.transcriptionProvider else { return }
-            do {
-                let transcribedText = try await provider.transcribe(audioFileURL: audioFileURL)
-                await MainActor.run {
-                    self.logger?.log("Transcription completed successfully", level: .info)
-                    self.handleTranscribedText(transcribedText, audioFileName: audioFileURL.lastPathComponent)
+            let services = ActionServices(
+                providerReady: { [weak self] in self?.isProviderReady ?? false },
+                startCapture: { try recorder.startRecording() },
+                stopCapture: { recorder.stopRecording() },
+                transcribe: { [weak self] url in
+                    guard let provider = self?.transcriptionProvider else { throw CancellationError() }
+                    return try await provider.transcribe(audioFileURL: url)
+                },
+                discardAudio: { try? FileManager.default.removeItem(at: $0) },
+                dictationCleanupEnabled: { settings.cleanDictation },
+                cleanDictation: { text in
+                    (try? await cleanup.clean(text, instructions: settings.cleanupPrompt, profile: .dictation))
+                        ?? .original(text, .failed)
+                },
+                accessibilityGranted: { AXIsProcessTrusted() },
+                instructAvailable: { instruct.isAvailable },
+                readSelection: { await reader.readSelection()?.text },
+                cleanSelection: { try await instruct.clean($0) },
+                speak: { speech.speak($0) },
+                stopSpeech: { speech.stop() },
+                frontmostPID: { NSWorkspace.shared.frontmostApplication?.processIdentifier },
+                paste: { text, done in
+                    pasteManager.pasteText(text) { success in
+                        DispatchQueue.main.async { MainActor.assumeIsolated { done(success) } }
+                    }
+                },
+                record: { record in
+                    switch record {
+                    case .dictation(let text, let audio, let original):
+                        if let original {
+                            HistoryManager.shared.add(text, kind: .dictation, audioFileName: audio, originalText: original)
+                        } else {
+                            HistoryManager.shared.addTranscription(text, audioFileName: audio)
+                        }
+                    case .cleanup(let text, let original):
+                        HistoryManager.shared.add(text, kind: .cleanup, originalText: original)
+                    case .readAloud(let text):
+                        HistoryManager.shared.add(text, kind: .readAloud)
+                    }
+                },
+                prepareVoice: {
+                    // The system voice reads until Kokoro is ready, and keeps reading if it fails.
+                    let kokoro = KokoroSpeechEngine()
+                    guard await kokoro.prepare() else { return }
+                    speech.useEngine(kokoro)
                 }
-            } catch {
-                // No history entry will own this recording, so nothing else deletes it.
-                try? FileManager.default.removeItem(at: audioFileURL)
-                await MainActor.run {
-                    self.logger?.logError(error, context: "Transcription failed")
-                    self.notificationManager?.showTranscriptionError("Transcription failed: \(error.localizedDescription)")
-                    self.menuBarIconManager?.showErrorState()
-                }
-            }
-        }
-    }
+            )
 
-    private func handleTranscribedText(_ text: String, audioFileName: String? = nil) {
-        logger?.log("Handling transcribed text: \(text)", level: .info)
-        guard settingsManager.cleanDictation, let textCleanup else {
-            HistoryManager.shared.addTranscription(text, audioFileName: audioFileName)
-            pasteDictation(text)
-            return
-        }
-        // Bounded by the dictation profile's deadline. Anything but a clean result,
-        // including cancellation, pastes the transcript as it was.
-        menuBarIconManager?.setTransformingState()
-        let prompt = settingsManager.cleanupPrompt
-        MainActor.assumeIsolated {
-            Task { @MainActor [weak self] in
-                let result = (try? await textCleanup.clean(text, instructions: prompt, profile: .dictation))
-                    ?? .original(text, .failed)
-                self?.logger?.log("Dictation cleanup: \(result.outcome.rawValue)", level: .info)
-                HistoryManager.shared.add(result.text, kind: .dictation, audioFileName: audioFileName,
-                                          originalText: result.original)
-                self?.pasteDictation(result.text)
-            }
-        }
-    }
-
-    private func pasteDictation(_ text: String) {
-        pasteManager?.pasteText(text) { [weak self] success in
-            DispatchQueue.main.async {
-                if success {
-                    self?.logger?.log("Text pasted at cursor successfully", level: .info)
-                    self?.notificationManager?.showTranscriptionSuccess()
-                    self?.menuBarIconManager?.showSuccessState()
-                } else {
-                    self?.logger?.log("Failed to paste text at cursor", level: .error)
-                    self?.notificationManager?.showTranscriptionError("Failed to paste text at cursor")
-                    self?.menuBarIconManager?.showErrorState()
+            let feedback = MenuBarFeedback(
+                icon: icon,
+                notifications: notifications,
+                currentPhase: { [weak self] in self?.coordinator?.phase ?? .ready },
+                isModelReady: { [weak self] in self?.isProviderReady ?? false },
+                onModelLoading: { [weak self] in
+                    self?.settingsManager.providerStatus = "Loading… (try again in a moment)"
                 }
-            }
+            )
+            let coordinator = ActionCoordinator(services: services, feedback: feedback)
+            speech.onIdle = { [weak coordinator] in coordinator?.speechEnded() }
+            self.coordinator = coordinator
         }
     }
 
@@ -539,7 +422,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Cleanup
     private func cleanup() {
-        if isRecording { _ = audioRecorder?.stopRecording() }
+        MainActor.assumeIsolated { coordinator?.shutDown() }
         Task { await transcriptionProvider?.teardown() }
         if let readAloud { Task { @MainActor in await readAloud.teardown() } }
         if let textCleanup { Task { @MainActor in await textCleanup.shutDown() } }

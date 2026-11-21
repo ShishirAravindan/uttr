@@ -1,20 +1,15 @@
-import ApplicationServices
 import Foundation
 
-/// Reads the frontmost app's selection aloud. Pressing the shortcut again stops it.
+/// Owns the voice that reads text aloud and switches voices between reads.
 @MainActor
 final class ReadAloud {
-    private let reader = SelectionReader()
     private var engine: SpeechEngine
     /// A voice that became ready mid-sentence; it takes over once speech ends.
     private var nextEngine: SpeechEngine?
-    private var isReadingSelection = false
     private let logger: Logger
 
-    // Status feedback, wired to the menu-bar icon and notifications by AppDelegate.
-    var onSpeaking: (() -> Void)?
+    /// Speech ended, on its own or through `stop()`.
     var onIdle: (() -> Void)?
-    var onFailed: ((String) -> Void)?
 
     init(engine: SpeechEngine? = nil, logger: Logger = Logger(componentName: "ReadAloud")) {
         self.logger = logger
@@ -35,35 +30,7 @@ final class ReadAloud {
 
     var isSpeaking: Bool { engine.isSpeaking }
 
-    func toggle() {
-        if engine.isSpeaking {
-            stop()
-            logger.log("Read-aloud stopped", level: .info)
-            return
-        }
-        guard !isReadingSelection else { return }
-        guard AXIsProcessTrusted() else {
-            onFailed?("Read aloud needs Accessibility permission")
-            return
-        }
-        isReadingSelection = true
-        Task {
-            defer { isReadingSelection = false }
-            guard let text = await readSelection() else {
-                onFailed?("No text selected")
-                return
-            }
-            speak(text)
-        }
-    }
-
-    func readSelection() async -> String? {
-        await reader.readSelection()?.text
-    }
-
     func speak(_ text: String) {
-        HistoryManager.shared.add(text, kind: .readAloud)
-        onSpeaking?()
         engine.speak(text)
     }
 
