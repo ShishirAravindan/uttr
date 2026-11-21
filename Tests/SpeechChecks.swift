@@ -1,12 +1,13 @@
 import Foundation
 
-/// Sentence chunking and voice switching, with fake voices. Plays no audio and
+/// Sentence chunking, grouping for speech-LLMs, and voice switching, with fake voices. Plays no audio and
 /// never reads the selection.
 @main
 struct SpeechChecks {
     @MainActor
     static func main() async {
         checkChunks()
+        checkGroups()
         await checkVoiceSwitching()
         print("Speech checks passed")
     }
@@ -25,6 +26,31 @@ struct SpeechChecks {
 
         let unbroken = String(repeating: "x", count: 80)
         precondition(SpeechChunks.split(unbroken, maxCharacters: 50) == [unbroken], "a single long word is kept whole")
+    }
+
+    static func checkGroups() {
+        precondition(SpeechChunks.groups("") == [])
+        let text = "Wait. Did you hear that? \"Yes,\" she whispered, \"I did.\" We ran! The door slammed. Silence."
+        let groups = SpeechChunks.groups(text)
+        precondition(groups.first == "Wait.", "the first chunk is one sentence, for fast first audio")
+        precondition(groups.joined(separator: " ") == text, "punctuation and quotes are kept, nothing lost or reordered")
+        let later = groups.dropFirst().map { SpeechChunks.sentences($0).count }
+        precondition(later.allSatisfy { $0 >= 1 && $0 <= 3 }, "later chunks hold one to three sentences")
+        precondition(groups.count < SpeechChunks.sentences(text).count, "short sentences are joined")
+
+        // Sentences are kept whole while they fit the target.
+        let medium = Array(repeating: "This sentence is about fifty characters in all.", count: 6).joined(separator: " ")
+        for group in SpeechChunks.groups(medium, targetCharacters: 120).dropFirst() {
+            precondition(group.count <= 120 && group.hasSuffix("."))
+        }
+
+        // A long sentence splits after clause punctuation before it splits words.
+        let clauses = "When the storm finally broke over the valley, the villagers ran for shelter; "
+            + "the old miller, who had seen worse, simply closed his shutters and waited."
+        let pieces = SpeechChunks.groups(clauses, maxCharacters: 80)
+        precondition(pieces.count > 1 && pieces.allSatisfy { $0.count <= 80 })
+        precondition(pieces.dropLast().allSatisfy { [",", ";"].contains($0.last!) }, "splits land on clause punctuation")
+        precondition(pieces.joined(separator: " ") == clauses)
     }
 
     static let logger = Logger(writer: LogWriter(fileURL: FileManager.default.temporaryDirectory
