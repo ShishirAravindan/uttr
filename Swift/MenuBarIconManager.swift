@@ -218,6 +218,7 @@ class MenuBarIconManager: ObservableObject {
         // Any state change ends the recording breathe.
         stopRecordingPulse()
         iconGeneration += 1
+        let generation = iconGeneration
 
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .bold)
         let appName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "uttr"
@@ -236,8 +237,9 @@ class MenuBarIconManager: ObservableObject {
                 
                 // Fade out
                 button.animator().alphaValue = 0.0
-            }, completionHandler: {
-                // Change icon
+            }, completionHandler: { [weak self] in
+                // A newer state owns the icon and its opacity.
+                guard let self, generation == self.iconGeneration else { return }
                 button.image = newImage
                 
                 // Fade in
@@ -249,6 +251,7 @@ class MenuBarIconManager: ObservableObject {
             })
         } else {
             button.image = newImage
+            button.alphaValue = 1.0
         }
     }
     
