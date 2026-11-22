@@ -43,7 +43,7 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `PermissionManager.swift` | Microphone and Accessibility checks, onboarding, permission refresh |
 | `HistoryManager.swift` | Recent entries labeled by kind, up to the configured limit; JSON persistence; deletes recordings of removed entries; copy/clear APIs |
 | `MenuBarPopoverView.swift` | Recording and read-aloud controls, with the sentence being read, through `PopoverViewModel` |
-| `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings, permissions, and history UI |
+| `SettingsWindowView.swift`, `SettingsTabView.swift`, `HomeTabView.swift` | Settings panes (General, Speech to Text, Text to Speech, Instruct) and the history window |
 | `MenuBarIconManager.swift`, `NotificationManager.swift` | Status feedback |
 | `Transcription/TranscriptionProvider.swift` | Provider protocol and factory |
 | `Transcription/FluidAudioProvider.swift` | Parakeet v2/v3 preparation, inference, teardown |
@@ -53,8 +53,8 @@ of busy input, provider switching, delayed callbacks, and quit behavior.
 | `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift`, `Speech/SystemSpeechEngine.swift` | Read-aloud: the `SpeechEngine` protocol, the ⌥R toggle that records a history entry, read-aloud state with pause/skip, voice switches between reads, and the system voice |
 | `Speech/SpeechPipeline.swift`, `Speech/SpeechAudioPlayer.swift`, `Speech/SpeechChunks.swift` | Chunked synthesis that stays two chunks ahead of playback, gapless playback with pitch-preserving speed, sentence splitting and grouping |
 | `Speech/KokoroSpeechEngine.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU |
-| `Speech/MLXSpeechEngine.swift`, `Speech/MLXAudioRuntime.swift`, `Speech/MLXAudioInstaller.swift`, `Speech/SpeechModels.swift`, `Speech/WAVDecoder.swift`, `Resources/mlx_audio_worker.py` | Expressive speech-LLM voices on the GPU through a local mlx-audio worker that starts on demand and unloads when idle. See [Read Aloud](read-aloud.md). |
-| `Speech/ReadAloudVoices.swift`, `ReadAloudSettingsView.swift` | Voice selection, runtime install, model downloads and management |
+| `Speech/MLXSpeechEngine.swift`, `Speech/TTSModelHost.swift`, `Speech/MLXAudioBackend.swift`, `Speech/SpeechModels.swift` | Expressive speech-LLM voices run in-process on the GPU by mlx-audio-swift; the model loads on demand and unloads when idle; presets declare their settings dials as data. See [Read Aloud](read-aloud.md). |
+| `Speech/ReadAloudVoices.swift`, `TextToSpeechSettingsView.swift` | Voice selection, model downloads and removal; the Text to Speech settings pane |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection
@@ -74,7 +74,8 @@ FluidAudio handles the file for inference.
 ## Provider and Settings
 
 The default is `fluidaudio.parakeet.v3` (multilingual); v2 is English-only. Xcode
-resolves FluidAudio and Yams through Swift Package Manager. See
+resolves FluidAudio, Yams, and mlx-audio-swift (with mlx-swift and swift-huggingface)
+through Swift Package Manager. See
 [Configuration](configuration.md) for the YAML schema and model-selection behavior.
 
 `prepare()` calls `AsrModels.downloadAndLoad` and creates the `AsrManager`; the first
@@ -91,8 +92,7 @@ requires a prepared manager, and `teardown()` calls its cleanup method.
 | Debug logs | `~/Library/Logs/uttr Debug/transcriptions.log` |
 | Recordings | macOS temporary directory; filenames include a recording timestamp. Deleted when their entry leaves history. |
 | Kokoro voice models | FluidAudio's cache under `~/.cache/fluidaudio/Models/`, about 320 MB; downloaded the first time ⌥R is used, loaded on the first ⌥R of each launch |
-| mlx-audio runtime and worker log | `~/Library/Application Support/uttr/mlx-audio/` (`venv/`, `worker.log`); installed when an expressive voice is first selected |
-| Expressive voice models | Hugging Face cache, `~/.cache/huggingface/hub/models--…`; downloaded when selected in Settings, deletable from Finder |
+| Expressive voice models | mlx-audio-swift's folder in the Hugging Face cache, `~/.cache/huggingface/hub/mlx-audio/<org>_<name>`; downloaded when selected in Settings, removable in Settings → General → Storage |
 
 AppDelegate requests a history update before attempting paste. With dictation
 cleanup on, that happens after cleanup, so a quit during those 2 seconds loses

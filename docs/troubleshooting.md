@@ -22,7 +22,7 @@ The app is not notarized. To open it:
 3. Toggle it **off**, then **on** again
 4. Restart the app
 
-Use Settings → Permissions to request access again. The Accessibility action opens
+Use Settings → General → Permissions to request access again. The Accessibility action opens
 System Settings even after the one-time prompt has been dismissed. If the app is
 missing from the list, use the folder action beside the guidance to reveal the
 running app in Finder, then add it with **+**. The app refreshes its permissions
@@ -43,7 +43,7 @@ ad-hoc rebuild may need a fresh grant; see [Development](development.md#required
 ### "Recording failed" error
 
 - Check another app isn't using the microphone exclusively
-- Check Settings → Audio → Input device. A pinned microphone overrides the system default.
+- Check Settings → Speech to Text → Input device. A pinned microphone overrides the system default.
 - Try unplugging and reconnecting external microphones
 
 If a pinned device is absent before recording, uttr falls back to the system

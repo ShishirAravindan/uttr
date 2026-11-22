@@ -4,13 +4,15 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 26 or later** — CI builds with 26.3
+- **Xcode 26.4 or later** — mlx-audio-swift needs Swift 6.3; CI builds with 26.4
 - **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
 
-Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio) and
-[Yams](https://github.com/jpsim/Yams) through Swift Package Manager. The checked-in
-`Package.resolved` pins the versions. Building requires access to those packages;
+Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio),
+[Yams](https://github.com/jpsim/Yams), and
+[mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) (with mlx-swift and
+swift-huggingface) through Swift Package Manager. mlx-audio-swift is pinned to a
+commit in the project; the checked-in `Package.resolved` pins the rest. Building requires access to those packages;
 running the app also needs network access for its first model download.
 
 ## Repository Structure
@@ -145,18 +147,15 @@ swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swif
   Tests/SpeechPipelineChecks.swift -o /tmp/uttr-pipeline-checks
 /tmp/uttr-pipeline-checks
 swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
-  Swift/Speech/SpeechChunks.swift Swift/Speech/SpeechModels.swift Swift/Speech/WAVDecoder.swift \
-  Swift/Speech/MLXAudioRuntime.swift Swift/Speech/MLXAudioInstaller.swift Swift/Speech/MLXSpeechEngine.swift \
-  Tests/MLXAudioChecks.swift -o /tmp/uttr-mlx-checks
-/tmp/uttr-mlx-checks
-python3 Tests/mlx_audio_worker_checks.py   # needs numpy
+  Swift/Speech/SpeechChunks.swift Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift \
+  Swift/Speech/MLXSpeechEngine.swift Tests/ExpressiveVoiceChecks.swift -o /tmp/uttr-expressive-checks
+/tmp/uttr-expressive-checks
 ```
 
 The selection and speech checks use fake voices: they never post Cmd+C, read the
-clipboard, or play audio. The pipeline and mlx-audio checks use a fake player,
-worker process, and HTTP client; the worker check runs the bundled Python worker
-against fake `mlx_audio` and `huggingface_hub` packages. None of them start
-mlx-audio or download a model ([Read Aloud](read-aloud.md#validation)). The evaluation with the real model is described in
+clipboard, or play audio. The pipeline and expressive-voice checks use a fake
+player, model loader, and model; none of them load a model, use the GPU, or
+download anything ([Read Aloud](read-aloud.md#validation)). The evaluation with the real model is described in
 [Cleanup](cleanup.md#evaluation).
 
 ## Code Style
@@ -219,5 +218,5 @@ installed as repository scripts or CI jobs.
 
 - [Architecture](architecture.md) — How it works internally
 - [Configuration](configuration.md) — Settings reference
-- [Read Aloud](read-aloud.md) — Voices, the mlx-audio worker, and its checks
+- [Read Aloud](read-aloud.md) — Voices, the in-process model host, and its checks
 - [Troubleshooting](troubleshooting.md) — Common issues

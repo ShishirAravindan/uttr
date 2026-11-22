@@ -7,7 +7,7 @@ Two callers use it:
 - **Selection cleanup** (⌥C, `SelectionCleanup`) uses the `.selection` profile and
   pastes the result over the selection; any other outcome leaves the selection
   alone and says why.
-- **Dictation cleanup** (Settings → Cleanup → Clean up dictation, off by default)
+- **Dictation cleanup** (Settings → Speech to Text → Clean up dictation, off by default)
   runs between Parakeet and the paste with the `.dictation` profile. Any outcome
   other than `cleaned` pastes the transcript as it was, so dictation never fails
   because of cleanup; it only waits up to 2 seconds longer.
@@ -54,7 +54,7 @@ requests made before it ends return `busy` rather than starting another, and
 
 ## Prompt
 
-`CleanupPrompt.standard` is the default prompt. Settings → Cleanup edits it;
+`CleanupPrompt.standard` is the default prompt. Settings → Instruct edits it;
 only an edited prompt is saved (`cleanup.prompt`), so anyone using the default
 gets later improvements to it. Both callers share it. It asks for minimal edits: fix spelling,
 punctuation and capitalization, remove fillers and repeated starts, apply spoken

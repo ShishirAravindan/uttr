@@ -53,7 +53,7 @@ to the changed behavior. Merge with **Rebase and merge** so each commit lands on
 `main` as written. After running a release:
 
 - Inspect the Release run in [Actions](https://github.com/ShishirAravindan/uttr/actions).
-- Verify the published ZIP, tag, SHA256, and the version in Settings → About.
+- Verify the published ZIP, tag, SHA256, and the version in Settings → General → About.
 - Review and merge the generated cask PR in the tap. Publishing the app release
   does not itself make the Homebrew update available.
 

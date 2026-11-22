@@ -91,10 +91,10 @@ system voice reads instead, so that first read uses the system voice. A voice
 that becomes ready mid-sentence takes over after the current read-aloud. If you
 never use read-aloud, uttr never downloads or loads Kokoro.
 
-For reading with expression, choose an expressive voice in Settings → Read Aloud:
-speech-LLMs such as Chatterbox, Qwen3-TTS, Orpheus, Sesame CSM, and MisoTTS run
-on the GPU through mlx-audio and take their tone from the text. Choosing one
-installs mlx-audio and downloads the model (0.9–9 GB). See [Read Aloud](read-aloud.md).
+For reading with expression, choose an expressive voice in Settings → Text to
+Speech: speech-LLMs such as Chatterbox, Qwen3-TTS, Orpheus, and Marvis run inside
+uttr on the GPU and take their tone from the text. Choosing one downloads the
+model (0.6–4.3 GB); nothing else is installed. See [Read Aloud](read-aloud.md).
 
 ### Clean Up a Selection
 
@@ -104,11 +104,11 @@ capitalization are fixed and fillers like "um" removed, keeping your words and
 meaning. If the cleanup would lose content (a number, a negation, a question),
 times out after 10 seconds, or can't run, the selection is left as it was and a
 notification says why. History keeps the cleaned text. Cleanup needs Apple
-Intelligence on macOS 26 or later; Settings → Cleanup edits the prompt.
+Intelligence on macOS 26 or later; Settings → Instruct edits the prompt.
 
 ### Clean Up Dictation
 
-Settings → Cleanup → **Clean up dictation** (off by default) cleans each
+Settings → Speech to Text → **Clean up dictation** (off by default) cleans each
 dictation with the same prompt before pasting it. It adds up to 2 seconds; if
 cleanup can't finish or would lose content, the transcript is pasted as it was.
 The history card shows the cleaned text, with the original transcription under
@@ -128,7 +128,7 @@ Access via menu bar icon → Settings:
 
 Open History from the menu-bar popover to review recent entries and copy one
 again. Use it to recover text if automatic insertion fails. Each card shows what
-produced it. Settings → History sets how many entries are kept (default 5);
+produced it. Settings → General → History sets how many entries are kept (default 5);
 lowering it removes the oldest entries and their recordings. Debug and Release
 share this history and the settings file.
 

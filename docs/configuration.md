@@ -44,7 +44,7 @@ audio:
 
 Pins recording to a specific microphone. The value is a Core Audio **device UID** — stable across reboots and replugs, unlike the numeric device ID.
 
-Pick the device from Settings → Audio → Input device rather than writing the UID by hand. `null` (or omitting the `audio` block entirely) records from whatever macOS has set as the system default input.
+Pick the device from Settings → Speech to Text → Input device rather than writing the UID by hand. `null` (or omitting the `audio` block entirely) records from whatever macOS has set as the system default input.
 
 If the pinned device isn't connected when you start a recording, uttr falls back to the system default and notes it in the log.
 
@@ -70,7 +70,7 @@ cleanup_hotkey:          # clean up the selection, default ⌥C (key code 8)
   modifiers: ["option"]
 ```
 
-Use Settings → Shortcuts to record a new hotkey — it sets these values automatically.
+Use the Shortcut row in each pane of Settings (Speech to Text, Text to Speech, Instruct) to record a new hotkey — it sets these values automatically.
 A shortcut needs at least one of command, option or control, and Settings rejects
 one that another action already uses. If another app already holds a shortcut,
 uttr logs the failure and registers the rest.
@@ -94,7 +94,7 @@ cleanup:
   clean_dictation: false                          # clean dictation before pasting
 ```
 
-Settings → Cleanup edits the prompt; Restore default removes the key. The output
+Settings → Instruct edits the prompt; Restore default removes the key. The output
 checks in [Cleanup](cleanup.md#output-checks) apply whatever the prompt says.
 
 ### Read Aloud
@@ -103,23 +103,34 @@ checks in [Cleanup](cleanup.md#output-checks) apply whatever the prompt says.
 read_aloud:
   voice: "kokoro"            # system, kokoro, or an expressive preset (below)
   speed: 1.0                 # 0.75–1.5, every voice, pitch preserved
-  idle_unload_minutes: 5     # unload the expressive model after this long idle
-  models:                    # per-preset choices; omitted keys use the preset's defaults
+  idle_unload_minutes: 5     # drop the expressive model from memory after this long idle
+  sentences_per_chunk: 3     # 1–3; fewer starts sooner, more gives the model context
+  models:                    # values changed per preset; anything missing uses its default
     mlx.qwen3-voicedesign:
-      style: "A gravelly old sea captain telling a story by the fire."
+      description: "A gravelly old sea captain telling a story by the fire."
       temperature: 0.9
     mlx.chatterbox:
       exaggeration: 0.8
       cfg_weight: 0.3
-  python_path: null          # an existing Python with mlx-audio, instead of uttr's own
+      consistent_voice: false
 ```
 
 Expressive presets: `mlx.chatterbox-turbo`, `mlx.chatterbox`,
-`mlx.qwen3-voicedesign`, `mlx.qwen3-customvoice`, `mlx.orpheus`, `mlx.csm`,
-`mlx.miso`. Per-preset keys are `voice` (a preset speaker), `style`, `exaggeration`,
-`cfg_weight`, and `temperature`; a key a preset doesn't use is ignored. An unknown
-voice falls back to Kokoro. Choosing a preset in Settings downloads it; see
-[Read Aloud](read-aloud.md).
+`mlx.qwen3-voicedesign`, `mlx.qwen3-customvoice`, `mlx.orpheus`, `mlx.marvis`.
+Per-preset keys are the parameter IDs that preset declares:
+
+| Key | Presets | Value |
+|-----|---------|-------|
+| `speaker` | Qwen3 CustomVoice, Orpheus, Marvis | One of the preset's speakers |
+| `description` | Qwen3 VoiceDesign | Natural-language voice description |
+| `style` | Qwen3 CustomVoice | Style direction |
+| `exaggeration`, `cfg_weight` | Chatterbox | 0–1 |
+| `temperature` | all | 0.1–1.3 |
+| `top_p`, `repetition_penalty` | Qwen3, Orpheus | 0.5–1.0; 1.0–2.0 |
+| `consistent_voice` | all | `true` (default) or `false` |
+
+A key a preset doesn't declare is ignored, and an unknown voice falls back to
+Kokoro. Choosing a preset in Settings downloads it; see [Read Aloud](read-aloud.md).
 
 ## Full Example
 
