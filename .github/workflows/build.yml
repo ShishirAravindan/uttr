@@ -61,3 +61,10 @@ jobs:
           swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
             Tests/SpeechPipelineChecks.swift -o "$RUNNER_TEMP/uttr-pipeline-checks"
           "$RUNNER_TEMP/uttr-pipeline-checks"
+
+      - name: Check Expressive Voices
+        run: |
+          swiftc -parse-as-library Swift/Logger.swift Swift/Speech/SpeechEngine.swift Swift/Speech/SpeechPipeline.swift \
+            Swift/Speech/SpeechChunks.swift Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift \
+            Swift/Speech/MLXSpeechEngine.swift Tests/ExpressiveVoiceChecks.swift -o "$RUNNER_TEMP/uttr-expressive-checks"
+          "$RUNNER_TEMP/uttr-expressive-checks"
