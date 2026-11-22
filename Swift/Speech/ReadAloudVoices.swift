@@ -1,69 +1,58 @@
 import AppKit
 import Combine
 
-/// Owns the read-aloud voices and the mlx-audio runtime: picks the engine for the
-/// selected voice, installs the runtime and models, and reports their state to
-/// Settings and the popover.
+/// Owns the read-aloud voices and the in-process model host: picks the engine for
+/// the selected voice, downloads and removes expressive models, and reports their
+/// state to Settings and the popover.
 ///
 /// The system voice is always available. Kokoro loads on the first read, as
-/// before. An mlx-audio voice is used once its model is downloaded; its worker
-/// starts on the first sentence and stops when idle or when uttr quits. Until a
-/// selected voice is ready, the previous voice keeps reading.
+/// before. An expressive voice is used once its model is downloaded; the model
+/// loads on the first sentence and unloads when idle. Until a selected voice is
+/// ready, the previous voice keeps reading.
 @MainActor
 final class ReadAloudVoices: ObservableObject {
-    enum RuntimeStatus: Equatable {
-        case notInstalled
-        case installing(String)
-        case installed
-        case failed(String)
-    }
-
     enum ModelStatus: Equatable {
         case notDownloaded
-        case downloading(MLXDownloadProgress?)
+        /// The fraction downloaded, or `nil` while starting or preparing the model.
+        case downloading(Double?)
         case downloaded
         case failed(String)
     }
 
-    @Published private(set) var runtimeStatus: RuntimeStatus
+    /// A downloaded model as Settings → General → Storage lists it.
+    struct StoredModel: Identifiable, Equatable {
+        let model: MLXSpeechModel
+        let bytes: Int64
+        var id: String { model.id }
+    }
+
     @Published private(set) var modelStatus: [String: ModelStatus] = [:]
-    @Published private(set) var workerState: MLXRuntimeState = .stopped
+    @Published private(set) var hostState: TTSModelHostState = .unloaded
+    @Published private(set) var storedModels: [StoredModel] = []
     /// The voice actually reading, which lags the selection until it is ready.
     @Published private(set) var activeVoice: ReadAloudVoice = .system
     /// Why the selected voice isn't the active one, when there's a reason to show.
     @Published private(set) var notice: String?
 
     let player = SpeechAudioPlayer()
+    let host: TTSModelHost
     private let settings: SettingsManager
-    private let environment: MLXAudioEnvironment
-    private let runtime: MLXAudioRuntime
     private weak var readAloud: ReadAloud?
+    private var currentEngine: SpeechEngine?
     private var kokoro: KokoroSpeechEngine?
     private var kokoroPreparation: Task<Void, Never>?
-    private var runtimeInstall: Task<Bool, Never>?
     private var downloads: [String: (id: UUID, task: Task<Void, Never>)] = [:]
     private var observers: [NSObjectProtocol] = []
     private let logger = Logger(componentName: "ReadAloudVoices")
 
+    static let previewText = "Hello! This is how I'll read to you. \"Really?\" she asked, leaning closer. \"Every word of it?\""
+
     init(settings: SettingsManager) {
         self.settings = settings
-        let environment = MLXAudioEnvironment(customPython: settings.readAloud.pythonPath.map { URL(fileURLWithPath: $0) })
-        self.environment = environment
-        let launcher: MLXWorkerLauncher
-        if let workerLauncher = environment.launcher() {
-            launcher = workerLauncher
-        } else {
-            launcher = MissingWorkerLauncher()
-        }
-        runtime = MLXAudioRuntime(
-            launcher: launcher,
-            client: MLXWorkerHTTPClient(),
-            idleTimeout: .seconds(settings.readAloud.idleUnloadMinutes * 60),
-            isInstalled: { environment.isInstalled }
-        )
-        runtimeStatus = environment.isInstalled ? .installed : .notInstalled
+        host = TTSModelHost(loader: MLXAudioModelLoader(),
+                            idleTimeout: .seconds(settings.readAloud.idleUnloadMinutes * 60))
         player.rate = Float(settings.readAloud.speed)
-        runtime.onStateChange = { [weak self] state in self?.workerState = state }
+        host.onStateChange = { [weak self] state in self?.hostState = state }
         refresh()
 
         observers.append(NotificationCenter.default.addObserver(
@@ -93,87 +82,77 @@ final class ReadAloudVoices: ObservableObject {
         applySelection(preparingKokoro: true)
     }
 
-    // MARK: - Installing
+    /// Whether Preview would use the selected voice rather than a fallback.
+    var canPreview: Bool { activeVoice == selectedVoice && readAloud != nil }
 
-    var isRuntimeInstalled: Bool { runtimeStatus == .installed }
+    /// Reads a short sample with dialogue and a question, without touching history.
+    func preview() {
+        guard let readAloud else { return }
+        if readAloud.isSpeaking { readAloud.stop() }
+        readAloud.speak(Self.previewText)
+    }
+
+    // MARK: - Downloads
 
     func status(of model: MLXSpeechModel) -> ModelStatus {
         modelStatus[model.id] ?? .notDownloaded
     }
 
-    /// Installs the runtime if needed, then downloads `model`.
-    func install(_ model: MLXSpeechModel) {
+    /// Downloads `model`, then loads it once so the codec and tokenizer files it
+    /// needs are fetched too. The model then stays warm until the idle timeout.
+    func download(_ model: MLXSpeechModel) {
         guard downloads[model.id] == nil else { return }
         modelStatus[model.id] = .downloading(nil)
         let id = UUID()
         let task = Task { [weak self] in
             guard let self else { return }
             defer { if self.downloads[model.id]?.id == id { self.downloads[model.id] = nil } }
-            guard await self.ensureRuntime() else {
-                self.modelStatus[model.id] = .failed("Install the mlx-audio runtime first")
-                return
-            }
             self.logger.log("Downloading \(model.repo)", level: .info)
             do {
-                try await MLXAudioInstaller(environment: self.environment).downloadModel(model.repo) { [weak self] progress in
-                    guard self?.downloads[model.id] != nil else { return }
-                    self?.modelStatus[model.id] = .downloading(progress)
+                try await MLXModelDownloader.download(model.repo) { [weak self] fraction in
+                    guard self?.downloads[model.id]?.id == id else { return }
+                    self?.modelStatus[model.id] = .downloading(fraction)
                 }
+                try Task.checkCancellation()
+                self.modelStatus[model.id] = .downloading(nil)
+                try await self.host.warmUp(model.repo)
                 self.modelStatus[model.id] = .downloaded
                 self.logger.log("Downloaded \(model.repo)", level: .info)
+                self.refreshStorage()
                 if self.selectedVoice == .mlx(model) { self.applySelection(preparingKokoro: false) }
-            } catch is CancellationError {
-                self.refresh(model)
             } catch {
-                self.logger.logError(error, context: "Download of \(model.repo) failed")
-                self.modelStatus[model.id] = Task.isCancelled ? .notDownloaded : .failed(error.localizedDescription)
-                if Task.isCancelled { self.refresh(model) }
+                if Task.isCancelled || error is CancellationError {
+                    self.refresh(model)
+                } else {
+                    self.logger.logError(error, context: "Download of \(model.repo) failed")
+                    self.modelStatus[model.id] = .failed(error.localizedDescription)
+                }
             }
         }
         downloads[model.id] = (id, task)
     }
 
-    /// Stops a download; files already fetched stay in the Hugging Face cache and
-    /// the next download resumes from them.
+    /// Stops a download; files already fetched stay, and the next download resumes.
     func cancelDownload(_ model: MLXSpeechModel) {
         downloads[model.id]?.task.cancel()
         downloads[model.id] = nil
         refresh(model)
     }
 
-    func installRuntime() {
-        Task { _ = await ensureRuntime(force: true) }
-    }
-
-    @discardableResult
-    private func ensureRuntime(force: Bool = false) async -> Bool {
-        if !force, environment.isInstalled {
-            runtimeStatus = .installed
-            return true
+    /// Deletes the model's folder, unloading it first if it's in memory.
+    func remove(_ model: MLXSpeechModel) {
+        cancelDownload(model)
+        if hostState == .ready(model.repo) || hostState == .loading(model.repo) {
+            if case .mlx(let active) = activeVoice, active == model { readAloud?.stop() }
+            host.unload()
         }
-        if let runtimeInstall { return await runtimeInstall.value }
-        let task = Task { [weak self] () -> Bool in
-            guard let self else { return false }
-            self.runtimeStatus = .installing("Preparing…")
-            do {
-                // A reinstall replaces the worker's environment, so stop it first.
-                self.runtime.shutdown()
-                try await MLXAudioInstaller(environment: self.environment).installRuntime { [weak self] message in
-                    self?.runtimeStatus = .installing(message)
-                }
-                self.runtimeStatus = .installed
-                self.logger.log("mlx-audio runtime installed", level: .info)
-                return true
-            } catch {
-                self.logger.logError(error, context: "mlx-audio runtime install failed")
-                self.runtimeStatus = .failed(error.localizedDescription)
-                return false
-            }
+        do {
+            try FileManager.default.removeItem(at: TTSModelFiles.folder(repo: model.repo))
+            logger.log("Removed \(model.repo)", level: .info)
+        } catch {
+            logger.logError(error, context: "Couldn't remove \(model.repo)")
         }
-        runtimeInstall = task
-        let installed = await task.value
-        runtimeInstall = nil
-        return installed
+        refresh()
     }
 
     // MARK: - Managing models
@@ -181,10 +160,8 @@ final class ReadAloudVoices: ObservableObject {
     /// Re-reads which models are on disk, for example after the reader deletes
     /// one in Finder.
     func refresh() {
-        if runtimeInstall == nil {
-            runtimeStatus = environment.isInstalled ? .installed : (runtimeStatus.isFailure ? runtimeStatus : .notInstalled)
-        }
         MLXSpeechModel.presets.forEach(refresh)
+        refreshStorage()
         if case .mlx(let model) = activeVoice, status(of: model) != .downloaded {
             // Its files are gone; fall back until it's downloaded again.
             applySelection(preparingKokoro: false)
@@ -193,7 +170,7 @@ final class ReadAloudVoices: ObservableObject {
 
     private func refresh(_ model: MLXSpeechModel) {
         guard downloads[model.id] == nil else { return }
-        if MLXAudioEnvironment.isModelDownloaded(repo: model.repo) {
+        if TTSModelFiles.isDownloaded(repo: model.repo) {
             modelStatus[model.id] = .downloaded
         } else if case .failed = modelStatus[model.id] {
             return
@@ -202,10 +179,14 @@ final class ReadAloudVoices: ObservableObject {
         }
     }
 
-    var modelsFolder: URL { MLXAudioEnvironment.hubCache() }
+    private func refreshStorage() {
+        storedModels = MLXSpeechModel.presets
+            .filter { status(of: $0) == .downloaded }
+            .map { StoredModel(model: $0, bytes: TTSModelFiles.size(of: TTSModelFiles.folder(repo: $0.repo))) }
+    }
 
-    /// Opens the Hugging Face cache, where each model is a `models--…` folder that
-    /// can be moved to the Trash to free space.
+    var modelsFolder: URL { TTSModelFiles.modelsRoot() }
+
     func revealModelsFolder() {
         let folder = modelsFolder
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -213,7 +194,7 @@ final class ReadAloudVoices: ObservableObject {
     }
 
     func reveal(_ model: MLXSpeechModel) {
-        let folder = MLXAudioEnvironment.modelFolder(repo: model.repo)
+        let folder = TTSModelFiles.folder(repo: model.repo)
         if FileManager.default.fileExists(atPath: folder.path) {
             NSWorkspace.shared.activateFileViewerSelecting([folder])
         } else {
@@ -221,23 +202,17 @@ final class ReadAloudVoices: ObservableObject {
         }
     }
 
-    func revealRuntimeFolder() {
-        try? FileManager.default.createDirectory(at: environment.root, withIntermediateDirectories: true)
-        NSWorkspace.shared.activateFileViewerSelecting([environment.root])
-    }
-
     /// Unloads the model now instead of waiting for the idle timeout.
     func unloadModel() {
-        runtime.shutdown()
+        if case .mlx = activeVoice, readAloud?.isSpeaking == true { readAloud?.stop() }
+        host.unload()
     }
 
-    /// Stops the worker and downloads. Called from `applicationWillTerminate`, so
-    /// everything here signals processes synchronously.
+    /// Stops downloads and releases the model. Called from `applicationWillTerminate`.
     func shutdown() {
         downloads.values.forEach { $0.task.cancel() }
         downloads = [:]
-        runtimeInstall?.cancel()
-        runtime.shutdown()
+        host.unload()
         player.shutDown()
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
@@ -247,15 +222,15 @@ final class ReadAloudVoices: ObservableObject {
 
     private func selectionChanged() {
         notice = nil
-        if case .mlx(let model) = selectedVoice, status(of: model) != .downloaded {
-            install(model)
+        if case .mlx(let model) = selectedVoice, status(of: model) == .notDownloaded {
+            download(model)
         }
         applySelection(preparingKokoro: false)
     }
 
     private func playbackSettingsChanged() {
         player.rate = Float(settings.readAloud.speed)
-        runtime.idleTimeout = .seconds(settings.readAloud.idleUnloadMinutes * 60)
+        host.idleTimeout = .seconds(settings.readAloud.idleUnloadMinutes * 60)
     }
 
     /// Makes read-aloud use the selected voice if it's ready; otherwise keeps the
@@ -270,18 +245,27 @@ final class ReadAloudVoices: ObservableObject {
             notice = nil
             useKokoro(on: readAloud, preparing: preparingKokoro)
         case .mlx(let model):
-            if status(of: model) == .downloaded, environment.isInstalled {
+            if status(of: model) == .downloaded {
                 notice = nil
                 guard activeVoice != .mlx(model) else { return }
-                let engine = MLXSpeechEngine(model: model, runtime: runtime, player: player) { [weak settings] in
-                    settings?.modelOptions(for: model) ?? MLXModelOptions()
-                }
+                // A different expressive model was loaded; free it now rather than
+                // holding two in memory until the idle timeout.
+                if case .mlx = activeVoice { host.unload() }
+                let settings = self.settings
+                let engine = MLXSpeechEngine(
+                    model: model, host: host, player: player,
+                    sentencesPerChunk: { [weak settings] in settings?.readAloud.sentencesPerChunk ?? 3 },
+                    values: { [weak settings] in settings?.parameterValues(for: model) ?? [:] }
+                )
                 use(engine, as: .mlx(model), on: readAloud)
             } else {
-                if case .downloading = status(of: model) {
+                switch status(of: model) {
+                case .downloading:
                     notice = "\(model.name) is downloading; \(fallbackName) reads until it's ready."
-                } else {
-                    notice = "\(model.name) isn't downloaded yet. Download it in Settings → Read Aloud."
+                case .failed(let message):
+                    notice = "\(model.name) couldn't download: \(message)"
+                default:
+                    notice = "\(model.name) isn't downloaded yet. Download it in Settings → Text to Speech."
                 }
                 useKokoro(on: readAloud, preparing: preparingKokoro)
             }
@@ -305,7 +289,7 @@ final class ReadAloudVoices: ObservableObject {
             guard let self else { return }
             self.kokoroPreparation = nil
             guard ready else { return }
-            // Selected voices may have changed while Kokoro loaded.
+            // The selection may have changed while Kokoro loaded.
             self.applySelection(preparingKokoro: false)
         }
     }
@@ -318,23 +302,5 @@ final class ReadAloudVoices: ObservableObject {
         activeVoice = voice
         readAloud.useEngine(engine)
         logger.log("Read-aloud voice is now \(voice.id)", level: .info)
-    }
-
-    private var currentEngine: SpeechEngine?
-}
-
-private extension ReadAloudVoices.RuntimeStatus {
-    var isFailure: Bool {
-        if case .failed = self { return true }
-        return false
-    }
-}
-
-/// Used when the worker script is missing from the bundle, so reads fail with a
-/// clear error instead of crashing.
-private struct MissingWorkerLauncher: MLXWorkerLauncher {
-    func launch(onLine: @escaping @MainActor (String) -> Void,
-                onExit: @escaping @MainActor (Int32) -> Void) throws -> MLXWorkerProcess {
-        throw MLXAudioInstallerError.missingWorkerScript
     }
 }

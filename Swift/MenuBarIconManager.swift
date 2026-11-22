@@ -125,8 +125,8 @@ class MenuBarIconManager: ObservableObject {
         startSpeakingWaves()
     }
 
-    /// Read-aloud is waiting for its voice: copying the selection, starting the
-    /// mlx-audio worker, loading a model, or synthesizing the next sentence.
+    /// Read-aloud is waiting for its voice: copying the selection, loading a
+    /// model, or synthesizing the next sentence.
     func setVoicePreparingState() {
         guard currentState != .voicePreparing else { return }
         logger.log("[MenuBarIconManager] Setting voice preparing state", level: .debug)

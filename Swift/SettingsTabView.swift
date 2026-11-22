@@ -19,7 +19,7 @@ struct SettingsTabView: View {
                     permissionsSection
                     audioSection
                     transcriptionSection
-                    ReadAloudSettingsSection(settings: settings, voices: voices)
+                    TextToSpeechSettings(settings: settings, voices: voices)
                     shortcutsSection
                     historySection
                     cleanupSection

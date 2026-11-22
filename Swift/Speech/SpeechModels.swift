@@ -38,28 +38,105 @@ enum ReadAloudVoice: Equatable, Hashable {
     }
 }
 
-/// A speech-LLM preset run by the local mlx-audio worker on the Apple Silicon GPU.
+// MARK: - Parameters
+
+/// A stored parameter value. Settings keeps only values the reader changed.
+enum TTSValue: Codable, Equatable, Hashable {
+    case number(Double)
+    case text(String)
+    case flag(Bool)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let flag = try? container.decode(Bool.self) {
+            self = .flag(flag)
+        } else if let number = try? container.decode(Double.self) {
+            self = .number(number)
+        } else {
+            self = .text(try container.decode(String.self))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .number(let value): try container.encode(value)
+        case .text(let value): try container.encode(value)
+        case .flag(let value): try container.encode(value)
+        }
+    }
+
+    var number: Double? { if case .number(let value) = self { return value }; return nil }
+    var text: String? { if case .text(let value) = self { return value }; return nil }
+    var flag: Bool? { if case .flag(let value) = self { return value }; return nil }
+}
+
+/// The values a reader set for one model, keyed by parameter ID.
+typealias TTSParameterValues = [String: TTSValue]
+
+/// One dial a model exposes. Settings draws controls from these, so choosing
+/// defaults or hiding a dial later is a change here, not new UI.
+struct TTSParameter: Identifiable, Hashable {
+    enum Kind: Hashable {
+        /// `typical` is shown when the value is left to the model's own default.
+        case slider(range: ClosedRange<Double>, step: Double, typical: Double)
+        case choice([String])
+        case text(placeholder: String)
+        case toggle
+    }
+
+    enum Tier: Hashable {
+        /// Shapes how the voice sounds; shown with the voice.
+        case character
+        /// Sampling and consistency; collapsed under Advanced.
+        case advanced
+    }
+
+    let id: String
+    let label: String
+    let caption: String?
+    let kind: Kind
+    let tier: Tier
+    /// `nil` leaves the value to the model.
+    let defaultValue: TTSValue?
+
+    // Shared dials.
+    static func speaker(_ speakers: [String], default speaker: String) -> TTSParameter {
+        TTSParameter(id: "speaker", label: "Speaker", caption: nil, kind: .choice(speakers),
+                     tier: .character, defaultValue: .text(speaker))
+    }
+
+    static func temperature(typical: Double) -> TTSParameter {
+        TTSParameter(id: "temperature", label: "Variation",
+                     caption: "Sampling temperature. Higher varies delivery more, and can garble words.",
+                     kind: .slider(range: 0.1...1.3, step: 0.05, typical: typical), tier: .advanced, defaultValue: nil)
+    }
+
+    static func topP(typical: Double) -> TTSParameter {
+        TTSParameter(id: "top_p", label: "Top-p",
+                     caption: "Keeps the most likely choices that add up to this share. Lower is steadier.",
+                     kind: .slider(range: 0.5...1.0, step: 0.01, typical: typical), tier: .advanced, defaultValue: nil)
+    }
+
+    static func repetitionPenalty(typical: Double) -> TTSParameter {
+        TTSParameter(id: "repetition_penalty", label: "Repetition penalty",
+                     caption: "Discourages repeated sounds; raise it if the voice loops or stutters.",
+                     kind: .slider(range: 1.0...2.0, step: 0.05, typical: typical), tier: .advanced, defaultValue: nil)
+    }
+
+    static let consistentVoice = TTSParameter(
+        id: "consistent_voice", label: "Keep the voice consistent",
+        caption: "Uses the same random seed for every sentence, so the voice doesn't drift between them.",
+        kind: .toggle, tier: .advanced, defaultValue: .flag(true))
+}
+
+// MARK: - Models
+
+/// A speech-LLM preset run in-process on the Apple Silicon GPU by mlx-audio-swift.
 struct MLXSpeechModel: Identifiable, Hashable {
-    enum Family: String {
-        case chatterbox, qwen3, orpheus, csm, miso
-    }
-
-    /// Model-specific controls Settings shows for this preset.
-    enum Control: Hashable {
-        /// A natural-language description of the voice, sent as `instruct`.
-        case style
-        /// Chatterbox's emotion intensity.
-        case exaggeration
-        /// Chatterbox's classifier-free guidance weight: lower is slower and more deliberate.
-        case cfgWeight
-    }
-
-    /// How a style prompt is applied, for models that take one.
-    enum StyleMode: String {
-        /// The prompt designs the voice itself.
-        case voiceDesign = "voice_design"
-        /// The prompt directs one of the preset speakers.
-        case customVoice = "custom_voice"
+    /// How the preset's parameters map onto a request.
+    enum Family: String, Hashable {
+        case chatterboxTurbo, chatterbox, qwen3VoiceDesign, qwen3CustomVoice, orpheus, marvis
     }
 
     let id: String
@@ -70,144 +147,157 @@ struct MLXSpeechModel: Identifiable, Hashable {
     let repo: String
     /// Approximate download size, for Settings.
     let approximateBytes: Int64
-    let voices: [String]
-    let defaultVoice: String?
-    let controls: Set<Control>
-    let styleMode: StyleMode?
-    let defaultStyle: String?
-    let defaultTemperature: Double
-    let langCode: String?
+    let parameters: [TTSParameter]
 
     var approximateSize: String {
         ByteCountFormatter.string(fromByteCount: approximateBytes, countStyle: .file)
+    }
+
+    func parameters(in tier: TTSParameter.Tier) -> [TTSParameter] {
+        parameters.filter { $0.tier == tier }
+    }
+
+    func parameter(_ id: String) -> TTSParameter? {
+        parameters.first { $0.id == id }
+    }
+
+    /// The reader's value, or the parameter's default. A stored choice that is no
+    /// longer offered falls back to the default.
+    func value(_ id: String, in values: TTSParameterValues) -> TTSValue? {
+        guard let parameter = parameter(id) else { return nil }
+        if let stored = values[id] {
+            if case .choice(let options) = parameter.kind {
+                if let text = stored.text, options.contains(text) { return stored }
+            } else {
+                return stored
+            }
+        }
+        return parameter.defaultValue
     }
 
     static func preset(id: String) -> MLXSpeechModel? {
         presets.first { $0.id == id }
     }
 
+    static let qwenSpeakers = ["Ryan", "Aiden", "Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric"]
+    static let orpheusSpeakers = ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"]
+    static let marvisSpeakers = ["conversational_a", "conversational_b", "conversational_fr", "conversational_de"]
+
     static let presets: [MLXSpeechModel] = [
         MLXSpeechModel(
-            id: "mlx.chatterbox-turbo", family: .chatterbox, name: "Chatterbox Turbo",
+            id: "mlx.chatterbox-turbo", family: .chatterboxTurbo, name: "Chatterbox Turbo",
             summary: "Fast, with lively, dramatic pacing",
-            repo: "mlx-community/chatterbox-turbo-fp16", approximateBytes: 900_000_000,
-            voices: [], defaultVoice: nil, controls: [], styleMode: nil, defaultStyle: nil,
-            defaultTemperature: 0.8, langCode: nil
+            repo: "mlx-community/chatterbox-turbo-8bit", approximateBytes: 600_000_000,
+            parameters: [.temperature(typical: 0.8), .consistentVoice]
         ),
         MLXSpeechModel(
             id: "mlx.chatterbox", family: .chatterbox, name: "Chatterbox",
-            summary: "Dramatic delivery with tunable intensity",
-            repo: "mlx-community/chatterbox-fp16", approximateBytes: 1_600_000_000,
-            voices: [], defaultVoice: nil, controls: [.exaggeration, .cfgWeight], styleMode: nil,
-            defaultStyle: nil, defaultTemperature: 0.8, langCode: nil
+            summary: "Dramatic delivery with tunable emotion",
+            repo: "mlx-community/Chatterbox-TTS-fp16", approximateBytes: 1_600_000_000,
+            parameters: [
+                TTSParameter(id: "exaggeration", label: "Emotion", caption: "Higher is more dramatic and emotional.",
+                             kind: .slider(range: 0...1, step: 0.05, typical: 0.5), tier: .character, defaultValue: .number(0.5)),
+                TTSParameter(id: "cfg_weight", label: "Pace guidance", caption: "Lower is slower and more deliberate.",
+                             kind: .slider(range: 0...1, step: 0.05, typical: 0.5), tier: .character, defaultValue: .number(0.5)),
+                .temperature(typical: 0.8), .consistentVoice,
+            ]
         ),
         MLXSpeechModel(
-            id: "mlx.qwen3-voicedesign", family: .qwen3, name: "Qwen3-TTS 1.7B VoiceDesign",
+            id: "mlx.qwen3-voicedesign", family: .qwen3VoiceDesign, name: "Qwen3-TTS 1.7B VoiceDesign",
             summary: "A narrator you describe in words",
             repo: "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16", approximateBytes: 4_300_000_000,
-            voices: [], defaultVoice: nil, controls: [.style], styleMode: .voiceDesign,
-            defaultStyle: "A warm, articulate audiobook narrator with a calm, measured pace who lets emotion come through in dialogue.",
-            defaultTemperature: 0.9, langCode: nil
+            parameters: [
+                TTSParameter(id: "description", label: "Voice description",
+                             caption: "Describe the narrator in plain words: age, warmth, pace, accent. The model builds the voice from it.",
+                             kind: .text(placeholder: "A warm, articulate audiobook narrator…"), tier: .character,
+                             defaultValue: .text("A warm, articulate audiobook narrator with a calm, measured pace who lets emotion come through in dialogue.")),
+                .temperature(typical: 0.9), .topP(typical: 1.0), .repetitionPenalty(typical: 1.05), .consistentVoice,
+            ]
         ),
         MLXSpeechModel(
-            id: "mlx.qwen3-customvoice", family: .qwen3, name: "Qwen3-TTS 0.6B CustomVoice",
+            id: "mlx.qwen3-customvoice", family: .qwen3CustomVoice, name: "Qwen3-TTS 0.6B CustomVoice",
             summary: "Preset speakers with style direction; lighter",
             repo: "mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16", approximateBytes: 1_800_000_000,
-            voices: ["Ryan", "Aiden", "Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric"], defaultVoice: "Ryan",
-            controls: [.style], styleMode: .customVoice,
-            defaultStyle: "Read naturally, like a thoughtful narrator.",
-            defaultTemperature: 0.9, langCode: nil
+            parameters: [
+                .speaker(qwenSpeakers, default: "Ryan"),
+                TTSParameter(id: "style", label: "Style direction",
+                             caption: "How the speaker should read, for example \"calm and thoughtful\" or \"bright and playful\". Leave empty for a neutral read.",
+                             kind: .text(placeholder: "calm and thoughtful"), tier: .character, defaultValue: nil),
+                .temperature(typical: 0.9), .topP(typical: 1.0), .repetitionPenalty(typical: 1.05), .consistentVoice,
+            ]
         ),
         MLXSpeechModel(
             id: "mlx.orpheus", family: .orpheus, name: "Orpheus 3B (4-bit)",
-            summary: "Empathetic range and subtle inflection",
+            summary: "Empathetic range; tags like <laugh> in the text work",
             repo: "mlx-community/orpheus-3b-0.1-ft-4bit", approximateBytes: 2_100_000_000,
-            voices: ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"], defaultVoice: "tara",
-            controls: [], styleMode: nil, defaultStyle: nil, defaultTemperature: 0.6, langCode: nil
+            parameters: [
+                .speaker(orpheusSpeakers, default: "tara"),
+                .temperature(typical: 0.6), .topP(typical: 0.8), .repetitionPenalty(typical: 1.3), .consistentVoice,
+            ]
         ),
         MLXSpeechModel(
-            id: "mlx.csm", family: .csm, name: "Sesame CSM 1B",
-            summary: "Conversational cadence, breaths, and pauses",
-            repo: "mlx-community/csm-1b", approximateBytes: 3_000_000_000,
-            voices: [], defaultVoice: nil, controls: [], styleMode: nil, defaultStyle: nil,
-            defaultTemperature: 0.9, langCode: nil
-        ),
-        MLXSpeechModel(
-            id: "mlx.miso", family: .miso, name: "MisoTTS (8-bit)",
-            summary: "Conversational flow; the largest download",
-            repo: "mlx-community/MisoLabs-MisoTTS-8bit", approximateBytes: 9_000_000_000,
-            voices: [], defaultVoice: nil, controls: [], styleMode: nil, defaultStyle: nil,
-            defaultTemperature: 0.9, langCode: nil
+            id: "mlx.marvis", family: .marvis, name: "Marvis 250M",
+            summary: "Small and quick, with conversational cadence",
+            repo: "Marvis-AI/marvis-tts-250m-v0.2-MLX-8bit", approximateBytes: 600_000_000,
+            parameters: [
+                .speaker(marvisSpeakers, default: "conversational_a"),
+                .temperature(typical: 0.9), .consistentVoice,
+            ]
         ),
     ]
-}
 
-/// The choices a reader makes for one mlx-audio preset. Missing values use the
-/// preset's defaults, so improvements to them reach anyone who hasn't edited them.
-struct MLXModelOptions: Codable, Equatable {
-    var voice: String?
-    var style: String?
-    var exaggeration: Double?
-    var cfgWeight: Double?
-    var temperature: Double?
+    /// The request for one chunk, with the reader's values and the preset's
+    /// defaults. Sampling values left unset use the model's own defaults.
+    func request(text: String, values: TTSParameterValues) -> TTSRequest {
+        func number(_ id: String) -> Float? { value(id, in: values)?.number.map(Float.init) }
+        func string(_ id: String) -> String? {
+            value(id, in: values)?.text?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty
+        }
 
-    enum CodingKeys: String, CodingKey {
-        case voice, style, exaggeration
-        case cfgWeight = "cfg_weight"
-        case temperature
-    }
+        var voice: String?
+        switch family {
+        case .qwen3VoiceDesign:
+            voice = string("description")
+        case .qwen3CustomVoice:
+            // mlx-audio-swift reads CustomVoice prompts as "speaker, instruction".
+            let speaker = string("speaker") ?? "Ryan"
+            voice = string("style").map { "\(speaker), \($0)" } ?? speaker
+        case .orpheus, .marvis:
+            voice = string("speaker")
+        case .chatterbox, .chatterboxTurbo:
+            voice = nil
+        }
 
-    init(voice: String? = nil, style: String? = nil, exaggeration: Double? = nil,
-         cfgWeight: Double? = nil, temperature: Double? = nil) {
-        self.voice = voice
-        self.style = style
-        self.exaggeration = exaggeration
-        self.cfgWeight = cfgWeight
-        self.temperature = temperature
-    }
-
-    static let defaultExaggeration = 0.5
-    static let defaultCFGWeight = 0.5
-
-    /// The request fields for one chunk, with defaults filled in and controls the
-    /// preset doesn't have left out.
-    func request(for model: MLXSpeechModel, text: String) -> MLXSpeechRequest {
-        let voice = voice.flatMap { model.voices.contains($0) ? $0 : nil } ?? model.defaultVoice
-        let style = model.controls.contains(.style)
-            ? (style?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? model.defaultStyle
-            : nil
-        return MLXSpeechRequest(
-            model: model.repo,
-            input: text,
+        return TTSRequest(
+            repo: repo,
+            text: text,
             voice: voice,
-            instruct: style,
-            mode: model.styleMode?.rawValue,
-            langCode: model.langCode,
-            temperature: temperature ?? model.defaultTemperature,
-            exaggeration: model.controls.contains(.exaggeration) ? (exaggeration ?? Self.defaultExaggeration) : nil,
-            cfgWeight: model.controls.contains(.cfgWeight) ? (cfgWeight ?? Self.defaultCFGWeight) : nil
+            temperature: number("temperature"),
+            topP: number("top_p"),
+            repetitionPenalty: number("repetition_penalty"),
+            seed: value("consistent_voice", in: values)?.flag == true ? TTSRequest.consistentSeed : nil,
+            exaggeration: number("exaggeration"),
+            cfgWeight: number("cfg_weight")
         )
     }
 }
 
-/// The body of the worker's `/v1/audio/speech` request.
-struct MLXSpeechRequest: Codable, Equatable {
-    var model: String
-    var input: String
-    var voice: String?
-    var instruct: String?
-    var mode: String?
-    var langCode: String?
-    var temperature: Double?
-    var exaggeration: Double?
-    var cfgWeight: Double?
-    var requestID: String?
+/// One chunk to synthesize.
+struct TTSRequest: Equatable, Sendable {
+    /// The seed used for every chunk when the voice is kept consistent.
+    static let consistentSeed: UInt64 = 0x75747472
 
-    enum CodingKeys: String, CodingKey {
-        case model, input, voice, instruct, mode
-        case langCode = "lang_code"
-        case temperature, exaggeration
-        case cfgWeight = "cfg_weight"
-        case requestID = "request_id"
-    }
+    var repo: String
+    var text: String
+    var voice: String?
+    var temperature: Float?
+    var topP: Float?
+    var repetitionPenalty: Float?
+    var seed: UInt64?
+    var exaggeration: Float?
+    var cfgWeight: Float?
+}
+
+private extension String {
+    var nonEmpty: String? { isEmpty ? nil : self }
 }

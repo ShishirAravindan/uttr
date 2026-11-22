@@ -65,16 +65,18 @@ struct CleanupSettings: Codable {
 }
 
 struct ReadAloudSettings: Codable, Equatable {
-    /// `system`, `kokoro`, or an mlx-audio preset ID such as `mlx.qwen3-voicedesign`.
+    /// `system`, `kokoro`, or an expressive preset ID such as `mlx.qwen3-voicedesign`.
     var voice = ReadAloudVoice.defaultID
     /// Playback rate for every voice, 0.75–1.5, applied without changing pitch.
     var speed = 1.0
-    /// Minutes the mlx-audio worker stays loaded after the last read.
+    /// Minutes an expressive model stays in memory after the last read.
     var idleUnloadMinutes = ReadAloudSettings.defaultIdleUnloadMinutes
-    /// Choices per mlx-audio preset, keyed by preset ID.
-    var models: [String: MLXModelOptions] = [:]
-    /// An existing Python with mlx-audio installed, used instead of uttr's managed environment.
-    var pythonPath: String?
+    /// The most sentences an expressive voice reads per chunk, 1–3. Fewer starts
+    /// sooner; more gives the model context for its tone.
+    var sentencesPerChunk = 3
+    /// Values the reader changed per expressive preset, keyed by preset ID, then
+    /// by parameter ID. Anything missing uses the preset's default.
+    var models: [String: TTSParameterValues] = [:]
 
     static let defaultIdleUnloadMinutes = 5
     static let speedRange = 0.75...1.5
@@ -82,8 +84,8 @@ struct ReadAloudSettings: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case voice, speed
         case idleUnloadMinutes = "idle_unload_minutes"
+        case sentencesPerChunk = "sentences_per_chunk"
         case models
-        case pythonPath = "python_path"
     }
 
     init() {}
@@ -95,8 +97,8 @@ struct ReadAloudSettings: Codable, Equatable {
         speed = min(max(try container.decodeIfPresent(Double.self, forKey: .speed) ?? speed,
                         Self.speedRange.lowerBound), Self.speedRange.upperBound)
         idleUnloadMinutes = max(1, try container.decodeIfPresent(Int.self, forKey: .idleUnloadMinutes) ?? idleUnloadMinutes)
-        models = try container.decodeIfPresent([String: MLXModelOptions].self, forKey: .models) ?? [:]
-        pythonPath = try container.decodeIfPresent(String.self, forKey: .pythonPath)
+        sentencesPerChunk = min(3, max(1, try container.decodeIfPresent(Int.self, forKey: .sentencesPerChunk) ?? sentencesPerChunk))
+        models = try container.decodeIfPresent([String: TTSParameterValues].self, forKey: .models) ?? [:]
     }
 }
 
@@ -320,15 +322,31 @@ class SettingsManager: ObservableObject {
         saveSettings()
     }
 
-    func modelOptions(for model: MLXSpeechModel) -> MLXModelOptions {
-        readAloud.models[model.id] ?? MLXModelOptions()
+    func updateSentencesPerChunk(_ count: Int) {
+        readAloud.sentencesPerChunk = min(3, max(1, count))
+        saveSettings()
     }
 
-    /// Applies from the next chunk read; speech in progress keeps going.
-    func updateModelOptions(_ options: MLXModelOptions, for model: MLXSpeechModel) {
-        guard options != modelOptions(for: model) else { return }
-        readAloud.models[model.id] = options == MLXModelOptions() ? nil : options
-        logger.log("Read-aloud options changed for \(model.id)", level: .info)
+    func parameterValues(for model: MLXSpeechModel) -> TTSParameterValues {
+        readAloud.models[model.id] ?? [:]
+    }
+
+    /// Sets one of a preset's parameters; `nil`, or the parameter's default, removes
+    /// the stored value. Applies from the next chunk read.
+    func updateParameter(_ parameter: TTSParameter, to value: TTSValue?, for model: MLXSpeechModel) {
+        var values = parameterValues(for: model)
+        let stored = value == parameter.defaultValue ? nil : value
+        guard values[parameter.id] != stored else { return }
+        values[parameter.id] = stored
+        readAloud.models[model.id] = values.isEmpty ? nil : values
+        logger.log("Read-aloud \(parameter.id) changed for \(model.id)", level: .info)
+        saveSettings()
+    }
+
+    /// Puts every parameter of a preset back to its default.
+    func resetParameters(for model: MLXSpeechModel) {
+        guard readAloud.models[model.id] != nil else { return }
+        readAloud.models[model.id] = nil
         saveSettings()
     }
 

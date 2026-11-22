@@ -310,8 +310,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     }
 
     // MARK: - Read aloud
-    /// Voices load lazily: Kokoro on the first read, an mlx-audio model's worker on
-    /// its first sentence. The system voice reads until the selected voice is ready.
+    /// Voices load lazily: Kokoro on the first read, an expressive model on its
+    /// first sentence. The system voice reads until the selected voice is ready.
     private func setupReadAloud() {
         MainActor.assumeIsolated {
             let readAloud = ReadAloud()
@@ -326,7 +326,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
             let voices = readAloudVoices
             voices.attach(to: readAloud)
-            voices.$activeVoice.combineLatest(voices.$workerState, voices.$notice)
+            voices.$activeVoice.combineLatest(voices.$hostState, voices.$notice)
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] _ in self?.updateVoiceStatus() }
                 .store(in: &readAloudObservers)
@@ -362,15 +362,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 popoverViewModel.voiceStatus = isReading ? nil : voices.notice
                 return
             }
-            switch voices.workerState {
-            case .starting:
-                popoverViewModel.voiceStatus = "Starting mlx-audio on the GPU…"
+            switch voices.hostState {
             case .loading:
                 popoverViewModel.voiceStatus = "Loading \(model.name) into memory…"
             case .ready:
                 let minutes = settingsManager.readAloud.idleUnloadMinutes
                 popoverViewModel.voiceStatus = isReading ? "Synthesizing…" : "\(model.name) is warm · unloads after \(minutes) min idle"
-            case .stopped:
+            case .unloaded:
                 popoverViewModel.voiceStatus = isReading ? "Synthesizing…" : voices.notice
             case .failed(let message):
                 popoverViewModel.voiceStatus = message
@@ -611,7 +609,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func cleanup() {
         if isRecording { _ = audioRecorder?.stopRecording() }
         Task { await transcriptionProvider?.teardown() }
-        // Signals the mlx-audio worker and any download synchronously; tasks started
+        // Stops downloads and drops the expressive model synchronously; tasks started
         // here may not run before the process exits.
         MainActor.assumeIsolated {
             readAloud?.stop()
