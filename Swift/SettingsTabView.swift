@@ -1,9 +1,35 @@
 import SwiftUI
 
+/// The settings panes: shared settings, then one pane per primitive.
+enum SettingsPane: String, CaseIterable, Identifiable {
+    case general, speechToText, textToSpeech, instruct
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .speechToText: return "Speech to Text"
+        case .textToSpeech: return "Text to Speech"
+        case .instruct: return "Instruct"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .speechToText: return "mic"
+        case .textToSpeech: return "speaker.wave.2"
+        case .instruct: return "wand.and.stars"
+        }
+    }
+}
+
 struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
     @ObservedObject var voices: ReadAloudVoices
+    @AppStorage("settingsPane") private var pane: SettingsPane = .general
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var capturingAction: HotkeyAction?
     @State private var shortcutConflict: (action: HotkeyAction, message: String)?
@@ -12,28 +38,37 @@ struct SettingsTabView: View {
     @Environment(\.colorScheme) var scheme
 
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.windowBackground(for: scheme).ignoresSafeArea()
+        VStack(spacing: 0) {
+            PaneBar(selection: $pane, scheme: scheme)
+            Rectangle()
+                .fill(Color.rowSeparator(for: scheme))
+                .frame(height: 0.5)
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    permissionsSection
-                    audioSection
-                    transcriptionSection
-                    TextToSpeechSettings(settings: settings, voices: voices)
-                    shortcutsSection
-                    historySection
-                    cleanupSection
-                    aboutSection
+                    switch pane {
+                    case .general: generalPane
+                    case .speechToText: speechToTextPane
+                    case .textToSpeech: textToSpeechPane
+                    case .instruct: instructPane
+                    }
                 }
                 .padding(.top, 24)
                 .padding(.horizontal, 28)
                 .padding(.bottom, 28)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .id(pane)
         }
+        .background(Color.windowBackground(for: scheme).ignoresSafeArea())
         .onAppear {
             permissions.refresh()
             voices.refresh()
             promptDraft = settings.cleanupPrompt
+        }
+        .onChange(of: pane) { _, _ in
+            hotkeyRecorder.stopRecording()
+            capturingAction = nil
+            shortcutConflict = nil
         }
         .onDisappear { hotkeyRecorder.stopRecording() }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
@@ -50,21 +85,22 @@ struct SettingsTabView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Panes
 
-    private var permissionsSection: some View {
-        SectionBlock(label: "Permissions") {
-            SettingsCard(scheme: scheme) {
-                PermissionRow(permission: .microphone, permissions: permissions, scheme: scheme)
-                RowDivider(scheme: scheme)
-                PermissionRow(permission: .accessibility, permissions: permissions, scheme: scheme)
-            }
-        }
+    @ViewBuilder
+    private var generalPane: some View {
+        permissionsSection
+        historySection
+        StorageSection(voices: voices, scheme: scheme)
+        aboutSection
     }
 
-    private var audioSection: some View {
-        SectionBlock(label: "Audio") {
+    @ViewBuilder
+    private var speechToTextPane: some View {
+        SectionBlock(label: "Dictation") {
             SettingsCard(scheme: scheme) {
+                shortcutRow(for: .record)
+                RowDivider(scheme: scheme)
                 SettingRow(label: "Input device", scheme: scheme) {
                     InputDeviceMenu(
                         selection: settings.inputDeviceUID,
@@ -77,33 +113,86 @@ struct SettingsTabView: View {
                 }
             }
         }
-    }
-
-    private var transcriptionSection: some View {
-        SectionBlock(label: "Transcription") {
+        SectionBlock(label: "Model") {
             SettingsCard(scheme: scheme) {
-                SettingRow(label: "Provider", scheme: scheme) {
+                SettingRow(label: "Model", scheme: scheme) {
                     ProviderMenu(selection: $settings.transcriptionProviderID, scheme: scheme) {
                         settings.updateTranscriptionProvider($0)
                     }
                 }
                 RowDivider(scheme: scheme)
-                SettingRow(label: "Model status", scheme: scheme) {
+                SettingRow(label: "Status", scheme: scheme) {
                     Text(settings.providerStatus)
                         .font(.system(size: 12))
                         .foregroundColor(.textSecondary(for: scheme))
                 }
             }
         }
+        SectionBlock(label: "After Transcribing") {
+            SettingsCard(scheme: scheme) {
+                Toggle(isOn: Binding(
+                    get: { settings.cleanDictation },
+                    set: { settings.updateCleanDictation($0) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Clean up dictation")
+                            .font(.system(size: 13))
+                            .foregroundColor(.textPrimary(for: scheme))
+                        Text("Cleans the text with the Instruct prompt before pasting. This adds up to 2 seconds; if cleanup can't finish, the transcript is pasted as it was. History keeps the original transcription.")
+                            .font(.system(size: 11))
+                            .foregroundColor(.textTertiary(for: scheme))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .toggleStyle(.checkbox)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+                RowDivider(scheme: scheme)
+                HStack {
+                    Spacer()
+                    Button("Edit the prompt in Instruct") { pane = .instruct }
+                        .controlSize(.small)
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+            }
+        }
     }
 
-    private var shortcutsSection: some View {
-        SectionBlock(label: "Shortcuts") {
+    private var textToSpeechPane: some View {
+        TextToSpeechSettings(settings: settings, voices: voices) {
+            shortcutRow(for: .readAloud)
+            RowDivider(scheme: scheme)
+        }
+    }
+
+    @ViewBuilder
+    private var instructPane: some View {
+        SectionBlock(label: "Clean Up Selection") {
             SettingsCard(scheme: scheme) {
-                ForEach(Array(HotkeyAction.allCases.enumerated()), id: \.element) { index, action in
-                    if index > 0 { RowDivider(scheme: scheme) }
-                    shortcutRow(for: action)
+                shortcutRow(for: .cleanSelection)
+                RowDivider(scheme: scheme)
+                SettingRow(label: "Model", scheme: scheme) {
+                    Text(CleanupBackendFactory.isModelAvailable
+                         ? "Apple on-device model"
+                         : "Needs Apple Intelligence on macOS 26 or later")
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSecondary(for: scheme))
                 }
+            }
+        }
+        promptSection
+    }
+
+    // MARK: - Sections
+
+    private var permissionsSection: some View {
+        SectionBlock(label: "Permissions") {
+            SettingsCard(scheme: scheme) {
+                PermissionRow(permission: .microphone, permissions: permissions, scheme: scheme)
+                RowDivider(scheme: scheme)
+                PermissionRow(permission: .accessibility, permissions: permissions, scheme: scheme)
             }
         }
     }
@@ -123,7 +212,7 @@ struct SettingsTabView: View {
     }
 
     private func shortcutControls(for action: HotkeyAction) -> some View {
-        SettingRow(label: action.title, scheme: scheme) {
+        SettingRow(label: "Shortcut", scheme: scheme) {
             if hotkeyRecorder.isRecording && capturingAction == action {
                 Text("Press your shortcut…")
                     .font(.system(size: 13))
@@ -145,29 +234,9 @@ struct SettingsTabView: View {
         }
     }
 
-    private var cleanupSection: some View {
-        SectionBlock(label: "Cleanup") {
+    private var promptSection: some View {
+        SectionBlock(label: "Prompt") {
             SettingsCard(scheme: scheme) {
-                Toggle(isOn: Binding(
-                    get: { settings.cleanDictation },
-                    set: { settings.updateCleanDictation($0) }
-                )) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Clean up dictation")
-                            .font(.system(size: 13))
-                            .foregroundColor(.textPrimary(for: scheme))
-                        Text("After \(settings.getHotkeyDisplayString()) transcribes, clean the text with the prompt below before pasting. This adds up to 2 seconds; if cleanup can't finish, the transcript is pasted as it was. History keeps the original transcription.")
-                            .font(.system(size: 11))
-                            .foregroundColor(.textTertiary(for: scheme))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .toggleStyle(.checkbox)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 16)
-                RowDivider(scheme: scheme)
-
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Cleanup prompt")
                         .font(.system(size: 13))
@@ -180,7 +249,7 @@ struct SettingsTabView: View {
                         .font(.system(size: 12))
                         .scrollContentBackground(.hidden)
                         .padding(6)
-                        .frame(height: 140)
+                        .frame(height: 180)
                         .background(
                             RoundedRectangle(cornerRadius: 5)
                                 .fill(Color.pickerBackground(for: scheme))
@@ -191,12 +260,6 @@ struct SettingsTabView: View {
                         )
                         .accessibilityLabel("Cleanup prompt")
                     HStack(spacing: 8) {
-                        if !CleanupBackendFactory.isModelAvailable {
-                            Text("Cleanup needs Apple Intelligence on macOS 26 or later.")
-                                .font(.system(size: 11))
-                                .foregroundColor(.textSecondary(for: scheme))
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
                         Spacer(minLength: 0)
                         Button("Restore default") {
                             settings.updateCleanupPrompt(CleanupPrompt.standard)
@@ -270,6 +333,125 @@ struct SettingsTabView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 
+}
+
+// MARK: - Pane bar
+
+/// Toolbar-style pane switcher, like the tabs of a macOS Settings window.
+private struct PaneBar: View {
+    @Binding var selection: SettingsPane
+    let scheme: ColorScheme
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Spacer(minLength: 0)
+            ForEach(SettingsPane.allCases) { pane in
+                PaneButton(pane: pane, isSelected: pane == selection, scheme: scheme) { selection = pane }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+private struct PaneButton: View {
+    let pane: SettingsPane
+    let isSelected: Bool
+    let scheme: ColorScheme
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                Image(systemName: pane.icon)
+                    .font(.system(size: 17, weight: .regular))
+                    .frame(height: 20)
+                Text(pane.title)
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(isSelected ? .accentLink(for: scheme) : .textSecondary(for: scheme))
+            .frame(width: 104, height: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isSelected
+                          ? Color.textPrimary(for: scheme).opacity(0.08)
+                          : (isHovered ? Color.textPrimary(for: scheme).opacity(0.04) : .clear))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .accessibilityLabel(pane.title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+// MARK: - Storage
+
+/// Downloaded expressive models, with their size on disk, to remove or reveal.
+private struct StorageSection: View {
+    @ObservedObject var voices: ReadAloudVoices
+    let scheme: ColorScheme
+    @State private var pendingRemoval: MLXSpeechModel?
+
+    var body: some View {
+        SectionBlock(label: "Storage") {
+            SettingsCard(scheme: scheme) {
+                if voices.storedModels.isEmpty {
+                    Text("No expressive voices downloaded. Choose one in Text to Speech.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.textSecondary(for: scheme))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
+                }
+                ForEach(Array(voices.storedModels.enumerated()), id: \.element.id) { index, stored in
+                    if index > 0 { RowDivider(scheme: scheme) }
+                    SettingRow(label: stored.model.name, scheme: scheme) {
+                        HStack(spacing: 6) {
+                            if voices.hostState == .ready(stored.model.repo) {
+                                Text("In memory")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.accentLink(for: scheme))
+                            }
+                            Text(ByteCountFormatter.string(fromByteCount: stored.bytes, countStyle: .file))
+                                .font(.system(size: 12).monospacedDigit())
+                                .foregroundColor(.textSecondary(for: scheme))
+                            SettingsActionButton(icon: "folder", label: "Show \(stored.model.name) in Finder", scheme: scheme) {
+                                voices.reveal(stored.model)
+                            }
+                            SettingsActionButton(icon: "trash", label: "Remove \(stored.model.name)", scheme: scheme) {
+                                pendingRemoval = stored.model
+                            }
+                        }
+                    }
+                }
+                RowDivider(scheme: scheme)
+                HStack(spacing: 8) {
+                    Caption(text: "Expressive voices live in \((voices.modelsFolder.path as NSString).abbreviatingWithTildeInPath). Kokoro and Parakeet are managed by FluidAudio.", scheme: scheme)
+                    SettingsActionButton(icon: "arrow.clockwise", label: "Check again for downloaded models", scheme: scheme) {
+                        voices.refresh()
+                    }
+                    SettingsActionButton(icon: "folder", label: "Open the models folder in Finder", scheme: scheme) {
+                        voices.revealModelsFolder()
+                    }
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 16)
+            }
+        }
+        .alert(
+            "Remove \(pendingRemoval?.name ?? "this voice")?",
+            isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
+            presenting: pendingRemoval
+        ) { model in
+            Button("Remove", role: .destructive) { voices.remove(model) }
+            Button("Cancel", role: .cancel) {}
+        } message: { model in
+            Text("Its \(model.approximateSize) of weights are deleted. Choosing it again downloads it again.")
+        }
+    }
 }
 
 // MARK: - Section scaffold
