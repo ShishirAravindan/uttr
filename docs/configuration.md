@@ -75,6 +75,17 @@ A shortcut needs at least one of command, option or control, and Settings reject
 one that another action already uses. If another app already holds a shortcut,
 uttr logs the failure and registers the rest.
 
+### Read Aloud
+
+```yaml
+read_aloud:
+  playback_rate: 1.0
+```
+
+Settings → Read Aloud saves one playback speed across voices and app launches.
+The default is 1× and the supported range is 0.75× to 1.50×. Changing the speed
+during a System voice read applies to the next read.
+
 ### History
 
 ```yaml
@@ -116,4 +127,6 @@ read_aloud_hotkey:
 cleanup_hotkey:
   key_code: 8
   modifiers: ["option"]
+read_aloud:
+  playback_rate: 1.0
 ```

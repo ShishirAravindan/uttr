@@ -13,6 +13,27 @@ enum ActionOutcome: Equatable {
     case failure(String)
 }
 
+enum ReadAloudPlayback: Equatable {
+    case readingSelection
+    case buffering(canSkip: Bool)
+    case playing(canSkip: Bool)
+
+    var canSkip: Bool {
+        switch self {
+        case .readingSelection: return false
+        case .buffering(let canSkip), .playing(let canSkip): return canSkip
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .readingSelection: return "Reading selection…"
+        case .buffering: return "Buffering…"
+        case .playing: return "Reading aloud"
+        }
+    }
+}
+
 enum Delivery: Equatable {
     case pasted, failed, leftOnClipboard
 }
@@ -51,6 +72,7 @@ struct ActionServices {
     var copyToClipboard: @MainActor (String) -> Void
     var record: @MainActor (HistoryRecord) -> Void
     var prepareVoice: @MainActor () async -> Void
+    var skipSpeech: @MainActor () -> Void = {}
 }
 
 /// Owns what the app is doing: one foreground state, one task per run, and the
@@ -66,7 +88,23 @@ final class ActionCoordinator {
     private let services: ActionServices
     private let feedback: ActionFeedback
     private let logger: Logger
-    private(set) var state: ActionState = .idle
+    private(set) var state: ActionState = .idle {
+        didSet {
+            switch state {
+            case .readingSelection: readAloudPlayback = .readingSelection
+            case .speaking: readAloudPlayback = .buffering(canSkip: false)
+            default: readAloudPlayback = nil
+            }
+        }
+    }
+    private(set) var readAloudPlayback: ReadAloudPlayback? {
+        didSet {
+            if readAloudPlayback != oldValue {
+                onReadAloudPlaybackChanged?(readAloudPlayback)
+            }
+        }
+    }
+    var onReadAloudPlaybackChanged: ((ReadAloudPlayback?) -> Void)?
     private var runs: [Int: Run] = [:]
     private var lastRun = 0
     private var lastPhase: StatusPhase = .ready
@@ -108,6 +146,16 @@ final class ActionCoordinator {
             begin(request)
             sync()
         }
+    }
+
+    func updateReadAloudPlayback(isBuffering: Bool, canSkip: Bool) {
+        guard case .speaking = state else { return }
+        readAloudPlayback = isBuffering ? .buffering(canSkip: canSkip) : .playing(canSkip: canSkip)
+    }
+
+    func skipReadAloud() {
+        guard case .speaking = state, readAloudPlayback?.canSkip == true else { return }
+        services.skipSpeech()
     }
 
     func captureInterrupted() {

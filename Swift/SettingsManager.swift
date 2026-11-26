@@ -78,6 +78,7 @@ private struct SerializedAppConfig: Codable {
     var readAloudHotkey: HotkeyConfig?
     var cleanupHotkey: HotkeyConfig?
     var cleanup: CleanupSettings?
+    var readAloud: ReadAloudSettings?
 
     enum CodingKeys: String, CodingKey {
         case provider
@@ -88,6 +89,7 @@ private struct SerializedAppConfig: Codable {
         case readAloudHotkey = "read_aloud_hotkey"
         case cleanupHotkey = "cleanup_hotkey"
         case cleanup
+        case readAloud = "read_aloud"
     }
 }
 
@@ -116,6 +118,7 @@ extension Notification.Name {
     static let hotkeyCaptureBegan = Notification.Name("hotkeyCaptureBegan")
     static let hotkeyCaptureEnded = Notification.Name("hotkeyCaptureEnded")
     static let historyMaxEntriesChanged = Notification.Name("historyMaxEntriesChanged")
+    static let readAloudPlaybackRateChanged = Notification.Name("readAloudPlaybackRateChanged")
 }
 
 // MARK: - Settings Manager
@@ -135,6 +138,7 @@ class SettingsManager: ObservableObject {
     @Published var providerStatus: String = "Loading…"
     @Published var historyMaxEntries: Int = HistoryManager.defaultMaxEntries
     @Published var readAloudHotkey: HotkeyConfig = .defaultReadAloud
+    @Published private(set) var readAloudSettings = ReadAloudSettings()
     @Published var cleanupHotkey: HotkeyConfig = .defaultCleanSelection
     /// An edited cleanup prompt; `nil` means the built-in one.
     @Published var customCleanupPrompt: String?
@@ -190,7 +194,8 @@ class SettingsManager: ObservableObject {
                 history: HistorySettings(maxEntries: historyMaxEntries),
                 readAloudHotkey: readAloudHotkey,
                 cleanupHotkey: cleanupHotkey,
-                cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation)
+                cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation),
+                readAloud: readAloudSettings
             )
 
             let encoder = YAMLEncoder()
@@ -236,6 +241,14 @@ class SettingsManager: ObservableObject {
         NotificationCenter.default.post(name: .hotkeyChanged, object: self)
         logger.log("\(action.title) hotkey changed", level: .info)
         saveSettings()
+    }
+
+    func updateReadAloudPlaybackRate(_ rate: Double) {
+        let updated = ReadAloudSettings(playbackRate: rate)
+        guard updated.playbackRate != readAloudSettings.playbackRate else { return }
+        readAloudSettings = updated
+        saveSettings()
+        NotificationCenter.default.post(name: .readAloudPlaybackRateChanged, object: self)
     }
 
     /// Saving the built-in text, or an empty prompt, goes back to the built-in prompt.
@@ -315,6 +328,7 @@ class SettingsManager: ObservableObject {
         inputDeviceUID = config.audio?.inputDeviceUID
         historyMaxEntries = max(1, config.history?.maxEntries ?? HistoryManager.defaultMaxEntries)
         readAloudHotkey = config.readAloudHotkey ?? .defaultReadAloud
+        readAloudSettings = config.readAloud ?? ReadAloudSettings()
         cleanupHotkey = config.cleanupHotkey ?? .defaultCleanSelection
         customCleanupPrompt = config.cleanup?.prompt
         cleanDictation = config.cleanup?.cleanDictation ?? false
@@ -332,6 +346,7 @@ class SettingsManager: ObservableObject {
         inputDeviceUID = nil
         historyMaxEntries = HistoryManager.defaultMaxEntries
         readAloudHotkey = .defaultReadAloud
+        readAloudSettings = ReadAloudSettings()
         cleanupHotkey = .defaultCleanSelection
         customCleanupPrompt = nil
         cleanDictation = false

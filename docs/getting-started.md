@@ -83,6 +83,11 @@ needs the same Accessibility permission as pasting. Dictation comes first, then
 `⌥C`, then read-aloud: starting a recording or `⌥C` stops speech, and a shortcut
 that can't run right now is ignored with a brief dip of the menu-bar icon.
 
+While a read is active, click the menu-bar icon to see its state, stop it, or skip
+to the next section when the voice supports skipping. Settings → Read Aloud
+saves one playback speed across voices and app launches. If the System voice is
+already speaking, a speed change takes effect on the next read.
+
 The first `⌥R` after each launch also starts preparing the Kokoro voice in the
 background. The very first time, that downloads about 320 MB of Kokoro models
 through FluidAudio and compiles them for the Neural Engine; later launches load

@@ -3,6 +3,9 @@ import SwiftUI
 // MARK: - View model (owned by AppDelegate, observed by the view)
 
 class PopoverViewModel: ObservableObject {
+    @Published var readAloudPlayback: ReadAloudPlayback?
+    var onStopReadAloud: (() -> Void)?
+    var onSkipReadAloud: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onOpenHistory: (() -> Void)?
 }
@@ -14,6 +17,53 @@ struct MenuBarPopoverView: View {
     @Environment(\.colorScheme) var scheme
 
     var body: some View {
+        VStack(spacing: 0) {
+            if let playback = viewModel.readAloudPlayback {
+                playbackControls(for: playback)
+                Divider()
+            }
+            toolbar
+        }
+        .frame(width: viewModel.readAloudPlayback == nil ? 140 : 224)
+    }
+
+    private func playbackControls(for playback: ReadAloudPlayback) -> some View {
+        HStack(spacing: 4) {
+            if case .playing = playback {
+                Image(systemName: "speaker.wave.2")
+                    .accessibilityHidden(true)
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityHidden(true)
+            }
+            Text(playback.title)
+                .font(.system(size: 12))
+                .accessibilityAddTraits(.updatesFrequently)
+            Spacer(minLength: 4)
+            if playback.canSkip {
+                ToolButton(
+                    icon: "forward.end",
+                    tint: Color.textPrimary(for: scheme),
+                    tooltip: "Skip section",
+                    scheme: scheme,
+                    action: { viewModel.onSkipReadAloud?() }
+                )
+            }
+            ToolButton(
+                icon: "stop.fill",
+                tint: Color.textPrimary(for: scheme),
+                tooltip: "Stop reading",
+                scheme: scheme,
+                action: { viewModel.onStopReadAloud?() }
+            )
+        }
+        .foregroundStyle(Color.textPrimary(for: scheme))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+    }
+
+    private var toolbar: some View {
         HStack(spacing: 2) {
             ToolButton(
                 icon: "list.bullet.rectangle",
@@ -40,7 +90,6 @@ struct MenuBarPopoverView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .frame(width: 140)
     }
 
     private var divider: some View {
@@ -74,6 +123,7 @@ private struct ToolButton: View {
         }
         .buttonStyle(.plain)
         .help(tooltip)
+        .accessibilityLabel(tooltip)
         .onHover { isHovered = $0 }
     }
 }

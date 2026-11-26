@@ -5,7 +5,7 @@ import FluidAudio
 /// is split into sentences and each is scheduled as soon as it is ready: the first
 /// sentence plays while the next is synthesized.
 @MainActor
-final class KokoroSpeechEngine: SpeechEngine {
+final class KokoroSpeechEngine: SpeechPlaybackControlling {
     /// FluidAudio defaults Prosody and Noise to `.all`, which lets Core ML place them
     /// on the GPU. There, an MPSGraph tensor allocation fails Metal API validation,
     /// which Xcode enables for Debug runs, and read-aloud aborts. Keep every stage on
@@ -20,6 +20,16 @@ final class KokoroSpeechEngine: SpeechEngine {
     private let pipeline: SpeechPipeline
 
     var isSpeaking: Bool { pipeline.isActive }
+    var playbackRate: Double {
+        get { player.playbackRate }
+        set { player.playbackRate = newValue }
+    }
+    var isBuffering: Bool { pipeline.progress?.isBuffering == true }
+    var canSkip: Bool {
+        guard let progress = pipeline.progress else { return false }
+        return progress.index + 1 < progress.count
+    }
+    var onPlaybackChanged: (() -> Void)?
     var isReady: Bool { manager != nil }
 
     init() {
@@ -28,6 +38,7 @@ final class KokoroSpeechEngine: SpeechEngine {
         self.player = player
         self.pipeline = pipeline
         player.onInterrupted = { [weak pipeline] in pipeline?.fail("Audio output changed") }
+        pipeline.onProgress = { [weak self] _ in self?.onPlaybackChanged?() }
     }
 
     /// Downloads the models on first use, then compiles and loads them. Returns
@@ -53,6 +64,10 @@ final class KokoroSpeechEngine: SpeechEngine {
             let result = try await manager.synthesizeDetailed(text: chunk)
             return SpeechClip(samples: result.samples, sampleRate: 24_000)
         }, completion: completion)
+    }
+
+    func skip() {
+        pipeline.skip()
     }
 
     func stop() {
