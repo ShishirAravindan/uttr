@@ -124,7 +124,12 @@ struct SettingsTabView: View {
         case .cancelling:
             Text("Cancelling…").foregroundStyle(.secondary)
         case .downloaded:
-            Text("Downloaded").foregroundStyle(.secondary)
+            if let error = voices.preparationErrors[model] {
+                Text(error).font(.system(size: 12)).foregroundStyle(.secondary)
+                Button("Retry on Next Read") { voices.retryPreparation(model) }
+            } else {
+                Text("Downloaded").foregroundStyle(.secondary)
+            }
         case .failed(let message):
             Text(message)
                 .font(.system(size: 12))

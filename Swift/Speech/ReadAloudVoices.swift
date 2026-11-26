@@ -3,63 +3,43 @@ import Foundation
 
 @MainActor
 final class ReadAloudVoices: ObservableObject {
-    enum DownloadStatus: Equatable {
-        case missing
-        case downloading(Double?)
-        case cancelling
-        case downloaded
-        case failed(String)
+    let files: VoiceModelFiles
+    let speech = ReadAloud()
+    private let host: TTSModelHost
+    private let downloads: ExpressiveVoiceDownloads
+    private var activeVoice = ReadAloudVoice.system
+    private var kokoroPreparation: SharedVoicePreparation<BufferedSpeechEngine?>?
+    @Published private(set) var preparationErrors: [ExpressiveSpeechModel: String] = [:]
+
+    init(files: VoiceModelFiles = .application) {
+        self.files = files
+        host = TTSModelHost(loader: MLXAudioModelLoader(files: files))
+        downloads = ExpressiveVoiceDownloads(files: files)
+        downloads.onChange = { [weak self] in self?.objectWillChange.send() }
     }
 
-    let files = VoiceModelFiles.application
-    let speech = ReadAloud()
-    private(set) lazy var host = TTSModelHost(loader: MLXAudioModelLoader(files: files))
-    private var activeVoice = ReadAloudVoice.system
-    private var kokoroPreparation: Task<BufferedSpeechEngine?, Never>?
-    private var downloads: [ExpressiveSpeechModel: Task<Bool, Never>] = [:]
-    @Published private var statuses: [ExpressiveSpeechModel: DownloadStatus] = [:]
-
-    func status(for model: ExpressiveSpeechModel) -> DownloadStatus {
-        statuses[model] ?? (files.isDownloaded(model) ? .downloaded : .missing)
+    func status(for model: ExpressiveSpeechModel) -> ExpressiveVoiceDownloads.Status {
+        downloads.status(for: model)
     }
 
     func refresh() {
-        for model in ExpressiveSpeechModel.allCases where downloads[model] == nil {
-            if files.isDownloaded(model) {
-                if case .failed = statuses[model] { continue }
-                statuses[model] = .downloaded
-            } else if statuses[model] == .downloaded {
-                statuses[model] = .missing
-            }
-        }
+        objectWillChange.send()
     }
 
-    var hasActiveDownload: Bool { !downloads.isEmpty }
+    var hasActiveDownload: Bool { downloads.hasActiveDownload }
 
     func download(_ model: ExpressiveSpeechModel) {
         guard !hasActiveDownload else { return }
-        statuses[model] = .downloading(nil)
-        downloads[model] = Task { [weak self] in
-            guard let self else { return false }
-            defer { downloads[model] = nil }
-            do {
-                try await MLXAudioModelLoader(files: files).download(model) { [weak self] progress in
-                    guard let self, case .downloading = self.statuses[model] else { return }
-                    self.statuses[model] = .downloading(progress)
-                }
-                statuses[model] = .downloaded
-                return true
-            } catch {
-                statuses[model] = .failed(Task.isCancelled ? "Download cancelled" : error.localizedDescription)
-                return false
-            }
-        }
+        preparationErrors[model] = nil
+        downloads.download(model)
     }
 
     func cancelDownload(_ model: ExpressiveSpeechModel) {
-        guard let task = downloads[model] else { return }
-        statuses[model] = .cancelling
-        task.cancel()
+        downloads.cancel(model)
+    }
+
+    func retryPreparation(_ model: ExpressiveSpeechModel) {
+        preparationErrors[model] = nil
     }
 
     /// The coordinator snapshots the voice before copying the selection.
@@ -72,23 +52,25 @@ final class ReadAloudVoices: ObservableObject {
             guard activeVoice != .kokoro else { return }
             loading()
             if kokoroPreparation == nil {
-                kokoroPreparation = Task { await KokoroSpeechSource.makeEngine() }
+                kokoroPreparation = SharedVoicePreparation { await KokoroSpeechSource.makeEngine() }
             }
-            let engine = await kokoroPreparation?.value
+            let engine = try? await kokoroPreparation?.value()
             guard !Task.isCancelled else { return }
             kokoroPreparation = nil
             if let engine { use(engine, as: .kokoro) }
             else { useSystem() }
         case .expressive(let model):
-            if let download = downloads[model] {
+            if let preparation = downloads.waitingPreparation(for: model) {
                 loading()
-                let ready = await download.value
-                guard !Task.isCancelled else { return }
-                guard ready else { return useSystem() }
+                do {
+                    try await preparation.value()
+                } catch {
+                    if !Task.isCancelled { useSystem() }
+                    return
+                }
             }
-            if case .failed = statuses[model] { return useSystem() }
-            guard files.isDownloaded(model) else {
-                if statuses[model] == .downloaded { statuses[model] = .missing }
+            guard !Task.isCancelled else { return }
+            guard downloads.status(for: model) == .downloaded, preparationErrors[model] == nil else {
                 return useSystem()
             }
             if host.state != .ready(model) {
@@ -97,7 +79,7 @@ final class ReadAloudVoices: ObservableObject {
                     try await host.prepare(model)
                 } catch {
                     guard !Task.isCancelled else { return }
-                    statuses[model] = .failed(error.localizedDescription)
+                    preparationErrors[model] = error.localizedDescription
                     return useSystem()
                 }
             }
@@ -110,9 +92,9 @@ final class ReadAloudVoices: ObservableObject {
         if let pending = kokoroPreparation {
             pending.cancel()
             kokoroPreparation = nil
-            Task { await pending.value?.teardown() }
+            Task { if let engine = try? await pending.value() { await engine.teardown() } }
         }
-        for task in downloads.values { task.cancel() }
+        downloads.cancelAll()
     }
 
     private func useSystem() {

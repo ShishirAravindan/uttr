@@ -50,6 +50,8 @@
 		AF1701622E9B000000000001 /* BufferedSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */; };
 		AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701112E9B000000000001 /* TTSModelHost.swift */; };
 		AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701212E9B000000000001 /* MLXAudioBackend.swift */; };
+		AF1701822E9B000000000001 /* ExpressiveVoiceDownloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701812E9B000000000001 /* ExpressiveVoiceDownloads.swift */; };
+		AF1701722E9B000000000001 /* SharedVoicePreparation.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701712E9B000000000001 /* SharedVoicePreparation.swift */; };
 		AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701512E9B000000000001 /* VoiceModelFiles.swift */; };
 		AF1701422E9B000000000001 /* ReadAloudVoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701412E9B000000000001 /* ReadAloudVoices.swift */; };
 		AF1701322E9B000000000001 /* ReadAloudVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701312E9B000000000001 /* ReadAloudVoice.swift */; };
@@ -104,6 +106,8 @@
 		AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BufferedSpeechEngine.swift; path = Swift/Speech/BufferedSpeechEngine.swift; sourceTree = "<group>"; };
 		AF1701112E9B000000000001 /* TTSModelHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TTSModelHost.swift; path = Swift/Speech/TTSModelHost.swift; sourceTree = "<group>"; };
 		AF1701212E9B000000000001 /* MLXAudioBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXAudioBackend.swift; path = Swift/Speech/MLXAudioBackend.swift; sourceTree = "<group>"; };
+		AF1701812E9B000000000001 /* ExpressiveVoiceDownloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExpressiveVoiceDownloads.swift; path = Swift/Speech/ExpressiveVoiceDownloads.swift; sourceTree = "<group>"; };
+		AF1701712E9B000000000001 /* SharedVoicePreparation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SharedVoicePreparation.swift; path = Swift/Speech/SharedVoicePreparation.swift; sourceTree = "<group>"; };
 		AF1701512E9B000000000001 /* VoiceModelFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceModelFiles.swift; path = Swift/Speech/VoiceModelFiles.swift; sourceTree = "<group>"; };
 		AF1701412E9B000000000001 /* ReadAloudVoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudVoices.swift; path = Swift/Speech/ReadAloudVoices.swift; sourceTree = "<group>"; };
 		AF1701312E9B000000000001 /* ReadAloudVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudVoice.swift; path = Swift/Speech/ReadAloudVoice.swift; sourceTree = "<group>"; };
@@ -134,6 +138,8 @@
 				AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */,
 				AF1701112E9B000000000001 /* TTSModelHost.swift */,
 				AF1701212E9B000000000001 /* MLXAudioBackend.swift */,
+				AF1701812E9B000000000001 /* ExpressiveVoiceDownloads.swift */,
+				AF1701712E9B000000000001 /* SharedVoicePreparation.swift */,
 				AF1701512E9B000000000001 /* VoiceModelFiles.swift */,
 				AF1701412E9B000000000001 /* ReadAloudVoices.swift */,
 				AF1701312E9B000000000001 /* ReadAloudVoice.swift */,
@@ -278,6 +284,8 @@
 				AF1701622E9B000000000001 /* BufferedSpeechEngine.swift in Sources */,
 				AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */,
 				AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */,
+				AF1701822E9B000000000001 /* ExpressiveVoiceDownloads.swift in Sources */,
+				AF1701722E9B000000000001 /* SharedVoicePreparation.swift in Sources */,
 				AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */,
 				AF1701422E9B000000000001 /* ReadAloudVoices.swift in Sources */,
 				AF1701322E9B000000000001 /* ReadAloudVoice.swift in Sources */,
