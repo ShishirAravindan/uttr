@@ -5,9 +5,11 @@ import Foundation
 @main
 struct SpeechChecks {
     @MainActor
-    static func main() async {
+    static func main() async throws {
         checkChunks()
         await checkVoiceSwitching()
+        await checkPlaybackControls()
+        try checkPlaybackRateSettings()
         print("Speech checks passed")
     }
 
@@ -84,15 +86,77 @@ struct SpeechChecks {
     }
 
     @MainActor
+    static func checkPlaybackControls() async {
+        let first = FakeVoice()
+        let second = FakeVoice()
+        let readAloud = ReadAloud(engine: first, logger: logger)
+        var updates: [[Bool]] = []
+        readAloud.onPlaybackChanged = { updates.append([$0, $1]) }
+
+        readAloud.playbackRate = 1.35
+        readAloud.speak("first") { _ in }
+        precondition(first.playbackRate == 1.35 && first.isSpeaking)
+        precondition(updates == [[true, false]])
+
+        // Skip appears when a later section exists. The same read stays active.
+        readAloud.skip()
+        first.isBuffering = false
+        first.canSkip = true
+        first.onPlaybackChanged?()
+        readAloud.skip()
+        precondition(first.skips == 1 && first.isSpeaking)
+        precondition(updates == [[true, false], [false, true]])
+
+        let staleProgress = first.onPlaybackChanged
+        readAloud.useEngine(second)
+        readAloud.playbackRate = 1.15
+        precondition(first.playbackRate == 1.15 && second.playbackRate == 1.0)
+        readAloud.stop()
+        readAloud.speak("second") { _ in }
+        staleProgress?()
+        precondition(second.playbackRate == 1.15 && second.isSpeaking)
+        precondition(updates == [[true, false], [false, true], [true, false]])
+        await readAloud.teardown()
+    }
+
+    static func checkPlaybackRateSettings() throws {
+        struct Config: Codable {
+            var read_aloud: ReadAloudSettings?
+        }
+        let decoder = JSONDecoder()
+        for (text, expected) in [
+            ("{}", 1.0),
+            (#"{"read_aloud":{}}"#, 1.0),
+            (#"{"read_aloud":true}"#, 1.0),
+            (#"{"read_aloud":{"playback_rate":"invalid"}}"#, 1.0),
+            (#"{"read_aloud":{"playback_rate":0.5}}"#, 0.75),
+            (#"{"read_aloud":{"playback_rate":2}}"#, 1.5),
+        ] {
+            let config = try decoder.decode(Config.self, from: Data(text.utf8))
+            precondition((config.read_aloud ?? ReadAloudSettings()).playbackRate == expected)
+        }
+
+        let saved = try JSONEncoder().encode(Config(read_aloud: ReadAloudSettings(playbackRate: 1.25)))
+        let reopened = try decoder.decode(Config.self, from: saved)
+        precondition(reopened.read_aloud?.playbackRate == 1.25)
+        precondition(ReadAloudSettings(playbackRate: .infinity).playbackRate == 1.0)
+    }
+
+    @MainActor
     static func settle() async {
         for _ in 0..<20 { await Task.yield() }
     }
 }
 
 @MainActor
-final class FakeVoice: SpeechEngine {
+final class FakeVoice: SpeechPlaybackControlling {
     var speaking = false
     var stops = 0
+    var skips = 0
+    var playbackRate = 1.0
+    var isBuffering = true
+    var canSkip = false
+    var onPlaybackChanged: (() -> Void)?
     var teardowns = 0
     var completion: ((SpeechCompletion) -> Void)?
     var isSpeaking: Bool { speaking }
@@ -100,6 +164,7 @@ final class FakeVoice: SpeechEngine {
         speaking = true
         self.completion = completion
     }
+    func skip() { skips += 1 }
     func stop() { speaking = false; stops += 1 }
     func teardown() async { teardowns += 1 }
 }
