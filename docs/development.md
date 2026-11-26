@@ -4,12 +4,13 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 26 or later** — CI builds with 26.3
+- **Xcode 26.4 or later** — CI builds with 26.4.1
 - **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
 
-Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio) and
-[Yams](https://github.com/jpsim/Yams) through Swift Package Manager. The checked-in
+Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio),
+[Yams](https://github.com/jpsim/Yams), and the
+[MLX Audio runtime](https://github.com/Blaizzy/mlx-audio-swift) through Swift Package Manager. The checked-in
 `Package.resolved` pins the versions. Building requires access to those packages;
 running the app also needs network access for its first model download.
 
