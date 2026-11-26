@@ -14,6 +14,7 @@ struct CoordinationChecks {
         await checkRecordingOverCleaning()
         await checkFocusChange()
         await checkReadAloud()
+        await checkWaitingForVoice()
         await checkInstruct()
         await checkPriorityRejections()
         await checkBlockedRecording()
@@ -252,6 +253,42 @@ extension CoordinationChecks {
         await settle()
         speaking.coordinator.request(.toggleRecord)
         precondition(speaking.stops == 1 && speaking.coordinator.state == .capturing)
+    }
+
+    @MainActor
+    static func checkWaitingForVoice() async {
+        let reader = Harness()
+        reader.holdVoice = true
+        reader.voiceSelection = "first"
+        reader.coordinator.request(.readAloud)
+        await settle()
+        reader.voiceSelection = "second"
+        reader.selections[0].open("first selection")
+        await settle()
+        precondition(reader.preparedVoices == ["first"], "the shortcut snapshots the selected voice")
+        precondition(reader.coordinator.phase == .loadingVoice && reader.history.isEmpty)
+        reader.voiceGates[0].open(())
+        await settle()
+        precondition(reader.spoken == ["first selection"] && reader.history == ["readAloud:first selection"])
+        reader.coordinator.stopReadAloud()
+
+        reader.coordinator.request(.readAloud)
+        await settle()
+        reader.selections[1].open("cancel while loading")
+        await settle()
+        precondition(reader.preparedVoices == ["first", "second"])
+        reader.coordinator.request(.readAloud)
+        precondition(reader.coordinator.state == .idle)
+
+        // A cancelled wait may still be attached to the explicit download.
+        // It must not block a new selection or speak when the download finishes.
+        reader.coordinator.request(.instruct)
+        await settle()
+        precondition(reader.reads == 3 && reader.coordinator.state.priority == .instruct)
+        reader.voiceGates[1].open(())
+        reader.selections[2].open(nil)
+        await settle()
+        precondition(reader.spoken == ["first selection"] && reader.history == ["readAloud:first selection"])
     }
 
     @MainActor
