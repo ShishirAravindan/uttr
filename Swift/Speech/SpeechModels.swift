@@ -31,7 +31,7 @@ enum ExpressiveSpeechModel: String, CaseIterable, Sendable {
         case .chatterboxTurbo:
             return ("Chatterbox Turbo", "mlx-community/chatterbox-turbo-8bit", 600_000_000)
         case .chatterbox:
-            return ("Chatterbox", "mlx-community/Chatterbox-TTS-fp16", 1_600_000_000)
+            return ("Chatterbox", "mlx-community/chatterbox-fp16", 2_580_000_000)
         case .qwenVoiceDesign:
             return ("Qwen3-TTS 1.7B VoiceDesign", "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16", 4_300_000_000)
         case .qwenCustomVoice:

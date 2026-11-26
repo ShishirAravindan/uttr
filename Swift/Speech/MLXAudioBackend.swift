@@ -19,9 +19,12 @@ struct MLXAudioModelLoader: SpeechModelLoader {
             model = try await LlamaTTSModel.fromModelDirectory(payload, cache: cache)
         case .marvis:
             // Marvis resolves its prompt and codec files from the supplied cache.
-            model = try await TTS.loadModel(modelRepo: preset.repository, modelType: "marvis", cache: cache)
+            model = try await TTS.loadModel(modelRepo: preset.repository, modelType: "csm", cache: cache)
         default:
             model = try await TTS.loadModel(modelRepo: payload.path, cache: cache)
+        }
+        if let chatterbox = model as? ChatterboxModel, chatterbox.defaultConditioning == nil {
+            throw AudioGenerationError.modelNotInitialized("This Chatterbox checkpoint has no default voice.")
         }
         return MLXLoadedSpeechModel(model: model)
     }
@@ -37,14 +40,14 @@ struct MLXAudioModelLoader: SpeechModelLoader {
         progress(nil)
         switch preset {
         case .orpheus:
-            try await fetch("mlx-community/snac_24khz", cache: cache, progress: nil)
+            try await fetch(VoiceModelFiles.orpheusCodec, cache: cache, progress: nil)
         case .chatterbox, .chatterboxTurbo:
             // The pinned Chatterbox loader uses its shared default cache for this tokenizer.
             try await fetch("mlx-community/S3TokenizerV2", cache: .default, progress: nil)
         case .marvis:
-            let repository = "kyutai/moshiko-pytorch-bf16"
+            let repository = VoiceModelFiles.marvisCodec
             let codec = files.payload(repository, in: directory)
-            let name = "tokenizer-e351c8d8-checkpoint125.safetensors"
+            let name = VoiceModelFiles.marvisCodecWeights
             if !FileManager.default.fileExists(atPath: codec.appendingPathComponent(name).path) {
                 _ = try await HubClient(cache: cache).downloadSnapshot(
                     of: repoID(repository), kind: .model, to: codec, matching: [name]
