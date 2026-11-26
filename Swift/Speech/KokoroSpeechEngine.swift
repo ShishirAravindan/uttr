@@ -5,7 +5,7 @@ import FluidAudio
 /// is split into sentences and each is scheduled as soon as it is ready: the first
 /// sentence plays while the next is synthesized.
 @MainActor
-final class KokoroSpeechEngine: SpeechPlaybackControlling {
+final class KokoroSpeechEngine: SpeechEngine {
     /// FluidAudio defaults Prosody and Noise to `.all`, which lets Core ML place them
     /// on the GPU. There, an MPSGraph tensor allocation fails Metal API validation,
     /// which Xcode enables for Debug runs, and read-aloud aborts. Keep every stage on

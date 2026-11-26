@@ -11,7 +11,7 @@ final class ReadAloud {
 
     var onPlaybackChanged: ((_ isBuffering: Bool, _ canSkip: Bool) -> Void)?
     var playbackRate = ReadAloudSettings.defaultPlaybackRate {
-        didSet { playbackControls?.playbackRate = playbackRate }
+        didSet { engine.playbackRate = playbackRate }
     }
 
     init(engine: SpeechEngine? = nil, logger: Logger = Logger(componentName: "ReadAloud")) {
@@ -32,36 +32,34 @@ final class ReadAloud {
     }
 
     var isSpeaking: Bool { engine.isSpeaking }
-    private var playbackControls: SpeechPlaybackControlling? { engine as? SpeechPlaybackControlling }
 
     func speak(_ text: String, completion: @escaping (SpeechCompletion) -> Void) {
         stop()
         let generation = self.generation
-        let controls = playbackControls
-        controls?.onPlaybackChanged = { [weak self, weak controls] in
-            guard let self, let controls, self.generation == generation else { return }
-            self.onPlaybackChanged?(controls.isBuffering, controls.canSkip)
+        let engine = self.engine
+        engine.onPlaybackChanged = { [weak self, weak engine] in
+            guard let self, let engine, self.generation == generation else { return }
+            self.onPlaybackChanged?(engine.isBuffering, engine.canSkip)
         }
         engine.speak(text) { [weak self] outcome in
             guard let self, self.generation == generation else { return }
             self.generation += 1
-            self.playbackControls?.onPlaybackChanged = nil
+            self.engine.onPlaybackChanged = nil
             self.adoptNextEngine()
             completion(outcome)
         }
         if self.generation == generation {
-            onPlaybackChanged?(controls?.isBuffering ?? false, controls?.canSkip ?? false)
+            onPlaybackChanged?(engine.isBuffering, engine.canSkip)
         }
     }
 
     func skip() {
-        guard let controls = playbackControls, controls.canSkip else { return }
-        controls.skip()
+        if engine.canSkip { engine.skip() }
     }
 
     func stop() {
         generation += 1
-        playbackControls?.onPlaybackChanged = nil
+        engine.onPlaybackChanged = nil
         if engine.isSpeaking { engine.stop() }
         adoptNextEngine()
     }
@@ -81,7 +79,7 @@ final class ReadAloud {
     private func replaceEngine(with newEngine: SpeechEngine) {
         let old = engine
         engine = newEngine
-        playbackControls?.playbackRate = playbackRate
+        engine.playbackRate = playbackRate
         logger.log("Read-aloud voice switched to \(type(of: newEngine))", level: .info)
         retire(old)
     }

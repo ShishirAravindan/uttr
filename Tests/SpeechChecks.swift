@@ -149,7 +149,7 @@ struct SpeechChecks {
 }
 
 @MainActor
-final class FakeVoice: SpeechPlaybackControlling {
+final class FakeVoice: SpeechEngine {
     var speaking = false
     var stops = 0
     var skips = 0

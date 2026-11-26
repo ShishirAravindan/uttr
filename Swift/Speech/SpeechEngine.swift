@@ -5,30 +5,25 @@ import AVFoundation
 @MainActor
 protocol SpeechEngine: AnyObject {
     var isSpeaking: Bool { get }
+    var playbackRate: Double { get set }
+    var isBuffering: Bool { get }
+    var canSkip: Bool { get }
+    var onPlaybackChanged: (() -> Void)? { get set }
+    func skip()
     /// Completes the current utterance. Stopping it invalidates completion.
     func speak(_ text: String, completion: @escaping (SpeechCompletion) -> Void)
     func stop()
     func teardown() async
 }
 
-/// Adopted by selectable voices that surface playback state and take a shared rate.
-@MainActor
-protocol SpeechPlaybackControlling: SpeechEngine {
-    var playbackRate: Double { get set }
-    var isBuffering: Bool { get }
-    var canSkip: Bool { get }
-    var onPlaybackChanged: (() -> Void)? { get set }
-    func skip()
-}
-
-extension SpeechPlaybackControlling {
+extension SpeechEngine {
     var canSkip: Bool { false }
     func skip() {}
 }
 
 /// The macOS system voice: always available, nothing to download.
 @MainActor
-final class SystemSpeechEngine: NSObject, SpeechPlaybackControlling, AVSpeechSynthesizerDelegate {
+final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private let logger = Logger(componentName: "SystemSpeech")
     private var current: AVSpeechUtterance?
