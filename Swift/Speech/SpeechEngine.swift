@@ -36,9 +36,10 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
     }
 
     func stop() {
+        let hadUtterance = current != nil
         current = nil
         completion = nil
-        if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        if hadUtterance || synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
     }
 
     func teardown() async {
@@ -54,9 +55,9 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
     }
 
     private nonisolated func complete(_ utterance: AVSpeechUtterance, with outcome: SpeechCompletion) {
-        let id = ObjectIdentifier(utterance)
-        Task { @MainActor [weak self] in
-            guard let self, let current = self.current, ObjectIdentifier(current) == id else { return }
+        // Keep the utterance alive across the hop so its identity cannot be reused.
+        Task { @MainActor [weak self, utterance] in
+            guard let self, self.current === utterance else { return }
             let completion = self.completion
             self.current = nil
             self.completion = nil
