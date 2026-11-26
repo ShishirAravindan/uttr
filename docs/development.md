@@ -149,7 +149,7 @@ swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/Speech
 /tmp/uttr-speech-pipeline-checks
 
 swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
-  Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift \
+  Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift Swift/Speech/VoiceModelFiles.swift \
   Tests/ExpressiveSpeechChecks.swift -o /tmp/uttr-expressive-speech-checks
 /tmp/uttr-expressive-speech-checks
 

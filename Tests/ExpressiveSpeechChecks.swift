@@ -5,6 +5,7 @@ struct ExpressiveSpeechChecks {
     @MainActor
     static func main() async throws {
         checkPresets()
+        try checkRequiredAssets()
         try await checkSerializedUse()
         try await checkPreparationCancellationAndRetry()
         print("Expressive speech checks passed")
@@ -14,7 +15,7 @@ struct ExpressiveSpeechChecks {
         let presets = ExpressiveSpeechModel.allCases
         precondition(presets.map(\.repository) == [
             "mlx-community/chatterbox-turbo-8bit",
-            "mlx-community/Chatterbox-TTS-fp16",
+            "mlx-community/chatterbox-fp16",
             "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
             "mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
             "mlx-community/orpheus-3b-0.1-ft-4bit",
@@ -25,6 +26,37 @@ struct ExpressiveSpeechChecks {
             "A warm, articulate audiobook narrator with a calm, measured pace who lets emotion come through in dialogue.",
             "Ryan", "tara", "conversational_a"
         ])
+    }
+
+    private static func checkRequiredAssets() throws {
+        let manager = FileManager.default
+        let folder = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let files = VoiceModelFiles(root: folder)
+        defer { try? manager.removeItem(at: folder) }
+
+        for preset in [ExpressiveSpeechModel.chatterbox, .marvis] {
+            let presetDirectory = files.directory(for: preset)
+            let primary = files.payload(preset.repository, in: presetDirectory)
+            try manager.createDirectory(at: primary, withIntermediateDirectories: true)
+            try Data("{}".utf8).write(to: primary.appendingPathComponent("config.json"))
+            try Data([1]).write(to: primary.appendingPathComponent("model.safetensors"))
+            do {
+                try files.markDownloaded(preset)
+                preconditionFailure("main weights must not make an incomplete voice ready")
+            } catch let error as CocoaError {
+                precondition(error.code == .fileReadNoSuchFile)
+            }
+            let required = preset == .chatterbox
+                ? primary.appendingPathComponent("conds.safetensors")
+                : files.payload(VoiceModelFiles.marvisCodec, in: presetDirectory)
+                    .appendingPathComponent(VoiceModelFiles.marvisCodecWeights)
+            try manager.createDirectory(at: required.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data([1]).write(to: required)
+            try files.markDownloaded(preset)
+            precondition(files.isDownloaded(preset))
+            try manager.removeItem(at: required)
+            precondition(!files.isDownloaded(preset), "readiness must notice missing model files")
+        }
     }
 
     @MainActor

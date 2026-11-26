@@ -70,7 +70,7 @@ jobs:
       - name: Check Expressive Speech
         run: |
           swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
-            Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift \
+            Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift Swift/Speech/VoiceModelFiles.swift \
             Tests/ExpressiveSpeechChecks.swift -o "$RUNNER_TEMP/uttr-expressive-speech-checks"
           "$RUNNER_TEMP/uttr-expressive-speech-checks"
 
