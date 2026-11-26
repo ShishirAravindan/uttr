@@ -67,6 +67,13 @@ jobs:
             Tests/SpeechPipelineChecks.swift -o "$RUNNER_TEMP/uttr-speech-pipeline-checks"
           "$RUNNER_TEMP/uttr-speech-pipeline-checks"
 
+      - name: Check Expressive Speech
+        run: |
+          swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
+            Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift \
+            Tests/ExpressiveSpeechChecks.swift -o "$RUNNER_TEMP/uttr-expressive-speech-checks"
+          "$RUNNER_TEMP/uttr-expressive-speech-checks"
+
       - name: Check Coordination
         run: |
           swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
