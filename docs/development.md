@@ -143,6 +143,10 @@ swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Cli
   Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
   Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
+swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
+  Tests/SpeechPipelineChecks.swift -o /tmp/uttr-speech-pipeline-checks
+/tmp/uttr-speech-pipeline-checks
+
 swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
   Swift/Speech/SpeechCompletion.swift Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
   Tests/CoordinationChecks.swift -o /tmp/uttr-coordination-checks

@@ -207,6 +207,33 @@ extension CoordinationChecks {
         ending.speechCompletions[0](.finished)
         precondition(ending.coordinator.state == .idle && ending.feedback.renders.last == .ready)
 
+        // Report failure only for the currently speaking run.
+        let restarted = Harness()
+        restarted.coordinator.request(.readAloud)
+        await settle()
+        restarted.selections[0].open("old")
+        await settle()
+        restarted.coordinator.stopReadAloud()
+        restarted.coordinator.request(.readAloud)
+        await settle()
+        restarted.selections[1].open("new")
+        await settle()
+        restarted.speechCompletions[0](.failed("stale output error"))
+        precondition(restarted.coordinator.state.phase == .speaking && restarted.feedback.reports.isEmpty)
+        restarted.speechCompletions[1](.failed("current output error"))
+        precondition(restarted.coordinator.state == .idle)
+        precondition(restarted.feedback.reports == [.init(.failure("current output error"), flash: true)])
+
+        // Shutdown stops active output and suppresses a late terminal event.
+        let quitting = Harness()
+        quitting.coordinator.request(.readAloud)
+        await settle()
+        quitting.selections[0].open("quit during speech")
+        await settle()
+        quitting.coordinator.shutDown()
+        quitting.speechCompletions[0](.failed("failure after quit"))
+        precondition(quitting.stops == 1 && quitting.coordinator.state == .idle && quitting.feedback.reports.isEmpty)
+
         // Nothing selected.
         let empty = Harness()
         empty.coordinator.request(.readAloud)

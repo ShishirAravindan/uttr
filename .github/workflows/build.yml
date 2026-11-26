@@ -61,6 +61,12 @@ jobs:
             Tests/SpeechChecks.swift -o "$RUNNER_TEMP/uttr-speech-checks"
           "$RUNNER_TEMP/uttr-speech-checks"
 
+      - name: Check Speech Pipeline
+        run: |
+          swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
+            Tests/SpeechPipelineChecks.swift -o "$RUNNER_TEMP/uttr-speech-pipeline-checks"
+          "$RUNNER_TEMP/uttr-speech-pipeline-checks"
+
       - name: Check Coordination
         run: |
           swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
