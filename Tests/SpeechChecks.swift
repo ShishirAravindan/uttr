@@ -93,6 +93,11 @@ struct SpeechChecks {
 final class FakeVoice: SpeechEngine {
     var speaking = false
     var stops = 0
+    var skips = 0
+    var playbackRate = 1.0
+    var isBuffering = true
+    var canSkip = false
+    var onPlaybackChanged: (() -> Void)?
     var teardowns = 0
     var completion: ((SpeechCompletion) -> Void)?
     var isSpeaking: Bool { speaking }
@@ -100,6 +105,7 @@ final class FakeVoice: SpeechEngine {
         speaking = true
         self.completion = completion
     }
+    func skip() { skips += 1 }
     func stop() { speaking = false; stops += 1 }
     func teardown() async { teardowns += 1 }
 }

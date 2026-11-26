@@ -15,7 +15,7 @@ final class ReadAloudVoices: ObservableObject {
     let speech = ReadAloud()
     private(set) lazy var host = TTSModelHost(loader: MLXAudioModelLoader(files: files))
     private var activeVoice = ReadAloudVoice.system
-    private var kokoroPreparation: Task<KokoroSpeechEngine?, Never>?
+    private var kokoroPreparation: Task<BufferedSpeechEngine?, Never>?
     private var downloads: [ExpressiveSpeechModel: Task<Bool, Never>] = [:]
     @Published private var statuses: [ExpressiveSpeechModel: DownloadStatus] = [:]
 
@@ -72,15 +72,7 @@ final class ReadAloudVoices: ObservableObject {
             guard activeVoice != .kokoro else { return }
             loading()
             if kokoroPreparation == nil {
-                kokoroPreparation = Task {
-                    let engine = KokoroSpeechEngine()
-                    let ready = await engine.prepare()
-                    guard ready, !Task.isCancelled else {
-                        await engine.teardown()
-                        return nil
-                    }
-                    return engine
-                }
+                kokoroPreparation = Task { await KokoroSpeechSource.makeEngine() }
             }
             let engine = await kokoroPreparation?.value
             guard !Task.isCancelled else { return }
@@ -110,7 +102,7 @@ final class ReadAloudVoices: ObservableObject {
                 }
             }
             guard !Task.isCancelled else { return }
-            if activeVoice != voice { use(MLXSpeechEngine(model: model, host: host), as: voice) }
+            if activeVoice != voice { use(MLXSpeechSource.makeEngine(model: model, host: host), as: voice) }
         }
     }
 

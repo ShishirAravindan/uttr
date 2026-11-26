@@ -40,13 +40,14 @@
 		AF1700522E9B000000000001 /* SpeechCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700512E9B000000000001 /* SpeechCompletion.swift */; };
 		AF1700222E9B000000000001 /* ReadAloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700212E9B000000000001 /* ReadAloud.swift */; };
 		AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700312E9B000000000001 /* SpeechChunks.swift */; };
-		AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */; };
+		AF1700422E9B000000000001 /* KokoroSpeechSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700412E9B000000000001 /* KokoroSpeechSource.swift */; };
 		B01800022E9B000000000001 /* SelectionCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = B01800012E9B000000000001 /* SelectionCleanup.swift */; };
 		AC190122E9B000000000001 /* ActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190112E9B000000000001 /* ActionPolicy.swift */; };
 		AC190222E9B000000000001 /* ActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190212E9B000000000001 /* ActionCoordinator.swift */; };
 		AC190322E9B000000000001 /* MenuBarFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190312E9B000000000001 /* MenuBarFeedback.swift */; };
 		AF1700822E9B000000000001 /* SpeechModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700812E9B000000000001 /* SpeechModels.swift */; };
-		AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */; };
+		AF1700C22E9B000000000001 /* MLXSpeechSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700C12E9B000000000001 /* MLXSpeechSource.swift */; };
+		AF1701622E9B000000000001 /* BufferedSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */; };
 		AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701112E9B000000000001 /* TTSModelHost.swift */; };
 		AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701212E9B000000000001 /* MLXAudioBackend.swift */; };
 		AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701512E9B000000000001 /* VoiceModelFiles.swift */; };
@@ -93,13 +94,14 @@
 		AF1700512E9B000000000001 /* SpeechCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechCompletion.swift; path = Swift/Speech/SpeechCompletion.swift; sourceTree = "<group>"; };
 		AF1700212E9B000000000001 /* ReadAloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloud.swift; path = Swift/Speech/ReadAloud.swift; sourceTree = "<group>"; };
 		AF1700312E9B000000000001 /* SpeechChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechChunks.swift; path = Swift/Speech/SpeechChunks.swift; sourceTree = "<group>"; };
-		AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KokoroSpeechEngine.swift; path = Swift/Speech/KokoroSpeechEngine.swift; sourceTree = "<group>"; };
+		AF1700412E9B000000000001 /* KokoroSpeechSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KokoroSpeechSource.swift; path = Swift/Speech/KokoroSpeechSource.swift; sourceTree = "<group>"; };
 		B01800012E9B000000000001 /* SelectionCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionCleanup.swift; path = Swift/Cleanup/SelectionCleanup.swift; sourceTree = "<group>"; };
 		AC190112E9B000000000001 /* ActionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionPolicy.swift; path = Swift/Coordination/ActionPolicy.swift; sourceTree = "<group>"; };
 		AC190212E9B000000000001 /* ActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionCoordinator.swift; path = Swift/Coordination/ActionCoordinator.swift; sourceTree = "<group>"; };
 		AC190312E9B000000000001 /* MenuBarFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MenuBarFeedback.swift; path = Swift/Coordination/MenuBarFeedback.swift; sourceTree = "<group>"; };
 		AF1700812E9B000000000001 /* SpeechModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechModels.swift; path = Swift/Speech/SpeechModels.swift; sourceTree = "<group>"; };
-		AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXSpeechEngine.swift; path = Swift/Speech/MLXSpeechEngine.swift; sourceTree = "<group>"; };
+		AF1700C12E9B000000000001 /* MLXSpeechSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXSpeechSource.swift; path = Swift/Speech/MLXSpeechSource.swift; sourceTree = "<group>"; };
+		AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BufferedSpeechEngine.swift; path = Swift/Speech/BufferedSpeechEngine.swift; sourceTree = "<group>"; };
 		AF1701112E9B000000000001 /* TTSModelHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TTSModelHost.swift; path = Swift/Speech/TTSModelHost.swift; sourceTree = "<group>"; };
 		AF1701212E9B000000000001 /* MLXAudioBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXAudioBackend.swift; path = Swift/Speech/MLXAudioBackend.swift; sourceTree = "<group>"; };
 		AF1701512E9B000000000001 /* VoiceModelFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceModelFiles.swift; path = Swift/Speech/VoiceModelFiles.swift; sourceTree = "<group>"; };
@@ -128,7 +130,8 @@
 			isa = PBXGroup;
 			children = (
 				AF1700812E9B000000000001 /* SpeechModels.swift */,
-				AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */,
+				AF1700C12E9B000000000001 /* MLXSpeechSource.swift */,
+				AF1701612E9B000000000001 /* BufferedSpeechEngine.swift */,
 				AF1701112E9B000000000001 /* TTSModelHost.swift */,
 				AF1701212E9B000000000001 /* MLXAudioBackend.swift */,
 				AF1701512E9B000000000001 /* VoiceModelFiles.swift */,
@@ -155,7 +158,7 @@
 				AE1600212E9B000000000001 /* CleanupOutputChecks.swift */,
 				AE1600112E9B000000000001 /* AppleCleanupBackend.swift */,
 				AE1600012E9B000000000001 /* TextCleanup.swift */,
-				AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */,
+				AF1700412E9B000000000001 /* KokoroSpeechSource.swift */,
 				AF1700312E9B000000000001 /* SpeechChunks.swift */,
 				AF1700212E9B000000000001 /* ReadAloud.swift */,
 				AF1700112E9B000000000001 /* SpeechEngine.swift */,
@@ -271,7 +274,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AF1700822E9B000000000001 /* SpeechModels.swift in Sources */,
-				AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */,
+				AF1700C22E9B000000000001 /* MLXSpeechSource.swift in Sources */,
+				AF1701622E9B000000000001 /* BufferedSpeechEngine.swift in Sources */,
 				AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */,
 				AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */,
 				AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */,
@@ -301,7 +305,7 @@
 				AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */,
 				AE1600122E9B000000000001 /* AppleCleanupBackend.swift in Sources */,
 				AE1600022E9B000000000001 /* TextCleanup.swift in Sources */,
-				AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */,
+				AF1700422E9B000000000001 /* KokoroSpeechSource.swift in Sources */,
 				AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */,
 				AF1700222E9B000000000001 /* ReadAloud.swift in Sources */,
 				AF1700122E9B000000000001 /* SpeechEngine.swift in Sources */,
