@@ -44,7 +44,7 @@ struct ActionServices {
     var instructAvailable: @MainActor () -> Bool
     var readSelection: @MainActor () async -> String?
     var cleanSelection: @MainActor (String) async throws -> CleanupResult
-    var speak: @MainActor (String) -> Void
+    var speak: @MainActor (String, @escaping (SpeechCompletion) -> Void) -> Void
     var stopSpeech: @MainActor () -> Void
     var frontmostPID: @MainActor () -> pid_t?
     var paste: @MainActor (String, @escaping @MainActor (Bool) -> Void) -> Void
@@ -117,10 +117,18 @@ final class ActionCoordinator {
         conclude(nil, .failure("Microphone disconnected"))
     }
 
-    func speechEnded() {
-        guard case .speaking = state else { return }
-        state = .idle
+    func stopReadAloud() {
+        guard state.priority == .tts else { return }
+        preempt()
         sync()
+    }
+
+    private func speechEnded(_ completion: SpeechCompletion, run: Int) {
+        guard state == .speaking(run: run) else { return }
+        switch completion {
+        case .finished: conclude(run, nil)
+        case .failed(let message): conclude(run, .failure(message))
+        }
     }
 
     /// Cancels every run. A transcript still being cleaned is kept in history as it was.
@@ -136,7 +144,9 @@ final class ActionCoordinator {
         }
         runs = [:]
         voiceTask?.cancel()
+        let wasSpeaking = state.priority == .tts
         state = .idle
+        if wasSpeaking { services.stopSpeech() }
     }
 
     // MARK: - Policy
@@ -405,6 +415,8 @@ final class ActionCoordinator {
         services.record(.readAloud(text: selection))
         state = .speaking(run: run)
         sync()
-        services.speak(selection)
+        services.speak(selection) { [weak self] completion in
+            self?.speechEnded(completion, run: run)
+        }
     }
 }

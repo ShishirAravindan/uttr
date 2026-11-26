@@ -35,8 +35,7 @@ struct SpeechChecks {
         // Not speaking: the new voice takes over at once.
         let system = FakeVoice()
         let readAloud = ReadAloud(engine: system, logger: logger)
-        var idle = 0
-        readAloud.onIdle = { idle += 1 }
+        var finished = 0
         let kokoro = FakeVoice()
         readAloud.useEngine(kokoro)
         await settle()
@@ -48,16 +47,14 @@ struct SpeechChecks {
         let first = FakeVoice()
         let second = FakeVoice()
         let stopping = ReadAloud(engine: first, logger: logger)
-        stopping.onIdle = { idle += 1 }
-        first.speaking = true
+        stopping.speak("first") { _ in finished += 1 }
         stopping.useEngine(second)
         await settle()
         precondition(first.teardowns == 0 && first.stops == 0, "speech in progress keeps its voice")
-        let idleBefore = idle
         stopping.stop()
         await settle()
         precondition(first.stops == 1 && first.teardowns == 1)
-        precondition(idle == idleBefore + 1)
+        precondition(finished == 0)
         precondition(!stopping.isSpeaking)
         second.speaking = true
         precondition(stopping.isSpeaking)
@@ -66,11 +63,11 @@ struct SpeechChecks {
         let third = FakeVoice()
         let fourth = FakeVoice()
         let finishing = ReadAloud(engine: third, logger: logger)
-        finishing.onIdle = { idle += 1 }
-        third.speaking = true
+        finishing.speak("third") { _ in finished += 1 }
         finishing.useEngine(fourth)
         third.speaking = false
-        third.onFinished?()
+        third.completion?(.finished)
+        precondition(finished == 1)
         await settle()
         precondition(third.teardowns == 1 && third.stops == 0)
         fourth.speaking = true
@@ -80,7 +77,7 @@ struct SpeechChecks {
         let fifth = FakeVoice()
         let sixth = FakeVoice()
         let quitting = ReadAloud(engine: fifth, logger: logger)
-        fifth.speaking = true
+        quitting.speak("fifth") { _ in preconditionFailure("quit must invalidate completion") }
         quitting.useEngine(sixth)
         await quitting.teardown()
         precondition(fifth.teardowns == 1 && sixth.teardowns == 1)
@@ -97,9 +94,12 @@ final class FakeVoice: SpeechEngine {
     var speaking = false
     var stops = 0
     var teardowns = 0
-    var onFinished: (() -> Void)?
+    var completion: ((SpeechCompletion) -> Void)?
     var isSpeaking: Bool { speaking }
-    func speak(_ text: String) { speaking = true }
+    func speak(_ text: String, completion: @escaping (SpeechCompletion) -> Void) {
+        speaking = true
+        self.completion = completion
+    }
     func stop() { speaking = false; stops += 1 }
     func teardown() async { teardowns += 1 }
 }

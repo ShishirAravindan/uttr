@@ -5,9 +5,8 @@ import AVFoundation
 @MainActor
 protocol SpeechEngine: AnyObject {
     var isSpeaking: Bool { get }
-    /// Called when speech ends on its own; not after `stop()`.
-    var onFinished: (() -> Void)? { get set }
-    func speak(_ text: String)
+    /// Completes the current utterance. Stopping it invalidates completion.
+    func speak(_ text: String, completion: @escaping (SpeechCompletion) -> Void)
     func stop()
     func teardown() async
 }
@@ -19,7 +18,7 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
     private let logger = Logger(componentName: "SystemSpeech")
     private var current: AVSpeechUtterance?
 
-    var onFinished: (() -> Void)?
+    private var completion: ((SpeechCompletion) -> Void)?
     var isSpeaking: Bool { current != nil }
 
     override init() {
@@ -27,9 +26,10 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
         synthesizer.delegate = self
     }
 
-    func speak(_ text: String) {
+    func speak(_ text: String, completion: @escaping (SpeechCompletion) -> Void) {
         stop()
         let utterance = AVSpeechUtterance(string: text)
+        self.completion = completion
         current = utterance
         synthesizer.speak(utterance)
         logger.log("Speaking \(text.count) characters with the system voice", level: .info)
@@ -37,6 +37,7 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
 
     func stop() {
         current = nil
+        completion = nil
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
     }
 
@@ -45,11 +46,21 @@ final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDeleg
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        complete(utterance, with: .finished)
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        complete(utterance, with: .failed("System speech was interrupted"))
+    }
+
+    private nonisolated func complete(_ utterance: AVSpeechUtterance, with outcome: SpeechCompletion) {
         let id = ObjectIdentifier(utterance)
         Task { @MainActor [weak self] in
             guard let self, let current = self.current, ObjectIdentifier(current) == id else { return }
+            let completion = self.completion
             self.current = nil
-            self.onFinished?()
+            self.completion = nil
+            completion?(outcome)
         }
     }
 }

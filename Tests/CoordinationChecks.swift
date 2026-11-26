@@ -204,7 +204,7 @@ extension CoordinationChecks {
         await settle()
         ending.selections[0].open("done soon")
         await settle()
-        ending.coordinator.speechEnded()
+        ending.speechCompletions[0](.finished)
         precondition(ending.coordinator.state == .idle && ending.feedback.renders.last == .ready)
 
         // Nothing selected.
@@ -420,6 +420,7 @@ final class Harness {
     var clipboard: [String] = []
     var history: [String] = []
     var spoken: [String] = []
+    var speechCompletions: [(SpeechCompletion) -> Void] = []
     var discarded: [URL] = []
     var transcriptions: [Gate<Result<String, Error>>] = []
     var dictationCleanups: [Gate<CleanupResult>] = []
@@ -465,7 +466,10 @@ final class Harness {
                 selectionCleanups.append(gate)
                 return try await gate.wait().get()
             },
-            speak: { [unowned self] in spoken.append($0) },
+            speak: { [unowned self] text, done in
+                spoken.append(text)
+                speechCompletions.append(done)
+            },
             stopSpeech: { [unowned self] in stops += 1 },
             frontmostPID: { [unowned self] in frontmost },
             paste: { [unowned self] text, done in

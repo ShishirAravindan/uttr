@@ -57,13 +57,13 @@ jobs:
       - name: Check Speech
         run: |
           swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/ClipboardTransaction.swift Swift/Selection/SelectionReader.swift \
-            Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
+            Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
             Tests/SpeechChecks.swift -o "$RUNNER_TEMP/uttr-speech-checks"
           "$RUNNER_TEMP/uttr-speech-checks"
 
       - name: Check Coordination
         run: |
           swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
-            Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
+            Swift/Speech/SpeechCompletion.swift Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
             Tests/CoordinationChecks.swift -o "$RUNNER_TEMP/uttr-coordination-checks"
           "$RUNNER_TEMP/uttr-coordination-checks"
