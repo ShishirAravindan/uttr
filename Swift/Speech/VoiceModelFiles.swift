@@ -24,6 +24,47 @@ struct VoiceModelFiles {
             .appendingPathComponent(repository.replacingOccurrences(of: "/", with: "_"), isDirectory: true)
     }
 
+    struct StoredVoice: Identifiable {
+        let model: ExpressiveSpeechModel
+        let bytes: Int64
+        let downloaded: Bool
+
+        var id: ExpressiveSpeechModel { model }
+    }
+
+    func storedDirectory(for model: ExpressiveSpeechModel) -> URL? {
+        let directory = directory(for: model)
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
+        guard let rootValues = try? root.resourceValues(forKeys: keys),
+              rootValues.isDirectory == true, rootValues.isSymbolicLink == false,
+              let values = try? directory.resourceValues(forKeys: keys),
+              values.isDirectory == true, values.isSymbolicLink == false
+        else { return nil }
+        return directory
+    }
+
+    func storedVoices() -> [StoredVoice] {
+        ExpressiveSpeechModel.allCases.compactMap { model in
+            guard let directory = storedDirectory(for: model) else { return nil }
+            let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey, .totalFileAllocatedSizeKey, .fileSizeKey]
+            guard let files = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: Array(keys))
+            else { return nil }
+            var bytes: Int64 = 0
+            for case let file as URL in files {
+                guard let values = try? file.resourceValues(forKeys: keys), values.isRegularFile == true,
+                      values.isSymbolicLink == false else { continue }
+                bytes += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+            }
+            let downloaded = isDownloaded(model)
+            return bytes > 0 || downloaded ? StoredVoice(model: model, bytes: bytes, downloaded: downloaded) : nil
+        }
+    }
+
+    func remove(_ model: ExpressiveSpeechModel) throws {
+        guard let directory = storedDirectory(for: model) else { throw CocoaError(.fileNoSuchFile) }
+        try FileManager.default.removeItem(at: directory)
+    }
+
     func isDownloaded(_ model: ExpressiveSpeechModel) -> Bool {
         let marker = directory(for: model).appendingPathComponent(".uttr-ready")
         return FileManager.default.fileExists(atPath: marker.path) && hasModelFiles(model)

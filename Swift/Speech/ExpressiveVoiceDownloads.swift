@@ -21,12 +21,22 @@ final class ExpressiveVoiceDownloads {
     private var transfer: Transfer?
     private var failures: [ExpressiveSpeechModel: String] = [:]
     var onChange: (() -> Void)?
+    var onSettled: (() -> Void)?
 
     init(files: VoiceModelFiles) {
         self.files = files
     }
 
     var hasActiveDownload: Bool { transfer != nil }
+
+    func isDownloading(_ model: ExpressiveSpeechModel) -> Bool {
+        transfer?.model == model
+    }
+
+    func clearFailure(for model: ExpressiveSpeechModel) {
+        failures[model] = nil
+        onChange?()
+    }
 
     func status(for model: ExpressiveSpeechModel) -> Status {
         if let transfer, transfer.model == model { return transfer.status }
@@ -43,6 +53,7 @@ final class ExpressiveVoiceDownloads {
             defer {
                 self.transfer = nil
                 self.onChange?()
+                self.onSettled?()
             }
             do {
                 try await MLXAudioModelLoader(files: self.files).download(model) { [weak self] fraction in

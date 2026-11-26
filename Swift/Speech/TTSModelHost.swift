@@ -91,8 +91,10 @@ final class TTSModelHost {
     }
 
     /// Waits for the active operation to release the model before unloading.
-    func unload() async throws {
+    func unload(_ preset: ExpressiveSpeechModel? = nil, whileAllowed: () -> Bool = { true }) async throws {
         try await exclusively {
+            guard whileAllowed() else { throw CancellationError() }
+            if let preset, loaded?.preset != preset { return }
             releaseLoadedModel()
             state = .unloaded
         }

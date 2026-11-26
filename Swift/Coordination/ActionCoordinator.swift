@@ -67,7 +67,13 @@ final class ActionCoordinator {
     private let services: ActionServices
     private let feedback: ActionFeedback
     private let logger: Logger
-    private(set) var state: ActionState = .idle
+    private(set) var state: ActionState = .idle {
+        didSet {
+            let active = state.priority == .tts
+            if active != (oldValue.priority == .tts) { onReadAloudActivityChanged?(active) }
+        }
+    }
+    var onReadAloudActivityChanged: ((Bool) -> Void)?
     private var runs: [Int: Run] = [:]
     private var lastRun = 0
     private var lastPhase: StatusPhase = .ready
