@@ -6,6 +6,7 @@ struct ExpressiveSpeechChecks {
     static func main() async throws {
         checkPresets()
         try checkRequiredAssets()
+        try await checkSharedPreparationCancellation()
         try await checkSerializedUse()
         try await checkPreparationCancellationAndRetry()
         print("Expressive speech checks passed")
@@ -57,6 +58,43 @@ struct ExpressiveSpeechChecks {
             try manager.removeItem(at: required)
             precondition(!files.isDownloaded(preset), "readiness must notice missing model files")
         }
+    }
+
+    @MainActor
+    private static func checkSharedPreparationCancellation() async throws {
+        var hold: CheckedContinuation<Int, Never>?
+        var completed = false
+        let preparation = SharedVoicePreparation {
+            let value = await withCheckedContinuation { hold = $0 }
+            completed = true
+            return value
+        }
+        await waitUntil { hold != nil }
+
+        var entered = false
+        let cancelled = Task {
+            entered = true
+            return try await preparation.value()
+        }
+        await waitUntil { entered }
+        cancelled.cancel()
+        await expectCancellation(from: cancelled)
+        precondition(!completed, "cancelling a read must detach before the download finishes")
+
+        let stillWaiting = Task { try await preparation.value() }
+        hold?.resume(returning: 42)
+        let value = try await stillWaiting.value
+        precondition(completed && value == 42, "other reads still get the prepared voice")
+
+        var finishCancelledTransfer: CheckedContinuation<Void, Never>?
+        let transfer = SharedVoicePreparation {
+            await withCheckedContinuation { finishCancelledTransfer = $0 }
+        }
+        await waitUntil { finishCancelledTransfer != nil }
+        let read = Task { try await transfer.value() }
+        transfer.cancel()
+        await expectCancellation(from: read)
+        finishCancelledTransfer?.resume()
     }
 
     @MainActor
