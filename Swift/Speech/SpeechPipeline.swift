@@ -34,7 +34,7 @@ final class SpeechPipeline {
     private var inFlight: (run: Int, index: Int, task: Task<Void, Never>)?
     private var run = 0
     private var playback = 0
-    private var progress: SpeechProgress? {
+    private(set) var progress: SpeechProgress? {
         didSet {
             if progress != oldValue, let progress { onProgress?(progress) }
         }

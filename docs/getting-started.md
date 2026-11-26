@@ -83,13 +83,15 @@ needs the same Accessibility permission as pasting. Dictation comes first, then
 `⌥C`, then read-aloud: starting a recording or `⌥C` stops speech, and a shortcut
 that can't run right now is ignored with a brief dip of the menu-bar icon.
 
-The first `⌥R` after each launch also starts preparing the Kokoro voice in the
-background. The very first time, that downloads about 320 MB of Kokoro models
-through FluidAudio and compiles them for the Neural Engine; later launches load
-them from the cache. Until Kokoro is ready, or if it fails to load, the macOS
-system voice reads instead, so that first read uses the system voice. A voice
-that becomes ready mid-sentence takes over after the current read-aloud. If you
-never use read-aloud, uttr never downloads or loads Kokoro.
+**Settings → Text to Speech** lets you choose Kokoro, the macOS System voice,
+or one of six expressive voices. Expressive voices use local models. Select a
+voice and click **Download** to get its files. The first read with Kokoro
+prepares its FluidAudio model, downloading about 320 MB if needed.
+
+If the chosen voice is preparing, the read waits and the menu bar displays its
+loading indicator. Press `⌥R` again to cancel the read. If an expressive voice
+still needs a download or preparation fails, System reads that selection and
+your voice choice stays selected for the next read.
 
 ### Clean Up a Selection
 

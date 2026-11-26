@@ -11,6 +11,21 @@ protocol SpeechEngine: AnyObject {
     func teardown() async
 }
 
+/// Adopted by selectable voices that surface playback state and take a shared rate.
+@MainActor
+protocol SpeechPlaybackControlling: SpeechEngine {
+    var playbackRate: Double { get set }
+    var isBuffering: Bool { get }
+    var canSkip: Bool { get }
+    var onPlaybackChanged: (() -> Void)? { get set }
+    func skip()
+}
+
+extension SpeechPlaybackControlling {
+    var canSkip: Bool { false }
+    func skip() {}
+}
+
 /// The macOS system voice: always available, nothing to download.
 @MainActor
 final class SystemSpeechEngine: NSObject, SpeechEngine, AVSpeechSynthesizerDelegate {

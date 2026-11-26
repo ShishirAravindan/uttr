@@ -35,6 +35,7 @@ struct CoordinationChecks {
             ("cleaning", .cleaning(run: 1, target: 10)),
             ("inserting", .inserting(run: 1, target: 10)),
             ("readingSelection", .readingSelection(run: 1)),
+            ("preparingVoice", .preparingVoice(run: 1)),
             ("speaking", .speaking(run: 1)),
             ("instructing.reading", .instructing(run: 1, stage: .reading, target: 10)),
             ("instructing.cleaning", .instructing(run: 1, stage: .cleaning, target: 10)),
@@ -48,6 +49,7 @@ struct CoordinationChecks {
             "cleaning": [.replace, .reject(.busy), .reject(.busy)],
             "inserting": [.accept, .reject(.busy), .reject(.busy)],
             "readingSelection": [.replace, .replace, .cancel],
+            "preparingVoice": [.replace, .replace, .cancel],
             "speaking": [.replace, .replace, .cancel],
             "instructing.reading": [.replace, .reject(.busy), .reject(.busy)],
             "instructing.cleaning": [.replace, .reject(.busy), .reject(.busy)],
@@ -378,12 +380,18 @@ extension CoordinationChecks {
         precondition(h.captures == 1, "requests are ignored after quit")
 
         let voice = Harness()
+        voice.holdVoice = true
         voice.coordinator.request(.readAloud)
+        await settle()
+        voice.selections[0].open("waiting at quit")
         await settle()
         precondition(voice.voicePrepares == 1)
         voice.coordinator.shutDown()
         await settle()
         precondition(voice.voiceCancelled, "voice preparation is cancelled at quit")
+        voice.voiceGates[0].open(())
+        await settle()
+        precondition(voice.spoken.isEmpty && voice.history.isEmpty)
     }
 
     @MainActor
@@ -441,6 +449,10 @@ final class Harness {
     var reads = 0
     var readsInFlight = 0
     var maxReadsInFlight = 0
+    var holdVoice = false
+    var voiceSelection = "kokoro"
+    var preparedVoices: [String] = []
+    var voiceGates: [Gate<Void>] = []
     var voicePrepares = 0
     var voiceCancelled = false
     var pastes: [String] = []
@@ -516,12 +528,19 @@ final class Harness {
                 }
             },
             prepareVoice: { [unowned self] in
-                voicePrepares += 1
-                let gate = Gate<Void>()
-                await withTaskCancellationHandler {
-                    await gate.wait()
-                } onCancel: {
-                    Task { @MainActor in self.voiceCancelled = true; gate.open(()) }
+                let selected = voiceSelection
+                return { [unowned self] loading in
+                    voicePrepares += 1
+                    preparedVoices.append(selected)
+                    guard holdVoice else { return }
+                    loading()
+                    let gate = Gate<Void>()
+                    voiceGates.append(gate)
+                    await withTaskCancellationHandler {
+                        await gate.wait()
+                    } onCancel: {
+                        Task { @MainActor in self.voiceCancelled = true }
+                    }
                 }
             }
         )

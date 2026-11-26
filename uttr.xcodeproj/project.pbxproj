@@ -49,7 +49,12 @@
 		AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */; };
 		AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701112E9B000000000001 /* TTSModelHost.swift */; };
 		AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701212E9B000000000001 /* MLXAudioBackend.swift */; };
+		AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701512E9B000000000001 /* VoiceModelFiles.swift */; };
+		AF1701422E9B000000000001 /* ReadAloudVoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701412E9B000000000001 /* ReadAloudVoices.swift */; };
+		AF1701322E9B000000000001 /* ReadAloudVoice.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701312E9B000000000001 /* ReadAloudVoice.swift */; };
 		6AF1A0132E9B000000000001 /* MLXAudioTTS in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0122E9B000000000001 /* MLXAudioTTS */; };
+		6AF1A0432E9B000000000001 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0422E9B000000000001 /* HuggingFace */; };
+		6AF1A0332E9B000000000001 /* MLXAudioCore in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0322E9B000000000001 /* MLXAudioCore */; };
 		6AF1A0232E9B000000000001 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0222E9B000000000001 /* MLX */; };
 /* End PBXBuildFile section */
 
@@ -97,6 +102,9 @@
 		AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXSpeechEngine.swift; path = Swift/Speech/MLXSpeechEngine.swift; sourceTree = "<group>"; };
 		AF1701112E9B000000000001 /* TTSModelHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TTSModelHost.swift; path = Swift/Speech/TTSModelHost.swift; sourceTree = "<group>"; };
 		AF1701212E9B000000000001 /* MLXAudioBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXAudioBackend.swift; path = Swift/Speech/MLXAudioBackend.swift; sourceTree = "<group>"; };
+		AF1701512E9B000000000001 /* VoiceModelFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VoiceModelFiles.swift; path = Swift/Speech/VoiceModelFiles.swift; sourceTree = "<group>"; };
+		AF1701412E9B000000000001 /* ReadAloudVoices.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudVoices.swift; path = Swift/Speech/ReadAloudVoices.swift; sourceTree = "<group>"; };
+		AF1701312E9B000000000001 /* ReadAloudVoice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloudVoice.swift; path = Swift/Speech/ReadAloudVoice.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +114,8 @@
 			files = (
 				6AF1A0232E9B000000000001 /* MLX in Frameworks */,
 				6AF1A0132E9B000000000001 /* MLXAudioTTS in Frameworks */,
+				6AF1A0432E9B000000000001 /* HuggingFace in Frameworks */,
+				6AF1A0332E9B000000000001 /* MLXAudioCore in Frameworks */,
 				00E612A82E593BC4002E23F2 /* Yams in Frameworks */,
 				6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */,
 			);
@@ -121,6 +131,9 @@
 				AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */,
 				AF1701112E9B000000000001 /* TTSModelHost.swift */,
 				AF1701212E9B000000000001 /* MLXAudioBackend.swift */,
+				AF1701512E9B000000000001 /* VoiceModelFiles.swift */,
+				AF1701412E9B000000000001 /* ReadAloudVoices.swift */,
+				AF1701312E9B000000000001 /* ReadAloudVoice.swift */,
 				6A8FDBE02E8E057900D3C68F /* HomeTabView.swift */,
 				6A8FDBE12E8E057900D3C68F /* MenuBarPopoverView.swift */,
 				6A8FDBE22E8E057900D3C68F /* SettingsTabView.swift */,
@@ -190,6 +203,8 @@
 			packageProductDependencies = (
 				6AF1A0222E9B000000000001 /* MLX */,
 				6AF1A0122E9B000000000001 /* MLXAudioTTS */,
+				6AF1A0422E9B000000000001 /* HuggingFace */,
+				6AF1A0322E9B000000000001 /* MLXAudioCore */,
 				00E612A72E593BC4002E23F2 /* Yams */,
 				6AF1A0022E9B000000000001 /* FluidAudio */,
 			);
@@ -223,6 +238,7 @@
 			mainGroup = 00EA51522E24C05900BE5FC7;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				6AF1A0412E9B000000000001 /* swift-huggingface */,
 				6AF1A0112E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
 				6AF1A0212E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				00E612A62E593BC4002E23F2 /* XCRemoteSwiftPackageReference "Yams" */,
@@ -258,6 +274,9 @@
 				AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */,
 				AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */,
 				AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */,
+				AF1701522E9B000000000001 /* VoiceModelFiles.swift in Sources */,
+				AF1701422E9B000000000001 /* ReadAloudVoices.swift in Sources */,
+				AF1701322E9B000000000001 /* ReadAloudVoice.swift in Sources */,
 				00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */,
 				00869A152E56E33600D65D58 /* MenuBarIconManager.swift in Sources */,
 				00E612AA2E593E66002E23F2 /* HotkeyRecorder.swift in Sources */,
@@ -549,6 +568,14 @@
 				minimumVersion = 0.33.0;
 			};
 		};
+		6AF1A0412E9B000000000001 /* swift-huggingface */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.0.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -571,6 +598,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6AF1A0212E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-swift" */;
 			productName = MLX;
+		};
+		6AF1A0322E9B000000000001 /* MLXAudioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AF1A0112E9B000000000001;
+			productName = MLXAudioCore;
+		};
+		6AF1A0422E9B000000000001 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AF1A0412E9B000000000001;
+			productName = HuggingFace;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

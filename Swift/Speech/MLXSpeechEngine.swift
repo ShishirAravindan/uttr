@@ -1,12 +1,23 @@
 /// Reads with one preset through the same bounded audio pipeline as Kokoro.
 @MainActor
-final class MLXSpeechEngine: SpeechEngine {
-    let player: SpeechAudioPlayer
-    let pipeline: SpeechPipeline
+final class MLXSpeechEngine: SpeechPlaybackControlling {
+    private let player: SpeechAudioPlayer
+    private let pipeline: SpeechPipeline
     private let model: ExpressiveSpeechModel
     private let host: TTSModelHost
 
     var isSpeaking: Bool { pipeline.isActive }
+    var isBuffering: Bool { pipeline.progress?.isBuffering ?? false }
+    var canSkip: Bool {
+        guard let progress = pipeline.progress else { return false }
+        return progress.index + 1 < progress.count
+    }
+    var playbackRate: Double {
+        get { player.playbackRate }
+        set { player.playbackRate = newValue }
+    }
+    var onPlaybackChanged: (() -> Void)?
+    func skip() { if canSkip { pipeline.skip() } }
 
     init(model: ExpressiveSpeechModel, host: TTSModelHost) {
         self.model = model
@@ -15,6 +26,7 @@ final class MLXSpeechEngine: SpeechEngine {
         self.player = player
         let pipeline = SpeechPipeline(player: player)
         self.pipeline = pipeline
+        pipeline.onProgress = { [weak self] _ in self?.onPlaybackChanged?() }
         player.onInterrupted = { [weak pipeline] in
             pipeline?.fail("Audio output changed during read-aloud")
         }

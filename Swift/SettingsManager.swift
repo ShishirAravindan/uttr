@@ -75,6 +75,7 @@ private struct SerializedAppConfig: Codable {
     var audio: AudioSettings?
     // Optional for the same reason as `audio`.
     var history: HistorySettings?
+    var readAloudVoice: String?
     var readAloudHotkey: HotkeyConfig?
     var cleanupHotkey: HotkeyConfig?
     var cleanup: CleanupSettings?
@@ -85,6 +86,7 @@ private struct SerializedAppConfig: Codable {
         case hotkey
         case audio
         case history
+        case readAloudVoice = "read_aloud_voice"
         case readAloudHotkey = "read_aloud_hotkey"
         case cleanupHotkey = "cleanup_hotkey"
         case cleanup
@@ -134,6 +136,7 @@ class SettingsManager: ObservableObject {
     @Published var hotkeyModifiers: [String] = ["option"]
     @Published var providerStatus: String = "Loading…"
     @Published var historyMaxEntries: Int = HistoryManager.defaultMaxEntries
+    @Published private(set) var readAloudVoice: ReadAloudVoice = .kokoro
     @Published var readAloudHotkey: HotkeyConfig = .defaultReadAloud
     @Published var cleanupHotkey: HotkeyConfig = .defaultCleanSelection
     /// An edited cleanup prompt; `nil` means the built-in one.
@@ -188,6 +191,7 @@ class SettingsManager: ObservableObject {
                 hotkey: HotkeyConfig(keyCode: hotkeyKeyCode, modifiers: hotkeyModifiers),
                 audio: AudioSettings(inputDeviceUID: inputDeviceUID),
                 history: HistorySettings(maxEntries: historyMaxEntries),
+                readAloudVoice: readAloudVoice.id,
                 readAloudHotkey: readAloudHotkey,
                 cleanupHotkey: cleanupHotkey,
                 cleanup: CleanupSettings(prompt: customCleanupPrompt, cleanDictation: cleanDictation)
@@ -235,6 +239,12 @@ class SettingsManager: ObservableObject {
         }
         NotificationCenter.default.post(name: .hotkeyChanged, object: self)
         logger.log("\(action.title) hotkey changed", level: .info)
+        saveSettings()
+    }
+
+    func updateReadAloudVoice(_ voice: ReadAloudVoice) {
+        guard readAloudVoice != voice else { return }
+        readAloudVoice = voice
         saveSettings()
     }
 
@@ -314,6 +324,7 @@ class SettingsManager: ObservableObject {
         hotkeyModifiers = config.hotkey.modifiers
         inputDeviceUID = config.audio?.inputDeviceUID
         historyMaxEntries = max(1, config.history?.maxEntries ?? HistoryManager.defaultMaxEntries)
+        readAloudVoice = ReadAloudVoice(id: config.readAloudVoice)
         readAloudHotkey = config.readAloudHotkey ?? .defaultReadAloud
         cleanupHotkey = config.cleanupHotkey ?? .defaultCleanSelection
         customCleanupPrompt = config.cleanup?.prompt
@@ -331,6 +342,7 @@ class SettingsManager: ObservableObject {
         hotkeyModifiers = ["option"]
         inputDeviceUID = nil
         historyMaxEntries = HistoryManager.defaultMaxEntries
+        readAloudVoice = .kokoro
         readAloudHotkey = .defaultReadAloud
         cleanupHotkey = .defaultCleanSelection
         customCleanupPrompt = nil
