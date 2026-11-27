@@ -86,9 +86,12 @@ files can reduce the transfer. uttr stores model files in
 `~/Library/Application Support/<bundle ID>/Voice Models/`, with separate caches
 for Debug and Release. The shared Chatterbox tokenizer uses the Hugging Face cache.
 
-**Voice Model Storage** in Settings shows the files on this Mac and which voice
-is in memory. Reveal a model in Finder or remove it between reads. Removing the
-selected voice switches the choice to System.
+**Voice Model Storage** in Settings shows how much space macOS reports for each
+model folder, including its cache, and which voice is in memory. Shared downloads
+outside the folder are excluded. The space reclaimed by removal depends on
+whether the file system shares blocks with other files. Reveal a model in Finder
+or remove it between reads. Removing the selected voice switches the choice to
+System.
 
 ### History
 

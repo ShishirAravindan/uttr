@@ -26,7 +26,7 @@ struct VoiceModelFiles {
 
     struct StoredVoice: Identifiable {
         let model: ExpressiveSpeechModel
-        let bytes: Int64
+        let allocatedBytes: Int64
         let downloaded: Bool
 
         var id: ExpressiveSpeechModel { model }
@@ -46,17 +46,24 @@ struct VoiceModelFiles {
     func storedVoices() -> [StoredVoice] {
         ExpressiveSpeechModel.allCases.compactMap { model in
             guard let directory = storedDirectory(for: model) else { return nil }
-            let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey, .totalFileAllocatedSizeKey, .fileSizeKey]
+            let keys: Set<URLResourceKey> = [
+                .isRegularFileKey, .isSymbolicLinkKey, .fileResourceIdentifierKey,
+                .totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .fileSizeKey
+            ]
             guard let files = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: Array(keys))
             else { return nil }
-            var bytes: Int64 = 0
+            var allocatedBytes: Int64 = 0
+            var countedFiles = Set<AnyHashable>()
             for case let file as URL in files {
                 guard let values = try? file.resourceValues(forKeys: keys), values.isRegularFile == true,
                       values.isSymbolicLink == false else { continue }
-                bytes += Int64(values.totalFileAllocatedSize ?? values.fileSize ?? 0)
+                if let identifier = values.fileResourceIdentifier as? AnyHashable,
+                   !countedFiles.insert(identifier).inserted { continue }
+                allocatedBytes += Int64(values.totalFileAllocatedSize ?? values.fileAllocatedSize ?? values.fileSize ?? 0)
             }
             let downloaded = isDownloaded(model)
-            return bytes > 0 || downloaded ? StoredVoice(model: model, bytes: bytes, downloaded: downloaded) : nil
+            guard allocatedBytes > 0 || downloaded else { return nil }
+            return StoredVoice(model: model, allocatedBytes: allocatedBytes, downloaded: downloaded)
         }
     }
 

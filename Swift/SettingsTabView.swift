@@ -180,11 +180,13 @@ struct SettingsTabView: View {
 
     private func voiceStorageRow(_ entry: VoiceModelFiles.StoredVoice) -> some View {
         let model = entry.model
-        let size = ByteCountFormatter.string(fromByteCount: entry.bytes, countStyle: .file)
+        let size = ByteCountFormatter.string(fromByteCount: entry.allocatedBytes, countStyle: .file)
         let state = voices.loadedModel == model ? "In memory" : (entry.downloaded ? "Unloaded" : "Incomplete")
         return SettingRow(label: model.name, scheme: scheme) {
             VStack(alignment: .trailing, spacing: 3) {
-                Text(size).monospacedDigit()
+                Text("\(size) on disk")
+                    .monospacedDigit()
+                    .help("Space reported for this model folder and its cache. Shared downloads are separate.")
                 Text(state)
             }
             .font(.system(size: 11))
