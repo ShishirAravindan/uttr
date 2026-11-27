@@ -5,6 +5,8 @@ struct ExpressiveSpeechChecks {
     @MainActor
     static func main() async throws {
         checkPresets()
+        try checkRequiredAssets()
+        try await checkSharedPreparationCancellation()
         try await checkSerializedUse()
         try await checkPreparationCancellationAndRetry()
         print("Expressive speech checks passed")
@@ -14,7 +16,7 @@ struct ExpressiveSpeechChecks {
         let presets = ExpressiveSpeechModel.allCases
         precondition(presets.map(\.repository) == [
             "mlx-community/chatterbox-turbo-8bit",
-            "mlx-community/Chatterbox-TTS-fp16",
+            "mlx-community/chatterbox-fp16",
             "mlx-community/Qwen3-TTS-12Hz-1.7B-VoiceDesign-bf16",
             "mlx-community/Qwen3-TTS-12Hz-0.6B-CustomVoice-bf16",
             "mlx-community/orpheus-3b-0.1-ft-4bit",
@@ -25,6 +27,74 @@ struct ExpressiveSpeechChecks {
             "A warm, articulate audiobook narrator with a calm, measured pace who lets emotion come through in dialogue.",
             "Ryan", "tara", "conversational_a"
         ])
+    }
+
+    private static func checkRequiredAssets() throws {
+        let manager = FileManager.default
+        let folder = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let files = VoiceModelFiles(root: folder)
+        defer { try? manager.removeItem(at: folder) }
+
+        for preset in [ExpressiveSpeechModel.chatterbox, .marvis] {
+            let presetDirectory = files.directory(for: preset)
+            let primary = files.payload(preset.repository, in: presetDirectory)
+            try manager.createDirectory(at: primary, withIntermediateDirectories: true)
+            try Data("{}".utf8).write(to: primary.appendingPathComponent("config.json"))
+            try Data([1]).write(to: primary.appendingPathComponent("model.safetensors"))
+            do {
+                try files.markDownloaded(preset)
+                preconditionFailure("main weights must not make an incomplete voice ready")
+            } catch let error as CocoaError {
+                precondition(error.code == .fileReadNoSuchFile)
+            }
+            let required = preset == .chatterbox
+                ? primary.appendingPathComponent("conds.safetensors")
+                : files.payload(VoiceModelFiles.marvisCodec, in: presetDirectory)
+                    .appendingPathComponent(VoiceModelFiles.marvisCodecWeights)
+            try manager.createDirectory(at: required.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data([1]).write(to: required)
+            try files.markDownloaded(preset)
+            precondition(files.isDownloaded(preset))
+            try manager.removeItem(at: required)
+            precondition(!files.isDownloaded(preset), "readiness must notice missing model files")
+        }
+    }
+
+    @MainActor
+    private static func checkSharedPreparationCancellation() async throws {
+        var hold: CheckedContinuation<Int, Never>?
+        var completed = false
+        let preparation = SharedVoicePreparation {
+            let value = await withCheckedContinuation { hold = $0 }
+            completed = true
+            return value
+        }
+        await waitUntil { hold != nil }
+
+        var entered = false
+        let cancelled = Task {
+            entered = true
+            return try await preparation.value()
+        }
+        await waitUntil { entered }
+        cancelled.cancel()
+        await expectCancellation(from: cancelled)
+        precondition(!completed, "cancelling a read must detach before the download finishes")
+
+        let stillWaiting = Task { try await preparation.value() }
+        hold?.resume(returning: 42)
+        let value = try await stillWaiting.value
+        precondition(completed && value == 42, "other reads still get the prepared voice")
+
+        var finishCancelledTransfer: CheckedContinuation<Void, Never>?
+        let transfer = SharedVoicePreparation {
+            await withCheckedContinuation { finishCancelledTransfer = $0 }
+        }
+        await waitUntil { finishCancelledTransfer != nil }
+        let read = Task { try await transfer.value() }
+        transfer.cancel()
+        await expectCancellation(from: read)
+        finishCancelledTransfer?.resume()
     }
 
     @MainActor

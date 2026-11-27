@@ -16,12 +16,19 @@ final class SpeechAudioPlayer: SpeechClipPlayer {
 
     private let engine = AVAudioEngine()
     private let node = AVAudioPlayerNode()
+    private let timePitch = AVAudioUnitTimePitch()
     private var sampleRate: Double?
     private var observer: NSObjectProtocol?
     private var generation = 0
     private var pending = 0
 
     var onInterrupted: (() -> Void)?
+    var playbackRate: Double = 1.0 {
+        didSet {
+            guard sampleRate != nil else { return }
+            timePitch.rate = Float(playbackRate)
+        }
+    }
 
     func play(_ clip: SpeechClip, completion: @escaping @MainActor () -> Void) throws {
         guard !clip.samples.isEmpty, clip.samples.count <= UInt32.max,
@@ -67,6 +74,8 @@ final class SpeechAudioPlayer: SpeechClipPlayer {
     private func configure(_ format: AVAudioFormat) {
         if sampleRate == nil {
             engine.attach(node)
+            engine.attach(timePitch)
+            timePitch.rate = Float(playbackRate)
             observer = NotificationCenter.default.addObserver(
                 forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
             ) { [weak self] _ in
@@ -75,8 +84,10 @@ final class SpeechAudioPlayer: SpeechClipPlayer {
         } else {
             engine.stop()
             engine.disconnectNodeOutput(node)
+            engine.disconnectNodeOutput(timePitch)
         }
-        engine.connect(node, to: engine.mainMixerNode, format: format)
+        engine.connect(node, to: timePitch, format: format)
+        engine.connect(timePitch, to: engine.mainMixerNode, format: format)
         sampleRate = format.sampleRate
     }
 }

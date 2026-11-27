@@ -10,7 +10,8 @@ struct uttr: App {
         Settings {
             SettingsWindowView(
                 settings: appDelegate.settingsManager,
-                permissions: appDelegate.permissionManager
+                permissions: appDelegate.permissionManager,
+                voices: appDelegate.readAloudVoices
             )
         }
         .defaultSize(width: 520, height: 580)
@@ -42,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private var settingsWindow: NSWindow?
     private var settingsWindowController: NSWindowController?
 
+    @MainActor lazy var readAloudVoices = ReadAloudVoices()
     private var readAloud: ReadAloud?
     private var textCleanup: TextCleanup?
     private var coordinator: ActionCoordinator?
@@ -180,7 +182,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
     private func startTranscriptionProvider() {
         isProviderReady = false
         settingsManager.providerStatus = "Loading…"
-        menuBarIconManager?.setLoadingState()
+        if MainActor.assumeIsolated({ coordinator?.phase ?? .ready }) == .ready {
+            menuBarIconManager?.setLoadingState()
+        }
         Task { [weak self] in
             guard let self, let provider = self.transcriptionProvider else { return }
             do {
@@ -190,14 +194,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                     self.logger?.log("Transcription provider ready: \(provider.displayName)", level: .info)
                     self.updateProviderStatus()
                     self.notificationManager?.showAppInitializationSuccess()
-                    self.menuBarIconManager?.playStartupAnimation()
+                    if (self.coordinator?.phase ?? .ready) == .ready {
+                        self.menuBarIconManager?.playStartupAnimation()
+                    }
                 }
             } catch {
                 await MainActor.run {
                     self.logger?.log("Failed to prepare transcription provider: \(error)", level: .error)
                     self.settingsManager.providerStatus = "Failed — \(error.localizedDescription)"
                     self.notificationManager?.showAppInitializationError("Failed to prepare transcription provider")
-                    self.menuBarIconManager?.showErrorState()
+                    if (self.coordinator?.phase ?? .ready) == .ready {
+                        self.menuBarIconManager?.showErrorState()
+                    }
                 }
             }
         }
@@ -263,7 +271,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             let settings = settingsManager
             let cleanup = TextCleanup(backend: CleanupBackendFactory.make())
             let instruct = SelectionCleanup(cleanup: cleanup) { settings.cleanupPrompt }
-            let speech = ReadAloud()
+            let voices = readAloudVoices
+            let speech = voices.speech
             let reader = SelectionReader()
             textCleanup = cleanup
             readAloud = speech
@@ -313,12 +322,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                     }
                 },
                 prepareVoice: {
-                    // The system voice reads until Kokoro is ready, and keeps reading if it fails.
-                    let kokoro = KokoroSpeechEngine()
-                    guard await kokoro.prepare() else { return }
-                    // Quit while preparing: release the voice instead of adopting it.
-                    guard !Task.isCancelled else { return await kokoro.teardown() }
-                    speech.useEngine(kokoro)
+                    let selection = settings.readAloudVoice
+                    return { loading in await voices.prepare(selection, loading: loading) }
                 }
             )
 
@@ -349,7 +354,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
         if settingsWindow == nil {
             let hostingController = NSHostingController(
-                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager)
+                rootView: SettingsWindowView(settings: settingsManager, permissions: permissionManager,
+                                             voices: MainActor.assumeIsolated { readAloudVoices })
             )
             settingsWindow = NSWindow(contentViewController: hostingController)
             settingsWindow?.title = "Settings"
@@ -427,7 +433,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
 
     // MARK: - Cleanup
     private func cleanup() {
-        MainActor.assumeIsolated { coordinator?.shutDown() }
+        MainActor.assumeIsolated {
+            coordinator?.shutDown()
+            readAloudVoices.cancelPreparation()
+        }
         // History writes are queued on the main queue; let them land before exit.
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
         Task { await transcriptionProvider?.teardown() }

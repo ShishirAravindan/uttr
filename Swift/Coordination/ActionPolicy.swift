@@ -38,6 +38,7 @@ enum ActionState: Equatable {
     case cleaning(run: Int, target: pid_t?)
     case inserting(run: Int, target: pid_t?)
     case readingSelection(run: Int)
+    case preparingVoice(run: Int)
     case speaking(run: Int)
     case instructing(run: Int, stage: InstructStage, target: pid_t?)
 
@@ -46,7 +47,7 @@ enum ActionState: Equatable {
         case .idle: return nil
         case .capturing, .transcribing, .cleaning, .inserting: return .stt
         case .instructing: return .instruct
-        case .readingSelection, .speaking: return .tts
+        case .readingSelection, .preparingVoice, .speaking: return .tts
         }
     }
 
@@ -54,7 +55,7 @@ enum ActionState: Equatable {
         switch self {
         case .idle, .capturing: return nil
         case .transcribing(let run, _), .cleaning(let run, _), .inserting(let run, _),
-             .readingSelection(let run), .speaking(let run), .instructing(let run, _, _):
+             .readingSelection(let run), .preparingVoice(let run), .speaking(let run), .instructing(let run, _, _):
             return run
         }
     }
@@ -62,7 +63,7 @@ enum ActionState: Equatable {
 
 /// What the menu-bar icon shows. Derived from state, never set by features.
 enum StatusPhase: Equatable {
-    case ready, recording, processing, transforming, speaking
+    case ready, loadingVoice, recording, processing, transforming, speaking
 }
 
 extension ActionState {
@@ -74,6 +75,7 @@ extension ActionState {
         case .transcribing: return .processing
         case .cleaning, .inserting: return .transforming
         case .instructing(_, let stage, _): return stage == .reading ? .ready : .transforming
+        case .preparingVoice: return .loadingVoice
         case .speaking: return .speaking
         }
     }

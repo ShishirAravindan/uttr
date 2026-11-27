@@ -84,7 +84,8 @@ task owned by `AppDelegate`.
 | `Cleanup/SelectionCleanup.swift` | The cleanup step of ⌥C; the coordinator reads the selection and delivers the result |
 | `Selection/SelectionReader.swift` | Reads the frontmost selection with a Cmd+C round trip, waiting up to about 0.75 s for slow apps and restoring the clipboard unless it changed; used by the coordinator for ⌥R and ⌥C |
 | `Speech/SpeechEngine.swift`, `Speech/ReadAloud.swift` | Read-aloud: the `SpeechEngine` protocol with the system voice, and the voice owner that switches voices between reads |
-| `Speech/KokoroSpeechEngine.swift`, `Speech/SpeechChunks.swift` | FluidAudio's Kokoro voice, with every Core ML stage on the Neural Engine or CPU; synthesizes sentence by sentence while earlier sentences play |
+| `Speech/BufferedSpeechEngine.swift`, `Speech/SpeechPipeline.swift` | Shared PCM playback for Kokoro and MLX, including buffering, speed, skip, and completion |
+| `Speech/KokoroSpeechSource.swift`, `Speech/MLXSpeechSource.swift` | Backend-specific synthesis and chunking. Kokoro runs its Core ML stages on the Neural Engine or CPU. |
 | `Logger.swift` | Shared locked writer for component logs |
 
 ## Input Device Selection

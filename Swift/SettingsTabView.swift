@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsTabView: View {
     @ObservedObject var settings: SettingsManager
     @ObservedObject var permissions: PermissionManager
+    @ObservedObject var voices: ReadAloudVoices
     @StateObject private var hotkeyRecorder = HotkeyRecorder()
     @State private var capturingAction: HotkeyAction?
     @State private var shortcutConflict: (action: HotkeyAction, message: String)?
@@ -18,6 +19,7 @@ struct SettingsTabView: View {
                     permissionsSection
                     audioSection
                     transcriptionSection
+                    voiceSection
                     shortcutsSection
                     historySection
                     cleanupSection
@@ -30,6 +32,7 @@ struct SettingsTabView: View {
         }
         .onAppear {
             permissions.refresh()
+            voices.refresh()
             promptDraft = settings.cleanupPrompt
         }
         .onDisappear { hotkeyRecorder.stopRecording() }
@@ -73,6 +76,68 @@ struct SettingsTabView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var voiceSection: some View {
+        SectionBlock(label: "Text to Speech") {
+            SettingsCard(scheme: scheme) {
+                SettingRow(label: "Voice", scheme: scheme) {
+                    Picker("Voice", selection: Binding(
+                        get: { settings.readAloudVoice },
+                        set: { settings.updateReadAloudVoice($0) }
+                    )) {
+                        ForEach(ReadAloudVoice.all) { voice in
+                            Text(voice.title).tag(voice)
+                        }
+                    }
+                    .labelsHidden()
+                }
+                if case .expressive(let model) = settings.readAloudVoice {
+                    RowDivider(scheme: scheme)
+                    SettingRow(label: "Model download", scheme: scheme) {
+                        voiceDownloadControls(model)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func voiceDownloadControls(_ model: ExpressiveSpeechModel) -> some View {
+        switch voices.status(for: model) {
+        case .missing:
+            let size = ByteCountFormatter.string(fromByteCount: model.estimatedDownloadBytes, countStyle: .file)
+            Label("About \(size)", systemImage: "arrow.down.circle")
+                .foregroundStyle(.secondary)
+                .help("Estimated download for an empty cache. Existing files may reduce the transfer.")
+            Button("Download") { voices.download(model) }
+                .disabled(voices.hasActiveDownload)
+        case .downloading(let fraction):
+            if let fraction {
+                ProgressView(value: fraction)
+                    .accessibilityLabel("Model download progress")
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Preparing model download")
+            }
+            Button("Cancel") { voices.cancelDownload(model) }
+        case .cancelling:
+            Text("Cancelling…").foregroundStyle(.secondary)
+        case .downloaded:
+            if let error = voices.preparationErrors[model] {
+                Text(error).font(.system(size: 12)).foregroundStyle(.secondary)
+                Button("Retry on Next Read") { voices.retryPreparation(model) }
+            } else {
+                Text("Downloaded").foregroundStyle(.secondary)
+            }
+        case .failed(let message):
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            Button("Retry") { voices.download(model) }
+                .disabled(voices.hasActiveDownload)
         }
     }
 
@@ -670,6 +735,6 @@ private struct KeycapView: View {
 }
 
 #Preview {
-    SettingsTabView(settings: SettingsManager(), permissions: PermissionManager())
+    SettingsTabView(settings: SettingsManager(), permissions: PermissionManager(), voices: ReadAloudVoices())
         .frame(width: 520, height: 580)
 }

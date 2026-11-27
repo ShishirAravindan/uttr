@@ -33,6 +33,7 @@ protocol ActionFeedback: AnyObject {
 /// Everything the coordinator touches outside itself, so tests can substitute fakes.
 @MainActor
 struct ActionServices {
+    typealias VoicePreparation = @MainActor (() -> Void) async -> Void
     var providerReady: @MainActor () -> Bool
     var startCapture: @MainActor () throws -> Void
     var stopCapture: @MainActor () -> URL?
@@ -50,7 +51,7 @@ struct ActionServices {
     var paste: @MainActor (String, @escaping @MainActor (Bool) -> Void) -> Void
     var copyToClipboard: @MainActor (String) -> Void
     var record: @MainActor (HistoryRecord) -> Void
-    var prepareVoice: @MainActor () async -> Void
+    var prepareVoice: @MainActor () -> VoicePreparation
 }
 
 /// Owns what the app is doing: one foreground state, one task per run, and the
@@ -71,7 +72,6 @@ final class ActionCoordinator {
     private var lastRun = 0
     private var lastPhase: StatusPhase = .ready
     private var cancelled: [Task<Void, Never>] = []
-    private var voiceTask: Task<Void, Never>?
     private var isShutDown = false
 
     init(services: ActionServices, feedback: ActionFeedback, logger: Logger = Logger(componentName: "ActionCoordinator")) {
@@ -143,7 +143,6 @@ final class ActionCoordinator {
             run.task?.cancel()
         }
         runs = [:]
-        voiceTask?.cancel()
         let wasSpeaking = state.priority == .tts
         state = .idle
         if wasSpeaking { services.stopSpeech() }
@@ -185,6 +184,10 @@ final class ActionCoordinator {
         case .speaking:
             state = .idle
             services.stopSpeech()
+        case .preparingVoice(let run):
+            // Selection copying has already completed. Never queue another action behind a download.
+            runs.removeValue(forKey: run)?.task?.cancel()
+            state = .idle
         case .readingSelection(let run), .instructing(let run, .reading, _), .instructing(let run, .cleaning, _):
             cancel(run)
             state = .idle
@@ -397,20 +400,23 @@ final class ActionCoordinator {
     // MARK: - Read aloud
 
     private func startReadAloud() {
-        // Starts on the first read-aloud, so someone who never uses it downloads nothing.
-        if voiceTask == nil {
-            voiceTask = Task { [services] in await services.prepareVoice() }
-        }
-        let run = newRun { coordinator, run in await coordinator.runReadAloud(run) }
+        let prepare = services.prepareVoice()
+        let run = newRun { coordinator, run in await coordinator.runReadAloud(run, prepare: prepare) }
         state = .readingSelection(run: run)
     }
 
-    private func runReadAloud(_ run: Int) async {
+    private func runReadAloud(_ run: Int, prepare: ActionServices.VoicePreparation) async {
         await drainCancelled()
         guard isActive(run) else { return }
         let selection = await services.readSelection()
         guard isActive(run) else { return }
         guard let selection else { return conclude(run, .failure("No text selected")) }
+        await prepare { [self] in
+            guard isActive(run) else { return }
+            state = .preparingVoice(run: run)
+            sync()
+        }
+        guard isActive(run) else { return }
         runs[run] = nil
         services.record(.readAloud(text: selection))
         state = .speaking(run: run)

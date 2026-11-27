@@ -75,6 +75,17 @@ A shortcut needs at least one of command, option or control, and Settings reject
 one that another action already uses. If another app already holds a shortcut,
 uttr logs the failure and registers the rest.
 
+### Text to Speech
+
+`read_aloud_voice` saves the selected voice ID. Settings without this key use
+`kokoro`. Use `system` for the macOS voice or select an expressive preset in Settings.
+
+Expressive voices download explicitly. Settings estimates the transfer for an
+empty cache, including the voice's required codec and tokenizer files. Existing
+files can reduce the transfer. uttr stores model files in
+`~/Library/Application Support/<bundle ID>/Voice Models/`, with separate caches
+for Debug and Release. The shared Chatterbox tokenizer uses the Hugging Face cache.
+
 ### History
 
 ```yaml
