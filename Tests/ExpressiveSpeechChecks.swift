@@ -113,11 +113,22 @@ struct ExpressiveSpeechChecks {
         let payload = files.payload(ExpressiveSpeechModel.marvis.repository, in: installed)
         try manager.createDirectory(at: payload, withIntermediateDirectories: true)
         try Data("{}".utf8).write(to: payload.appendingPathComponent("config.json"))
-        try Data(repeating: 1, count: 4_096).write(to: payload.appendingPathComponent("model.safetensors"))
+        let weights = payload.appendingPathComponent("model.safetensors")
+        try Data(repeating: 1, count: 4_096).write(to: weights)
         let codec = files.payload(VoiceModelFiles.marvisCodec, in: installed)
         try manager.createDirectory(at: codec, withIntermediateDirectories: true)
         try Data([1]).write(to: codec.appendingPathComponent(VoiceModelFiles.marvisCodecWeights))
         try files.markDownloaded(.marvis)
+        guard let originalBytes = files.storedVoices().first?.allocatedBytes else {
+            preconditionFailure("missing installed voice")
+        }
+        let cachedCopy = installed.appendingPathComponent("cached-copy")
+        try Data(contentsOf: weights).write(to: cachedCopy)
+        let weightAllocation = try cachedCopy.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
+        guard let copiedBytes = weightAllocation.totalFileAllocatedSize, copiedBytes > 0 else {
+            preconditionFailure("missing allocation for cached copy")
+        }
+        try manager.linkItem(at: weights, to: installed.appendingPathComponent("linked-copy"))
         try manager.createSymbolicLink(at: installed.appendingPathComponent("shared"), withDestinationURL: outside)
         try manager.createSymbolicLink(at: files.directory(for: .orpheus), withDestinationURL: outside)
 
@@ -126,7 +137,9 @@ struct ExpressiveSpeechChecks {
         try Data([1]).write(to: partial.appendingPathComponent("partial"))
         let inventory = files.storedVoices()
         precondition(inventory.map(\.model) == [.chatterbox, .marvis])
-        precondition(inventory[0].downloaded == false && inventory[1].downloaded && inventory[1].bytes > 0)
+        precondition(inventory[0].downloaded == false && inventory[1].downloaded)
+        precondition(inventory[1].allocatedBytes == originalBytes + Int64(copiedBytes),
+                     "shared targets and hard links must not add another allocation")
         do {
             try files.remove(.orpheus)
             preconditionFailure("a linked preset directory must not be removable")
