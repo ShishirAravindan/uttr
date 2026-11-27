@@ -24,6 +24,7 @@ struct SettingsTabView: View {
                     voiceSection
                     voiceStorageSection
                     shortcutsSection
+                    readAloudSection
                     historySection
                     cleanupSection
                     aboutSection
@@ -229,6 +230,32 @@ struct SettingsTabView: View {
                 ForEach(Array(HotkeyAction.allCases.enumerated()), id: \.element) { index, action in
                     if index > 0 { RowDivider(scheme: scheme) }
                     shortcutRow(for: action)
+                }
+            }
+        }
+    }
+
+    private var readAloudSection: some View {
+        SectionBlock(label: "Read Aloud") {
+            SettingsCard(scheme: scheme) {
+                SettingRow(label: "Playback speed", scheme: scheme) {
+                    Stepper(
+                        value: Binding(
+                            get: { settings.readAloudSettings.playbackRate },
+                            set: { settings.updateReadAloudPlaybackRate($0) }
+                        ),
+                        in: ReadAloudSettings.playbackRateRange,
+                        step: 0.05
+                    ) {
+                        Text(settings.readAloudSettings.playbackRate.formatted(
+                            .number.precision(.fractionLength(0...2))
+                        ) + "×")
+                        .monospacedDigit()
+                        .foregroundStyle(Color.textSecondary(for: scheme))
+                    }
+                    .controlSize(.small)
+                    .accessibilityLabel("Playback speed")
+                    .accessibilityValue(settings.readAloudSettings.playbackRate.formatted(.percent))
                 }
             }
         }

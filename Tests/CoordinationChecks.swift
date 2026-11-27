@@ -15,6 +15,7 @@ struct CoordinationChecks {
         await checkFocusChange()
         await checkReadAloud()
         await checkWaitingForVoice()
+        await checkReadAloudTransport()
         await checkInstruct()
         await checkPriorityRejections()
         await checkBlockedRecording()
@@ -292,6 +293,37 @@ extension CoordinationChecks {
     }
 
     @MainActor
+    static func checkReadAloudTransport() async {
+        let h = Harness()
+        var statuses: [ReadAloudPlayback?] = []
+        h.coordinator.onReadAloudPlaybackChanged = { statuses.append($0) }
+
+        h.coordinator.stopReadAloud()
+        h.coordinator.skipReadAloud()
+        precondition(h.stops == 0 && h.skips == 0 && statuses.isEmpty)
+
+        h.coordinator.request(.readAloud)
+        await settle()
+        precondition(h.coordinator.readAloudPlayback == .readingSelection)
+        h.coordinator.skipReadAloud()
+        precondition(h.skips == 0)
+        h.selections[0].open("two sections")
+        await settle()
+        precondition(h.coordinator.readAloudPlayback == .buffering(canSkip: false))
+
+        h.coordinator.updateReadAloudPlayback(isBuffering: false, canSkip: true)
+        h.coordinator.skipReadAloud()
+        precondition(h.skips == 1 && h.history.count == 1)
+        h.coordinator.stopReadAloud()
+        h.coordinator.updateReadAloudPlayback(isBuffering: false, canSkip: true)
+        h.coordinator.skipReadAloud()
+        precondition(h.stops == 1 && h.skips == 1 && h.coordinator.state == .idle)
+        precondition(statuses == [.readingSelection, .buffering(canSkip: false), .playing(canSkip: true), nil])
+        h.coordinator.shutDown()
+        await settle()
+    }
+
+    @MainActor
     static func checkInstruct() async {
         // Selection reads never overlap, even when one replaces another.
         let h = Harness()
@@ -483,6 +515,7 @@ final class Harness {
     var holdPastes = false
     var captures = 0
     var stops = 0
+    var skips = 0
     var reads = 0
     var readsInFlight = 0
     var maxReadsInFlight = 0
@@ -579,7 +612,8 @@ final class Harness {
                         Task { @MainActor in self.voiceCancelled = true }
                     }
                 }
-            }
+            },
+            skipSpeech: { [unowned self] in skips += 1 }
         )
         coordinator = ActionCoordinator(services: services, feedback: feedback, logger: logger)
     }

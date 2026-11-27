@@ -93,6 +93,17 @@ whether the file system shares blocks with other files. Reveal a model in Finder
 or remove it between reads. Removing the selected voice switches the choice to
 System.
 
+### Read Aloud
+
+```yaml
+read_aloud:
+  playback_rate: 1.0
+```
+
+Settings → Read Aloud saves one playback speed across voices and app launches.
+The default is 1× and the supported range is 0.75× to 1.50×. Changing the speed
+during a System voice read applies to the next read.
+
 ### History
 
 ```yaml
@@ -134,4 +145,6 @@ read_aloud_hotkey:
 cleanup_hotkey:
   key_code: 8
   modifiers: ["option"]
+read_aloud:
+  playback_rate: 1.0
 ```

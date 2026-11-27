@@ -117,6 +117,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         // Wire popover callbacks
         popoverViewModel.onOpenSettings   = { [weak self] in self?.openSettingsWindow() }
         popoverViewModel.onOpenHistory    = { [weak self] in self?.openHistoryWindow() }
+        popoverViewModel.onStopReadAloud = { [weak self] in
+            MainActor.assumeIsolated { self?.coordinator?.stopReadAloud() }
+        }
+        popoverViewModel.onSkipReadAloud = { [weak self] in
+            MainActor.assumeIsolated { self?.coordinator?.skipReadAloud() }
+        }
 
         NotificationCenter.default.addObserver(
             forName: .transcriptionProviderChanged,
@@ -151,6 +157,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             queue: .main
         ) { [weak self] _ in
             self?.hotkeyManager?.refreshHotkeyConfiguration()
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .readAloudPlaybackRateChanged,
+            object: settingsManager,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.readAloud?.playbackRate = self.settingsManager.readAloudSettings.playbackRate
+            }
         }
 
         // Show dock icon whenever a titled window is active
@@ -232,10 +249,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
         let popoverView = MenuBarPopoverView(viewModel: popoverViewModel)
 
         popover = NSPopover()
-        popover?.contentSize = NSSize(width: 140, height: 46)
         popover?.behavior = .transient
         popover?.animates = true
-        popover?.contentViewController = NSHostingController(rootView: popoverView)
+        let controller = NSHostingController(rootView: popoverView)
+        controller.sizingOptions = [.preferredContentSize]
+        popover?.contentViewController = controller
         popover?.delegate = self
 
         logger?.log("MenuBarPopoverView setup complete", level: .debug)
@@ -273,6 +291,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             let instruct = SelectionCleanup(cleanup: cleanup) { settings.cleanupPrompt }
             let voices = readAloudVoices
             let speech = voices.speech
+            speech.playbackRate = settings.readAloudSettings.playbackRate
             let reader = SelectionReader()
             textCleanup = cleanup
             readAloud = speech
@@ -324,7 +343,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 prepareVoice: {
                     let selection = settings.readAloudVoice
                     return { loading in await voices.prepare(selection, loading: loading) }
-                }
+                },
+                skipSpeech: { speech.skip() }
             )
 
             let feedback = MenuBarFeedback(
@@ -339,6 +359,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
             let coordinator = ActionCoordinator(services: services, feedback: feedback)
             coordinator.onReadAloudActivityChanged = { [weak voices] active in
                 voices?.updateReadActivity(active)
+            }
+            speech.onPlaybackChanged = { [weak coordinator] isBuffering, canSkip in
+                coordinator?.updateReadAloudPlayback(isBuffering: isBuffering, canSkip: canSkip)
+            }
+            coordinator.onReadAloudPlaybackChanged = { [weak self] in
+                self?.popoverViewModel.readAloudPlayback = $0
             }
             self.coordinator = coordinator
         }

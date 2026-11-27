@@ -6,6 +6,7 @@ struct SpeechPipelineChecks {
     static func main() async {
         await boundsAndStaleAudio()
         await failedReads()
+        await skipQueuedAudio()
         print("Speech pipeline checks passed")
     }
 
@@ -53,6 +54,26 @@ struct SpeechPipelineChecks {
         await waitUntil { !outcomes.isEmpty }
         guard case .failed = outcomes.removeFirst() else { preconditionFailure("output startup must fail") }
         precondition(!pipe.isActive && player.queued.isEmpty)
+    }
+
+    @MainActor
+    static func skipQueuedAudio() async {
+        let player = FakeSpeechPlayer()
+        let pipe = SpeechPipeline(player: player)
+        var outcomes: [SpeechCompletion] = []
+        pipe.speak(["first", "second", "third"], synthesize: { _ in
+            SpeechClip(samples: [0.01], sampleRate: 24_000)
+        }) { outcomes.append($0) }
+        await waitUntil { player.queued.count == 2 }
+        let dropped = player.queued
+        pipe.skip()
+        for completion in dropped { completion() }
+        await waitUntil { player.queued.count == 2 }
+        precondition(pipe.progress?.index == 1 && outcomes.isEmpty)
+        player.finishOne()
+        precondition(pipe.progress?.index == 2 && pipe.isActive)
+        player.finishOne()
+        precondition(outcomes == [.finished] && !pipe.isActive)
     }
 
     @MainActor

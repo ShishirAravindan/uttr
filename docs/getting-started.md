@@ -83,6 +83,11 @@ needs the same Accessibility permission as pasting. Dictation comes first, then
 `⌥C`, then read-aloud: starting a recording or `⌥C` stops speech, and a shortcut
 that can't run right now is ignored with a brief dip of the menu-bar icon.
 
+While a read is active, click the menu-bar icon to see its state, stop it, or skip
+to the next section when the voice supports skipping. Settings → Read Aloud
+saves one playback speed across voices and app launches. If the System voice is
+already speaking, a speed change takes effect on the next read.
+
 **Settings → Text to Speech** lets you choose Kokoro, the macOS System voice,
 or one of six expressive voices. Expressive voices use local models. Select a
 voice and click **Download** to get its files. The first read with Kokoro

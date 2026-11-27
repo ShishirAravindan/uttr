@@ -13,6 +13,29 @@ enum ActionOutcome: Equatable {
     case failure(String)
 }
 
+enum ReadAloudPlayback: Equatable {
+    case readingSelection
+    case loadingVoice
+    case buffering(canSkip: Bool)
+    case playing(canSkip: Bool)
+
+    var canSkip: Bool {
+        switch self {
+        case .readingSelection, .loadingVoice: return false
+        case .buffering(let canSkip), .playing(let canSkip): return canSkip
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .readingSelection: return "Reading selection…"
+        case .loadingVoice: return "Loading voice…"
+        case .buffering: return "Buffering…"
+        case .playing: return "Reading aloud"
+        }
+    }
+}
+
 enum Delivery: Equatable {
     case pasted, failed, leftOnClipboard
 }
@@ -52,6 +75,7 @@ struct ActionServices {
     var copyToClipboard: @MainActor (String) -> Void
     var record: @MainActor (HistoryRecord) -> Void
     var prepareVoice: @MainActor () -> VoicePreparation
+    var skipSpeech: @MainActor () -> Void = {}
 }
 
 /// Owns what the app is doing: one foreground state, one task per run, and the
@@ -71,8 +95,22 @@ final class ActionCoordinator {
         didSet {
             let active = state.priority == .tts
             if active != (oldValue.priority == .tts) { onReadAloudActivityChanged?(active) }
+            switch state {
+            case .readingSelection: readAloudPlayback = .readingSelection
+            case .preparingVoice: readAloudPlayback = .loadingVoice
+            case .speaking: readAloudPlayback = .buffering(canSkip: false)
+            default: readAloudPlayback = nil
+            }
         }
     }
+    private(set) var readAloudPlayback: ReadAloudPlayback? {
+        didSet {
+            if readAloudPlayback != oldValue {
+                onReadAloudPlaybackChanged?(readAloudPlayback)
+            }
+        }
+    }
+    var onReadAloudPlaybackChanged: ((ReadAloudPlayback?) -> Void)?
     var onReadAloudActivityChanged: ((Bool) -> Void)?
     private var runs: [Int: Run] = [:]
     private var lastRun = 0
@@ -114,6 +152,16 @@ final class ActionCoordinator {
             begin(request)
             sync()
         }
+    }
+
+    func updateReadAloudPlayback(isBuffering: Bool, canSkip: Bool) {
+        guard case .speaking = state else { return }
+        readAloudPlayback = isBuffering ? .buffering(canSkip: canSkip) : .playing(canSkip: canSkip)
+    }
+
+    func skipReadAloud() {
+        guard case .speaking = state, readAloudPlayback?.canSkip == true else { return }
+        services.skipSpeech()
     }
 
     func captureInterrupted() {
