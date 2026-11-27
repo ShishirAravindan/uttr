@@ -286,7 +286,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 instructAvailable: { instruct.isAvailable },
                 readSelection: { await reader.readSelection()?.text },
                 cleanSelection: { try await instruct.clean($0) },
-                speak: { speech.speak($0) },
+                speak: { speech.speak($0, completion: $1) },
                 stopSpeech: { speech.stop() },
                 frontmostPID: { NSWorkspace.shared.frontmostApplication?.processIdentifier },
                 paste: { text, done in
@@ -332,7 +332,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 }
             )
             let coordinator = ActionCoordinator(services: services, feedback: feedback)
-            speech.onIdle = { [weak coordinator] in coordinator?.speechEnded() }
             self.coordinator = coordinator
         }
     }

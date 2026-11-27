@@ -35,6 +35,9 @@
 		AE1600222E9B000000000001 /* CleanupOutputChecks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE1600212E9B000000000001 /* CleanupOutputChecks.swift */; };
 		AF1700022E9B000000000001 /* SelectionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700012E9B000000000001 /* SelectionReader.swift */; };
 		AF1700122E9B000000000001 /* SpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700112E9B000000000001 /* SpeechEngine.swift */; };
+		AF1700722E9B000000000001 /* SpeechAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700712E9B000000000001 /* SpeechAudioPlayer.swift */; };
+		AF1700622E9B000000000001 /* SpeechPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700612E9B000000000001 /* SpeechPipeline.swift */; };
+		AF1700522E9B000000000001 /* SpeechCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700512E9B000000000001 /* SpeechCompletion.swift */; };
 		AF1700222E9B000000000001 /* ReadAloud.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700212E9B000000000001 /* ReadAloud.swift */; };
 		AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700312E9B000000000001 /* SpeechChunks.swift */; };
 		AF1700422E9B000000000001 /* KokoroSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */; };
@@ -74,6 +77,9 @@
 		AE1600212E9B000000000001 /* CleanupOutputChecks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CleanupOutputChecks.swift; path = Swift/Cleanup/CleanupOutputChecks.swift; sourceTree = "<group>"; };
 		AF1700012E9B000000000001 /* SelectionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SelectionReader.swift; path = Swift/Selection/SelectionReader.swift; sourceTree = "<group>"; };
 		AF1700112E9B000000000001 /* SpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechEngine.swift; path = Swift/Speech/SpeechEngine.swift; sourceTree = "<group>"; };
+		AF1700712E9B000000000001 /* SpeechAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechAudioPlayer.swift; path = Swift/Speech/SpeechAudioPlayer.swift; sourceTree = "<group>"; };
+		AF1700612E9B000000000001 /* SpeechPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechPipeline.swift; path = Swift/Speech/SpeechPipeline.swift; sourceTree = "<group>"; };
+		AF1700512E9B000000000001 /* SpeechCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechCompletion.swift; path = Swift/Speech/SpeechCompletion.swift; sourceTree = "<group>"; };
 		AF1700212E9B000000000001 /* ReadAloud.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ReadAloud.swift; path = Swift/Speech/ReadAloud.swift; sourceTree = "<group>"; };
 		AF1700312E9B000000000001 /* SpeechChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechChunks.swift; path = Swift/Speech/SpeechChunks.swift; sourceTree = "<group>"; };
 		AF1700412E9B000000000001 /* KokoroSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = KokoroSpeechEngine.swift; path = Swift/Speech/KokoroSpeechEngine.swift; sourceTree = "<group>"; };
@@ -124,6 +130,9 @@
 				AF1700312E9B000000000001 /* SpeechChunks.swift */,
 				AF1700212E9B000000000001 /* ReadAloud.swift */,
 				AF1700112E9B000000000001 /* SpeechEngine.swift */,
+				AF1700712E9B000000000001 /* SpeechAudioPlayer.swift */,
+				AF1700612E9B000000000001 /* SpeechPipeline.swift */,
+				AF1700512E9B000000000001 /* SpeechCompletion.swift */,
 				AF1700012E9B000000000001 /* SelectionReader.swift */,
 				00EA516B2E24C16D00BE5FC7 /* uttr.swift */,
 				00869A142E56E33600D65D58 /* MenuBarIconManager.swift */,
@@ -253,6 +262,9 @@
 				AF1700322E9B000000000001 /* SpeechChunks.swift in Sources */,
 				AF1700222E9B000000000001 /* ReadAloud.swift in Sources */,
 				AF1700122E9B000000000001 /* SpeechEngine.swift in Sources */,
+				AF1700722E9B000000000001 /* SpeechAudioPlayer.swift in Sources */,
+				AF1700622E9B000000000001 /* SpeechPipeline.swift in Sources */,
+				AF1700522E9B000000000001 /* SpeechCompletion.swift in Sources */,
 				AF1700022E9B000000000001 /* SelectionReader.swift in Sources */,
 				6AF2A0022E9B000000000001 /* TranscriptionProvider.swift in Sources */,
 				6AF2A0042E9B000000000001 /* FluidAudioProvider.swift in Sources */,

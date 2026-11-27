@@ -140,11 +140,15 @@ swiftc Swift/ClipboardTransaction.swift Tests/ClipboardChecks.swift -o /tmp/uttr
 swiftc Swift/Logger.swift Swift/ClipboardTransaction.swift Swift/Selection/SelectionReader.swift Tests/SelectionChecks.swift -o /tmp/uttr-selection-checks
 /tmp/uttr-selection-checks
 swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/ClipboardTransaction.swift Swift/Selection/SelectionReader.swift \
-  Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
+  Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechEngine.swift Swift/Speech/ReadAloud.swift Swift/Speech/SpeechChunks.swift \
   Tests/SpeechChecks.swift -o /tmp/uttr-speech-checks
 /tmp/uttr-speech-checks
+swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
+  Tests/SpeechPipelineChecks.swift -o /tmp/uttr-speech-pipeline-checks
+/tmp/uttr-speech-pipeline-checks
+
 swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
-  Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
+  Swift/Speech/SpeechCompletion.swift Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \
   Tests/CoordinationChecks.swift -o /tmp/uttr-coordination-checks
 /tmp/uttr-coordination-checks
 ```
