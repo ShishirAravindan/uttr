@@ -108,7 +108,9 @@ struct SettingsTabView: View {
         switch voices.status(for: model) {
         case .missing:
             let size = ByteCountFormatter.string(fromByteCount: model.estimatedDownloadBytes, countStyle: .file)
-            Label(size, systemImage: "internaldrive").foregroundStyle(.secondary)
+            Label("About \(size)", systemImage: "arrow.down.circle")
+                .foregroundStyle(.secondary)
+                .help("Estimated download for an empty cache. Existing files may reduce the transfer.")
             Button("Download") { voices.download(model) }
                 .disabled(voices.hasActiveDownload)
         case .downloading(let fraction):
