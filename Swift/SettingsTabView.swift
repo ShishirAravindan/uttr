@@ -8,6 +8,8 @@ struct SettingsTabView: View {
     @State private var capturingAction: HotkeyAction?
     @State private var shortcutConflict: (action: HotkeyAction, message: String)?
     @State private var promptDraft = ""
+    @State private var removingModel: ExpressiveSpeechModel?
+    @State private var showRemoveModel = false
     @StateObject private var audioDevices = AudioDeviceManager()
     @Environment(\.colorScheme) var scheme
 
@@ -20,6 +22,7 @@ struct SettingsTabView: View {
                     audioSection
                     transcriptionSection
                     voiceSection
+                    voiceStorageSection
                     shortcutsSection
                     historySection
                     cleanupSection
@@ -36,6 +39,18 @@ struct SettingsTabView: View {
             promptDraft = settings.cleanupPrompt
         }
         .onDisappear { hotkeyRecorder.stopRecording() }
+        .alert("Remove voice model?", isPresented: $showRemoveModel, presenting: removingModel) { model in
+            Button("Cancel", role: .cancel) {}
+            Button("Remove", role: .destructive) {
+                voices.remove(model) {
+                    if settings.readAloudVoice == .expressive(model) {
+                        settings.updateReadAloudVoice(.system)
+                    }
+                }
+            }
+        } message: { model in
+            Text("Remove the downloaded files for \(model.name) from this Mac?")
+        }
         .onChange(of: hotkeyRecorder.isRecordingComplete) { _, complete in
             guard complete, let action = capturingAction else { return }
             let (keyCode, modifiers) = hotkeyRecorder.getHotkeyConfiguration()
@@ -112,7 +127,7 @@ struct SettingsTabView: View {
                 .foregroundStyle(.secondary)
                 .help("Estimated download for an empty cache. Existing files may reduce the transfer.")
             Button("Download") { voices.download(model) }
-                .disabled(voices.hasActiveDownload)
+                .disabled(voices.hasActiveDownload || voices.removing != nil)
         case .downloading(let fraction):
             if let fraction {
                 ProgressView(value: fraction)
@@ -137,7 +152,56 @@ struct SettingsTabView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
             Button("Retry") { voices.download(model) }
-                .disabled(voices.hasActiveDownload)
+                .disabled(voices.hasActiveDownload || voices.removing != nil)
+        }
+    }
+
+    private var voiceStorageSection: some View {
+        SectionBlock(label: "Voice Model Storage") {
+            SettingsCard(scheme: scheme) {
+                if voices.storedVoices.isEmpty {
+                    SettingRow(label: "Downloaded voices", scheme: scheme) {
+                        Text("None").foregroundStyle(.secondary)
+                    }
+                }
+                ForEach(Array(voices.storedVoices.enumerated()), id: \.element.id) { index, entry in
+                    if index > 0 { RowDivider(scheme: scheme) }
+                    voiceStorageRow(entry)
+                }
+                if let message = voices.storageMessage {
+                    RowDivider(scheme: scheme)
+                    SettingRow(label: "Storage", scheme: scheme) {
+                        Text(message).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func voiceStorageRow(_ entry: VoiceModelFiles.StoredVoice) -> some View {
+        let model = entry.model
+        let size = ByteCountFormatter.string(fromByteCount: entry.allocatedBytes, countStyle: .file)
+        let state = voices.loadedModel == model ? "In memory" : (entry.downloaded ? "Unloaded" : "Incomplete")
+        return SettingRow(label: model.name, scheme: scheme) {
+            VStack(alignment: .trailing, spacing: 3) {
+                Text("\(size) on disk")
+                    .monospacedDigit()
+                    .help("Space reported for this model folder and its cache. Shared downloads are separate.")
+                Text(state)
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            SettingsActionButton(icon: "folder", label: "Reveal \(model.name) in Finder", scheme: scheme) {
+                if let directory = voices.revealDirectory(for: model) {
+                    NSWorkspace.shared.activateFileViewerSelecting([directory])
+                }
+            }
+            .disabled(voices.removing == model)
+            SettingsActionButton(icon: "trash", label: "Remove \(model.name)", scheme: scheme) {
+                removingModel = model
+                showRemoveModel = true
+            }
+            .disabled(!voices.canRemove(model))
         }
     }
 

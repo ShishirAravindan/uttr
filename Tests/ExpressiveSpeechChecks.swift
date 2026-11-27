@@ -6,6 +6,8 @@ struct ExpressiveSpeechChecks {
     static func main() async throws {
         checkPresets()
         try checkRequiredAssets()
+        try checkStoredVoices()
+        try await checkGuardedUnload()
         try await checkSharedPreparationCancellation()
         try await checkSerializedUse()
         try await checkPreparationCancellationAndRetry()
@@ -95,6 +97,88 @@ struct ExpressiveSpeechChecks {
         transfer.cancel()
         await expectCancellation(from: read)
         finishCancelledTransfer?.resume()
+    }
+
+    private static func checkStoredVoices() throws {
+        let manager = FileManager.default
+        let scratch = manager.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let files = VoiceModelFiles(root: scratch.appendingPathComponent("models"))
+        let outside = scratch.appendingPathComponent("shared")
+        defer { try? manager.removeItem(at: scratch) }
+        try manager.createDirectory(at: outside, withIntermediateDirectories: true)
+        let unrelated = outside.appendingPathComponent("weights")
+        try Data([1]).write(to: unrelated)
+
+        let installed = files.directory(for: .marvis)
+        let payload = files.payload(ExpressiveSpeechModel.marvis.repository, in: installed)
+        try manager.createDirectory(at: payload, withIntermediateDirectories: true)
+        try Data("{}".utf8).write(to: payload.appendingPathComponent("config.json"))
+        let weights = payload.appendingPathComponent("model.safetensors")
+        try Data(repeating: 1, count: 4_096).write(to: weights)
+        let codec = files.payload(VoiceModelFiles.marvisCodec, in: installed)
+        try manager.createDirectory(at: codec, withIntermediateDirectories: true)
+        try Data([1]).write(to: codec.appendingPathComponent(VoiceModelFiles.marvisCodecWeights))
+        try files.markDownloaded(.marvis)
+        guard let originalBytes = files.storedVoices().first?.allocatedBytes else {
+            preconditionFailure("missing installed voice")
+        }
+        let cachedCopy = installed.appendingPathComponent("cached-copy")
+        try Data(contentsOf: weights).write(to: cachedCopy)
+        let weightAllocation = try cachedCopy.resourceValues(forKeys: [.totalFileAllocatedSizeKey])
+        guard let copiedBytes = weightAllocation.totalFileAllocatedSize, copiedBytes > 0 else {
+            preconditionFailure("missing allocation for cached copy")
+        }
+        try manager.linkItem(at: weights, to: installed.appendingPathComponent("linked-copy"))
+        try manager.createSymbolicLink(at: installed.appendingPathComponent("shared"), withDestinationURL: outside)
+        try manager.createSymbolicLink(at: files.directory(for: .orpheus), withDestinationURL: outside)
+
+        let partial = files.directory(for: .chatterbox)
+        try manager.createDirectory(at: partial, withIntermediateDirectories: true)
+        try Data([1]).write(to: partial.appendingPathComponent("partial"))
+        let inventory = files.storedVoices()
+        precondition(inventory.map(\.model) == [.chatterbox, .marvis])
+        precondition(inventory[0].downloaded == false && inventory[1].downloaded)
+        precondition(inventory[1].allocatedBytes == originalBytes + Int64(copiedBytes),
+                     "shared targets and hard links must not add another allocation")
+        do {
+            try files.remove(.orpheus)
+            preconditionFailure("a linked preset directory must not be removable")
+        } catch let error as CocoaError {
+            precondition(error.code == .fileNoSuchFile)
+        }
+        try files.remove(.marvis)
+        precondition(files.storedDirectory(for: .marvis) == nil && !files.isDownloaded(.marvis))
+        precondition(manager.fileExists(atPath: unrelated.path), "removal must preserve shared files")
+        precondition(files.storedVoices().map(\.model) == [.chatterbox])
+    }
+
+    @MainActor
+    private static func checkGuardedUnload() async throws {
+        let loader = FakeLoader()
+        let host = TTSModelHost(loader: loader)
+        let preparation = Task { try await host.prepare(.marvis) }
+        await waitUntil { loader.loading != nil }
+        loader.completeLoad()
+        try await preparation.value
+        try await host.unload(.orpheus)
+        precondition(host.state == .ready(.marvis))
+
+        let synthesis = Task { try await host.synthesize("speech", with: .marvis) }
+        await waitUntil { loader.model.generation != nil }
+        var removalQueued = false
+        var allowed = true
+        let removal = Task {
+            removalQueued = true
+            try await host.unload(.marvis, whileAllowed: { allowed })
+        }
+        await waitUntil { removalQueued }
+        allowed = false
+        loader.model.completeGeneration()
+        _ = try await synthesis.value
+        await expectCancellation(from: removal)
+        precondition(host.state == .ready(.marvis) && loader.clears == 0)
+        try await host.unload(.marvis)
+        precondition(host.state == .unloaded)
     }
 
     @MainActor

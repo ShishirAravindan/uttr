@@ -337,6 +337,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSWindowD
                 }
             )
             let coordinator = ActionCoordinator(services: services, feedback: feedback)
+            coordinator.onReadAloudActivityChanged = { [weak voices] active in
+                voices?.updateReadActivity(active)
+            }
             self.coordinator = coordinator
         }
     }

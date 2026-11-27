@@ -11,11 +11,71 @@ final class ReadAloudVoices: ObservableObject {
     private var kokoroPreparation: SharedVoicePreparation<BufferedSpeechEngine?>?
     @Published private(set) var preparationErrors: [ExpressiveSpeechModel: String] = [:]
 
+    @Published private(set) var storedVoices: [VoiceModelFiles.StoredVoice] = []
+    @Published private(set) var loadedModel: ExpressiveSpeechModel?
+    @Published private(set) var readActive = false
+    @Published private(set) var removing: ExpressiveSpeechModel?
+    @Published private(set) var storageMessage: String?
+    private var readGeneration = 0
+
     init(files: VoiceModelFiles = .application) {
         self.files = files
         host = TTSModelHost(loader: MLXAudioModelLoader(files: files))
         downloads = ExpressiveVoiceDownloads(files: files)
         downloads.onChange = { [weak self] in self?.objectWillChange.send() }
+        downloads.onSettled = { [weak self] in self?.refresh() }
+        host.onStateChange = { [weak self] state in
+            if case .ready(let model) = state { self?.loadedModel = model }
+            else { self?.loadedModel = nil }
+        }
+    }
+
+    func updateReadActivity(_ active: Bool) {
+        if active && !readActive { readGeneration += 1 }
+        readActive = active
+    }
+
+    func canRemove(_ model: ExpressiveSpeechModel) -> Bool {
+        !readActive && removing == nil && !downloads.isDownloading(model)
+    }
+
+    func remove(_ model: ExpressiveSpeechModel, onRemoved: @escaping () -> Void) {
+        guard canRemove(model) else {
+            storageMessage = "Finish the current read or download before removing this model."
+            return
+        }
+        let generation = readGeneration
+        removing = model
+        storageMessage = nil
+        Task {
+            defer {
+                removing = nil
+                refresh()
+            }
+            let isStillIdle = { [self] in !readActive && readGeneration == generation }
+            do {
+                try await host.unload(model, whileAllowed: isStillIdle)
+                guard isStillIdle() else { throw CancellationError() }
+                try files.remove(model)
+                preparationErrors[model] = nil
+                downloads.clearFailure(for: model)
+                onRemoved()
+            } catch is CancellationError {
+                storageMessage = "A read started. Try removing the model again when read-aloud is idle."
+            } catch {
+                storageMessage = "Couldn’t remove the model: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func revealDirectory(for model: ExpressiveSpeechModel) -> URL? {
+        guard let directory = files.storedDirectory(for: model) else {
+            refresh()
+            storageMessage = "The model folder is no longer on disk."
+            return nil
+        }
+        storageMessage = nil
+        return directory
     }
 
     func status(for model: ExpressiveSpeechModel) -> ExpressiveVoiceDownloads.Status {
@@ -23,13 +83,14 @@ final class ReadAloudVoices: ObservableObject {
     }
 
     func refresh() {
+        storedVoices = files.storedVoices()
         objectWillChange.send()
     }
 
     var hasActiveDownload: Bool { downloads.hasActiveDownload }
 
     func download(_ model: ExpressiveSpeechModel) {
-        guard !hasActiveDownload else { return }
+        guard !hasActiveDownload, removing == nil else { return }
         preparationErrors[model] = nil
         downloads.download(model)
     }
