@@ -45,6 +45,12 @@
 		AC190122E9B000000000001 /* ActionPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190112E9B000000000001 /* ActionPolicy.swift */; };
 		AC190222E9B000000000001 /* ActionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190212E9B000000000001 /* ActionCoordinator.swift */; };
 		AC190322E9B000000000001 /* MenuBarFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC190312E9B000000000001 /* MenuBarFeedback.swift */; };
+		AF1700822E9B000000000001 /* SpeechModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700812E9B000000000001 /* SpeechModels.swift */; };
+		AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */; };
+		AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701112E9B000000000001 /* TTSModelHost.swift */; };
+		AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1701212E9B000000000001 /* MLXAudioBackend.swift */; };
+		6AF1A0132E9B000000000001 /* MLXAudioTTS in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0122E9B000000000001 /* MLXAudioTTS */; };
+		6AF1A0232E9B000000000001 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 6AF1A0222E9B000000000001 /* MLX */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -87,6 +93,10 @@
 		AC190112E9B000000000001 /* ActionPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionPolicy.swift; path = Swift/Coordination/ActionPolicy.swift; sourceTree = "<group>"; };
 		AC190212E9B000000000001 /* ActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ActionCoordinator.swift; path = Swift/Coordination/ActionCoordinator.swift; sourceTree = "<group>"; };
 		AC190312E9B000000000001 /* MenuBarFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MenuBarFeedback.swift; path = Swift/Coordination/MenuBarFeedback.swift; sourceTree = "<group>"; };
+		AF1700812E9B000000000001 /* SpeechModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SpeechModels.swift; path = Swift/Speech/SpeechModels.swift; sourceTree = "<group>"; };
+		AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXSpeechEngine.swift; path = Swift/Speech/MLXSpeechEngine.swift; sourceTree = "<group>"; };
+		AF1701112E9B000000000001 /* TTSModelHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TTSModelHost.swift; path = Swift/Speech/TTSModelHost.swift; sourceTree = "<group>"; };
+		AF1701212E9B000000000001 /* MLXAudioBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MLXAudioBackend.swift; path = Swift/Speech/MLXAudioBackend.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +104,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6AF1A0232E9B000000000001 /* MLX in Frameworks */,
+				6AF1A0132E9B000000000001 /* MLXAudioTTS in Frameworks */,
 				00E612A82E593BC4002E23F2 /* Yams in Frameworks */,
 				6AF1A0032E9B000000000001 /* FluidAudio in Frameworks */,
 			);
@@ -105,6 +117,10 @@
 		00EA51522E24C05900BE5FC7 = {
 			isa = PBXGroup;
 			children = (
+				AF1700812E9B000000000001 /* SpeechModels.swift */,
+				AF1700C12E9B000000000001 /* MLXSpeechEngine.swift */,
+				AF1701112E9B000000000001 /* TTSModelHost.swift */,
+				AF1701212E9B000000000001 /* MLXAudioBackend.swift */,
 				6A8FDBE02E8E057900D3C68F /* HomeTabView.swift */,
 				6A8FDBE12E8E057900D3C68F /* MenuBarPopoverView.swift */,
 				6A8FDBE22E8E057900D3C68F /* SettingsTabView.swift */,
@@ -172,6 +188,8 @@
 			);
 			name = uttr;
 			packageProductDependencies = (
+				6AF1A0222E9B000000000001 /* MLX */,
+				6AF1A0122E9B000000000001 /* MLXAudioTTS */,
 				00E612A72E593BC4002E23F2 /* Yams */,
 				6AF1A0022E9B000000000001 /* FluidAudio */,
 			);
@@ -205,6 +223,8 @@
 			mainGroup = 00EA51522E24C05900BE5FC7;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				6AF1A0112E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
+				6AF1A0212E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				00E612A62E593BC4002E23F2 /* XCRemoteSwiftPackageReference "Yams" */,
 				6AF1A0012E9B000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
@@ -234,6 +254,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF1700822E9B000000000001 /* SpeechModels.swift in Sources */,
+				AF1700C22E9B000000000001 /* MLXSpeechEngine.swift in Sources */,
+				AF1701122E9B000000000001 /* TTSModelHost.swift in Sources */,
+				AF1701222E9B000000000001 /* MLXAudioBackend.swift in Sources */,
 				00EA516C2E24C16D00BE5FC7 /* uttr.swift in Sources */,
 				00869A152E56E33600D65D58 /* MenuBarIconManager.swift in Sources */,
 				00E612AA2E593E66002E23F2 /* HotkeyRecorder.swift in Sources */,
@@ -509,6 +533,22 @@
 				minimumVersion = 0.6.1;
 			};
 		};
+		6AF1A0112E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Blaizzy/mlx-audio-swift.git";
+			requirement = {
+				kind = revision;
+				revision = c7755e2504181a771941bb6f9f26ea79b3cdfce3;
+			};
+		};
+		6AF1A0212E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.33.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -521,6 +561,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 6AF1A0012E9B000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
+		};
+		6AF1A0122E9B000000000001 /* MLXAudioTTS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AF1A0112E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
+			productName = MLXAudioTTS;
+		};
+		6AF1A0222E9B000000000001 /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6AF1A0212E9B000000000001 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
