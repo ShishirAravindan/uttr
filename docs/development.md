@@ -4,12 +4,13 @@ This guide covers building and developing uttr from source.
 
 ## Prerequisites
 
-- **Xcode 26 or later** — CI builds with 26.3
+- **Xcode 26.4 or later** — CI builds with 26.4.1
 - **macOS 15.5 or later** — Required to run the app
 - **Apple Silicon** — Required for FluidAudio / Neural Engine
 
-Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio) and
-[Yams](https://github.com/jpsim/Yams) through Swift Package Manager. The checked-in
+Xcode resolves [FluidAudio](https://github.com/FluidInference/FluidAudio),
+[Yams](https://github.com/jpsim/Yams), and the
+[MLX Audio runtime](https://github.com/Blaizzy/mlx-audio-swift) through Swift Package Manager. The checked-in
 `Package.resolved` pins the versions. Building requires access to those packages;
 running the app also needs network access for its first model download.
 
@@ -146,6 +147,11 @@ swiftc -parse-as-library Swift/Logger.swift Swift/HistoryManager.swift Swift/Cli
 swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
   Tests/SpeechPipelineChecks.swift -o /tmp/uttr-speech-pipeline-checks
 /tmp/uttr-speech-pipeline-checks
+
+swiftc -parse-as-library Swift/Speech/SpeechCompletion.swift Swift/Speech/SpeechPipeline.swift \
+  Swift/Speech/SpeechModels.swift Swift/Speech/TTSModelHost.swift Swift/Speech/VoiceModelFiles.swift Swift/Speech/SharedVoicePreparation.swift \
+  Tests/ExpressiveSpeechChecks.swift -o /tmp/uttr-expressive-speech-checks
+/tmp/uttr-expressive-speech-checks
 
 swiftc -parse-as-library Swift/Logger.swift Swift/Cleanup/TextCleanup.swift Swift/Cleanup/CleanupOutputChecks.swift \
   Swift/Speech/SpeechCompletion.swift Swift/Coordination/ActionPolicy.swift Swift/Coordination/ActionCoordinator.swift \

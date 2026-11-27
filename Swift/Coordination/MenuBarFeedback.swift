@@ -27,6 +27,7 @@ final class MenuBarFeedback: ActionFeedback {
         case .recording: icon.setRecordingState()
         case .processing: icon.setProcessingState()
         case .transforming: icon.setTransformingState()
+        case .loadingVoice: icon.setLoadingState()
         case .speaking: icon.setSpeakingState()
         }
     }
@@ -37,7 +38,7 @@ final class MenuBarFeedback: ActionFeedback {
     func modelLoading() {
         onModelLoading()
         notifications.showTranscriptionError("Model still loading")
-        icon.setLoadingState()
+        if currentPhase() == .ready { icon.setLoadingState() }
     }
 
     func ignored() { icon.nudge() }

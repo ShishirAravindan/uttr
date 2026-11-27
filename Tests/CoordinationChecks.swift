@@ -14,6 +14,7 @@ struct CoordinationChecks {
         await checkRecordingOverCleaning()
         await checkFocusChange()
         await checkReadAloud()
+        await checkWaitingForVoice()
         await checkReadAloudTransport()
         await checkInstruct()
         await checkPriorityRejections()
@@ -36,6 +37,7 @@ struct CoordinationChecks {
             ("cleaning", .cleaning(run: 1, target: 10)),
             ("inserting", .inserting(run: 1, target: 10)),
             ("readingSelection", .readingSelection(run: 1)),
+            ("preparingVoice", .preparingVoice(run: 1)),
             ("speaking", .speaking(run: 1)),
             ("instructing.reading", .instructing(run: 1, stage: .reading, target: 10)),
             ("instructing.cleaning", .instructing(run: 1, stage: .cleaning, target: 10)),
@@ -49,6 +51,7 @@ struct CoordinationChecks {
             "cleaning": [.replace, .reject(.busy), .reject(.busy)],
             "inserting": [.accept, .reject(.busy), .reject(.busy)],
             "readingSelection": [.replace, .replace, .cancel],
+            "preparingVoice": [.replace, .replace, .cancel],
             "speaking": [.replace, .replace, .cancel],
             "instructing.reading": [.replace, .reject(.busy), .reject(.busy)],
             "instructing.cleaning": [.replace, .reject(.busy), .reject(.busy)],
@@ -254,6 +257,42 @@ extension CoordinationChecks {
     }
 
     @MainActor
+    static func checkWaitingForVoice() async {
+        let reader = Harness()
+        reader.holdVoice = true
+        reader.voiceSelection = "first"
+        reader.coordinator.request(.readAloud)
+        await settle()
+        reader.voiceSelection = "second"
+        reader.selections[0].open("first selection")
+        await settle()
+        precondition(reader.preparedVoices == ["first"], "the shortcut snapshots the selected voice")
+        precondition(reader.coordinator.phase == .loadingVoice && reader.history.isEmpty)
+        reader.voiceGates[0].open(())
+        await settle()
+        precondition(reader.spoken == ["first selection"] && reader.history == ["readAloud:first selection"])
+        reader.coordinator.stopReadAloud()
+
+        reader.coordinator.request(.readAloud)
+        await settle()
+        reader.selections[1].open("cancel while loading")
+        await settle()
+        precondition(reader.preparedVoices == ["first", "second"])
+        reader.coordinator.request(.readAloud)
+        precondition(reader.coordinator.state == .idle)
+
+        // A cancelled wait may still be attached to the explicit download.
+        // It must not block a new selection or speak when the download finishes.
+        reader.coordinator.request(.instruct)
+        await settle()
+        precondition(reader.reads == 3 && reader.coordinator.state.priority == .instruct)
+        reader.voiceGates[1].open(())
+        reader.selections[2].open(nil)
+        await settle()
+        precondition(reader.spoken == ["first selection"] && reader.history == ["readAloud:first selection"])
+    }
+
+    @MainActor
     static func checkReadAloudTransport() async {
         let h = Harness()
         var statuses: [ReadAloudPlayback?] = []
@@ -282,7 +321,6 @@ extension CoordinationChecks {
         precondition(statuses == [.readingSelection, .buffering(canSkip: false), .playing(canSkip: true), nil])
         h.coordinator.shutDown()
         await settle()
-        precondition(h.voiceCancelled)
     }
 
     @MainActor
@@ -411,12 +449,18 @@ extension CoordinationChecks {
         precondition(h.captures == 1, "requests are ignored after quit")
 
         let voice = Harness()
+        voice.holdVoice = true
         voice.coordinator.request(.readAloud)
+        await settle()
+        voice.selections[0].open("waiting at quit")
         await settle()
         precondition(voice.voicePrepares == 1)
         voice.coordinator.shutDown()
         await settle()
         precondition(voice.voiceCancelled, "voice preparation is cancelled at quit")
+        voice.voiceGates[0].open(())
+        await settle()
+        precondition(voice.spoken.isEmpty && voice.history.isEmpty)
     }
 
     @MainActor
@@ -475,6 +519,10 @@ final class Harness {
     var reads = 0
     var readsInFlight = 0
     var maxReadsInFlight = 0
+    var holdVoice = false
+    var voiceSelection = "kokoro"
+    var preparedVoices: [String] = []
+    var voiceGates: [Gate<Void>] = []
     var voicePrepares = 0
     var voiceCancelled = false
     var pastes: [String] = []
@@ -550,12 +598,19 @@ final class Harness {
                 }
             },
             prepareVoice: { [unowned self] in
-                voicePrepares += 1
-                let gate = Gate<Void>()
-                await withTaskCancellationHandler {
-                    await gate.wait()
-                } onCancel: {
-                    Task { @MainActor in self.voiceCancelled = true; gate.open(()) }
+                let selected = voiceSelection
+                return { [unowned self] loading in
+                    voicePrepares += 1
+                    preparedVoices.append(selected)
+                    guard holdVoice else { return }
+                    loading()
+                    let gate = Gate<Void>()
+                    voiceGates.append(gate)
+                    await withTaskCancellationHandler {
+                        await gate.wait()
+                    } onCancel: {
+                        Task { @MainActor in self.voiceCancelled = true }
+                    }
                 }
             },
             skipSpeech: { [unowned self] in skips += 1 }

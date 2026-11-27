@@ -30,7 +30,7 @@ other branch, and refuses a version whose tag already exists.
 
 1. **Version:** choose the next version from the inputs and name the release
    `uttr vX.Y.Z: <title>`.
-2. **Build:** the macOS 26 runner selects Xcode 26.3 and builds the Release scheme
+2. **Build:** the macOS 26 runner selects Xcode 26.4.1 and builds the Release scheme
    with signing disabled into a temporary derived-data directory. The version is
    stamped into the app as `MARKETING_VERSION`, with the workflow run number as
    `CURRENT_PROJECT_VERSION`, and checked in the built `Info.plist`.
